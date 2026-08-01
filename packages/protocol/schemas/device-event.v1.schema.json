@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperbridge.dev/schemas/device-event.v1.schema.json",
+  "title": "Paperbridge device event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "device_id", "event_id", "created_at", "event_type", "data"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "device_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "event_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "event_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "data": { "type": "object", "maxProperties": 64 }
+  }
+}

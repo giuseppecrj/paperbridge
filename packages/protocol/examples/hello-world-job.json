@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "job_id": "job-hello-001",
+  "device_id": "paperbridge-dev-001",
+  "created_at": "2026-08-01T00:00:00Z",
+  "expires_at": null,
+  "content": {
+    "kind": "receipt",
+    "blocks": [
+      {
+        "type": "text",
+        "text": "Hello from Paperbridge",
+        "align": "left",
+        "bold": false,
+        "underline": false,
+        "width_multiplier": 1,
+        "height_multiplier": 1
+      },
+      { "type": "feed", "lines": 3 }
+    ]
+  },
+  "options": { "copies": 1 }
+}

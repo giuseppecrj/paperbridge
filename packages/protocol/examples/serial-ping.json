@@ -1,0 +1,6 @@
+{
+  "type": "request",
+  "request_id": "req-001",
+  "command": "system.ping",
+  "params": {}
+}

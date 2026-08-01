@@ -1,0 +1,9 @@
+{
+  "schema_version": "999",
+  "job_id": "invalid",
+  "device_id": "paperbridge-dev-001",
+  "created_at": "not-a-timestamp",
+  "expires_at": null,
+  "content": { "kind": "receipt", "blocks": [{ "type": "raw", "bytes": "1b40" }] },
+  "options": { "copies": 999 }
+}

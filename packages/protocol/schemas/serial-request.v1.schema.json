@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperbridge.dev/schemas/serial-request.v1.schema.json",
+  "title": "Paperbridge serial request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "request_id", "command", "params"],
+  "properties": {
+    "type": { "const": "request" },
+    "request_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "command": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "params": { "type": "object", "maxProperties": 32 }
+  }
+}

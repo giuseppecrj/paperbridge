@@ -1,0 +1,14 @@
+LICENSE
+README.md
+pyproject.toml
+tools/device-cli/paperbridge.egg-info/PKG-INFO
+tools/device-cli/paperbridge.egg-info/SOURCES.txt
+tools/device-cli/paperbridge.egg-info/dependency_links.txt
+tools/device-cli/paperbridge.egg-info/entry_points.txt
+tools/device-cli/paperbridge.egg-info/requires.txt
+tools/device-cli/paperbridge.egg-info/top_level.txt
+tools/device-cli/paperbridge_cli/__init__.py
+tools/device-cli/paperbridge_cli/main.py
+tools/device-cli/paperbridge_cli/output.py
+tools/device-cli/paperbridge_cli/ports.py
+tools/device-cli/paperbridge_cli/serial_client.py

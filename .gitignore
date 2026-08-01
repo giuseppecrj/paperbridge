@@ -1,0 +1,14 @@
+.DS_Store
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.bin
+!packages/protocol/fixtures/*.bin
+*.log
+config.json
+secrets.py
+captures/
+firmware/downloads/
+.env

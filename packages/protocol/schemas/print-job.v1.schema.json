@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperbridge.dev/schemas/print-job.v1.schema.json",
+  "title": "Paperbridge semantic print job v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "job_id", "device_id", "created_at", "expires_at", "content", "options"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "job_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "device_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "expires_at": { "type": ["string", "null"], "format": "date-time", "maxLength": 64 },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "blocks"],
+      "properties": {
+        "kind": { "const": "receipt" },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/block" }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["copies"],
+      "properties": { "copies": { "type": "integer", "minimum": 1, "maximum": 3 } }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text", "align", "bold", "underline", "width_multiplier", "height_multiplier"],
+      "properties": {
+        "type": { "const": "text" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^[ -~]+$" },
+        "align": { "enum": ["left", "center", "right"] },
+        "bold": { "type": "boolean" },
+        "underline": { "type": "boolean" },
+        "width_multiplier": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "height_multiplier": { "type": "integer", "minimum": 1, "maximum": 2 }
+      }
+    },
+    "feed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "lines"],
+      "properties": {
+        "type": { "const": "feed" },
+        "lines": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "character"],
+      "properties": {
+        "type": { "const": "rule" },
+        "character": { "type": "string", "minLength": 1, "maxLength": 1, "pattern": "^[ -~]$" }
+      }
+    },
+    "cut": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "mode"],
+      "properties": {
+        "type": { "const": "cut" },
+        "mode": { "const": "partial" }
+      }
+    },
+    "block": { "oneOf": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/feed" }, { "$ref": "#/$defs/rule" }, { "$ref": "#/$defs/cut" }] }
+  }
+}

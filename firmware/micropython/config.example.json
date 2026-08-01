@@ -1,0 +1,23 @@
+{
+  "device_id": "paperbridge-dev-001",
+  "environment": "development",
+  "serial": {
+    "max_line_bytes": 4096
+  },
+  "ethernet": {
+    "address": "192.168.1.50",
+    "netmask": "255.255.255.0",
+    "gateway": null,
+    "dns": null
+  },
+  "printer": {
+    "host": "192.168.1.87",
+    "port": 9100,
+    "connect_timeout_ms": 3000,
+    "write_timeout_ms": 5000
+  },
+  "queue": {
+    "max_pending": 20,
+    "max_completed_ids": 100
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "type": "request",
+  "request_id": "req-002",
+  "command": "printer.print_test",
+  "params": { "text": "Hello from my Mac" }
+}

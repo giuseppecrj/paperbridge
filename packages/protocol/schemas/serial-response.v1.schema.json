@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperbridge.dev/schemas/serial-response.v1.schema.json",
+  "title": "Paperbridge serial response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "request_id", "ok"],
+  "properties": {
+    "type": { "const": "response" },
+    "request_id": { "type": ["string", "null"], "maxLength": 128 },
+    "ok": { "type": "boolean" },
+    "result": { "type": "object" },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    }
+  },
+  "oneOf": [
+    { "properties": { "ok": { "const": true } }, "required": ["result"], "not": { "required": ["error"] } },
+    { "properties": { "ok": { "const": false } }, "required": ["error"], "not": { "required": ["result"] } }
+  ]
+}
