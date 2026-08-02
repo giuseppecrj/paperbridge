@@ -10,10 +10,13 @@ The verified image is MicroPython 1.28.0 `SPIRAM_OCT`; inspect a replacement
 board before assuming it has the same memory configuration. See
 `docs/micropython-bringup.md`.
 
-Create ignored `firmware/micropython/config.json` from `config.example.json`,
-set the observed printer endpoint, then deploy with
-`PORT=/dev/cu.usbmodem... just deploy`. Deployment refuses to proceed without
-the local config and waits for application RPC readiness after reset. Wi-Fi and
-MQTT are disabled by default; enable them only after configuring the Wi-Fi and
-local Mosquitto credentials in the ignored config. `config.show_redacted` never
-returns either password.
+For the networked development path, copy `.env.example` to ignored `.env`, set
+this machine's non-secret addresses, then run `just configure-device`. The recipe
+resolves Wi-Fi and MQTT passwords from project `fnox.toml`/1Password and writes
+ignored `firmware/micropython/config.json` without putting passwords in command
+arguments. For Ethernet-only use, copy `config.example.json` manually and leave
+Wi-Fi/MQTT disabled.
+
+Deploy with `PORT=/dev/cu.usbmodem... just deploy`. Deployment refuses to
+proceed without local config and waits for RPC readiness after reset.
+`config.show_redacted` never returns either password.

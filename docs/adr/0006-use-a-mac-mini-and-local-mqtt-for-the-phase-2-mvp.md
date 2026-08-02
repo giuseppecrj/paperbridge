@@ -115,7 +115,9 @@ Phase 3 preserves the MCP tools, REST contract, semantic job schemas, topic
 shape, `job_id` correlation, device behavior, and delivery vocabulary. It
 replaces local infrastructure with a public authenticated API, a managed MQTT
 broker, MQTT/TLS, per-device credentials, durable job state, and production
-observability.
+observability. Local development resolves named secrets from 1Password through
+Fnox; a future Cloudflare runtime stores its own secret bindings under stable
+names and does not call Fnox or 1Password at runtime.
 
 Broker choice remains replaceable. Provider-specific publishing APIs, webhooks,
 rules, authentication, or provisioning must stay behind adapters. Before the

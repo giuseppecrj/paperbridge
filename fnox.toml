@@ -1,0 +1,19 @@
+#:schema https://fnox.jdx.dev/schema.json
+
+root = true
+env = "exec"
+if_missing = "error"
+
+[providers]
+keychain = { type = "keychain", service = "fnox" }
+onepass = { type = "1password", vault = "Agent" }
+
+[profiles.host.secrets]
+OP_SERVICE_ACCOUNT_TOKEN = { provider = "keychain", value = "OP_SERVICE_ACCOUNT_TOKEN", env = false, if_missing = "ignore", description = "Optional machine-local 1Password service-account bootstrap" }
+PAPERBRIDGE_MQTT_PASSWORD = { provider = "onepass", value = "op://Agent/paperbridge-mqtt-password/password", description = "Local development broker password" }
+
+[profiles.device.secrets]
+OP_SERVICE_ACCOUNT_TOKEN = { provider = "keychain", value = "OP_SERVICE_ACCOUNT_TOKEN", env = false, if_missing = "ignore", description = "Optional machine-local 1Password service-account bootstrap" }
+PAPERBRIDGE_MQTT_PASSWORD = { provider = "onepass", value = "op://Agent/paperbridge-mqtt-password/password", description = "Local development broker password" }
+PAPERBRIDGE_WIFI_SSID = { provider = "onepass", value = "op://Agent/home-router/name", description = "Development Wi-Fi network name" }
+PAPERBRIDGE_WIFI_PASSWORD = { provider = "onepass", value = "op://Agent/home-router/password", description = "Development Wi-Fi password" }

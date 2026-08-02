@@ -99,8 +99,17 @@ printer-simulator:
     uv run python tools/printer-simulator/server.py
 
 # No-output MQTT tracer; requires the configured local Mosquitto credentials.
+secrets-check:
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- python -c 'import os; names=("PAPERBRIDGE_MQTT_PASSWORD", "PAPERBRIDGE_WIFI_SSID", "PAPERBRIDGE_WIFI_PASSWORD"); missing=[name for name in names if not os.environ.get(name)]; assert not missing, missing; assert "OP_SERVICE_ACCOUNT_TOKEN" not in os.environ'
+
+# Generate ignored firmware config without putting passwords in argv or shell history.
+configure-device:
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- uv run python tools/provisioning/generate_device_config.py \
+        --from-env \
+        --output firmware/micropython/config.json
+
 mqtt-probe:
-    bun run mqtt:probe
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run mqtt:probe
 
 clean:
     rm -rf .pytest_cache .ruff_cache .venv captures

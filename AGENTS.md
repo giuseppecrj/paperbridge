@@ -10,23 +10,25 @@ experience is a **physical inbox** that works without opening an app.
 The currently proven local path is:
 
 ```text
-Mac host CLI -- USB-C NDJSON RPC --> Waveshare ESP32-S3-ETH
-             -- W5500 Ethernet / TCP ESC/POS --> Rongta RP326
+Mac host CLI -- USB-C NDJSON RPC ------------------> Waveshare ESP32-S3-ETH
+Mac/Mosquitto -- home Wi-Fi MQTT probe ----------->          |
+ESP32-S3-ETH -- direct W5500 / TCP ESC/POS -----------------> Rongta RP326
 ```
 
 The Mac does not need a direct network route to the printer. A successful socket
 write is `delivered_to_printer`; it is not proof that paper emerged.
 
-The complete local path, controlled power-cycle acceptance, isolated Ethernet
-and device recovery, and observable cover-open/paper-out behavior have been
-demonstrated on the purchased hardware. Treat that as bring-up evidence, not a
-production-reliability claim: the 72-hour soak remains a separate gate. Never
-infer hardware success from host tests or stale documentation.
+The complete USB print path, controlled power-cycle acceptance, isolated
+Ethernet and device recovery, observable cover-open/paper-out behavior, and a
+no-output Wi-Fi/MQTT tracer have been demonstrated on the purchased hardware.
+Treat that as bring-up evidence, not a production-reliability claim: the 72-hour
+soak remains a separate gate. Never infer hardware success from host tests or
+stale documentation.
 
-Not implemented: backend, web app, MQTT, Wi-Fi, OTA, production provisioning,
-image printing, or an ESP-IDF firmware port. Do not build these without an
-approved issue. `apps/`, MQTT documentation, and `firmware/esp-idf/` are future
-contracts or placeholders.
+Not implemented: backend/API service, MCP, web app, MQTT print-job delivery,
+MQTT/TLS, OTA, production provisioning, image printing, or an ESP-IDF firmware
+port. Do not build these without an approved issue. `apps/api` currently contains
+only the Node.js MQTT probe; `firmware/esp-idf/` remains a future placeholder.
 
 ## Sources of truth
 
@@ -66,18 +68,24 @@ stale claim.
   transport `request_id`.
 - `rpc_commands.py` — application command routing and hardware-order guards.
 - `ethernet.py` — the single MicroPython/W5500 version and pin seam.
+- `wifi.py` — station-mode control-plane connection and locked status snapshot.
+- `mqtt_adapter.py` — bounded no-output MQTT probe over Wi-Fi.
 - `escpos.py` — semantic/test content to ESC/POS bytes.
 - `print_coordinator.py` — render-then-deliver orchestration.
 - `printer_transport.py` — one TCP connection per payload with deterministic
   close and honest delivery results.
 - `packages/protocol/` — versioned schemas, examples, and binary fixtures.
+- `apps/api/` — portable Node.js MQTT probe; not an API or MCP service yet.
+- `tools/mosquitto/` — authenticated local-broker development configuration.
+- `tools/provisioning/` — local device-configuration generation.
 - `tools/printer-simulator/` — TCP capture and transport-failure testing.
 - `tools/firmware/` — flash, verify, and force-copy deployment utilities.
 
-The semantic `print-job.v1` contract exists, but no production job-submission RPC
-is wired yet. Bring-up commands such as `printer.print_test` are not print jobs.
-Queue, ledger, health, watchdog, and device-event artifacts must not be described
-as live capabilities until they have a real caller and observable behavior.
+Local USB `job.submit` implements semantic `print-job.v1`. The MQTT jobs topic
+accepts only a no-output tracer message and cannot reach the print coordinator.
+Bring-up commands such as `printer.print_test` are not print jobs. Queue, ledger,
+health, watchdog, and device-event artifacts must not be described as live
+capabilities until they have a real caller and observable behavior.
 
 Keep these identities distinct:
 
@@ -103,8 +111,17 @@ just format-check
 just test
 ```
 
-`mise.toml` pins the tools, `uv.lock` pins Python packages, and `justfile` is the
-operator interface. Use `uv run ...` for commands not exposed by `just`.
+`mise.toml` pins the tools, `uv.lock` and `bun.lock` pin dependencies, and
+`justfile` is the repeatable operator interface. Use the `paperbridge` CLI for
+parameterized USB diagnostics and jobs rather than adding a `just` wrapper for
+every command. MCP is a planned product ingress, not a live operator path.
+
+Development passwords resolve from 1Password through the checked-in project
+`fnox.toml`; non-secret machine settings come from ignored `.env`. Recipes that
+need secrets invoke `fnox exec`, which keeps values out of command arguments and
+the interactive shell. Never print resolved values or commit `.env`,
+`fnox.local.toml`, or generated firmware configuration. See
+`docs/research/fnox-secrets-workflow.md`.
 
 For non-trivial behavior, add or identify the smallest failing behavioral check,
 make it pass, then refactor. Run focused tests during work and all three checks
@@ -127,8 +144,9 @@ Before doing so:
 2. Confirm the purchased board and selected firmware variant match.
 3. Verify the downloaded firmware SHA-256 from
    `docs/micropython-bringup.md` immediately before flashing.
-4. Preserve ignored local `firmware/micropython/config.json`; never commit local
-   endpoints, `.env`, credentials, firmware downloads, or captures accidentally.
+4. Generate ignored `firmware/micropython/config.json` through the project Fnox
+   workflow when networking is enabled; never commit it, `.env`,
+   `fnox.local.toml`, credentials, firmware downloads, or captures accidentally.
 5. Power the printer from its 24 V adapter and the board from USB; never cross
    power them.
 6. Follow the order: ping/info → Ethernet init/link/address → probe → text →

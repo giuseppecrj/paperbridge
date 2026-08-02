@@ -15,3 +15,5 @@ tools/mosquitto/mosquitto.local.conf
 tools/mosquitto/*.passwd
 firmware/downloads/
 .env
+fnox.local.toml
+.fnox.local.toml

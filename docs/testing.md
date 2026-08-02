@@ -37,7 +37,9 @@ available. Evidence IDs and observations are recorded in `hardware.md`; the
 72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
-operates the printer. The Wi-Fi/MQTT tracer tests send no semantic job or
+operates the printer. `just secrets-check` is a separate local setup check that
+resolves project 1Password references without printing their values; it is not a
+test-suite prerequisite. The Wi-Fi/MQTT tracer tests send no semantic job or
 printer bytes. They do not establish purchased-device Wi-Fi/W5500 coexistence
 or paper-output evidence.
 

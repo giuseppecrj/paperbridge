@@ -14,6 +14,9 @@ facts, not physical verification of purchased units.
 | ESP32 WLAN API | <https://docs.micropython.org/en/v1.28.0/library/network.WLAN.html> | Station mode uses `network.WLAN(network.WLAN.IF_STA)`, `active(True)`, `connect`, `status`, and `isconnected`; DHCP supplies its address. This documents the API, not purchased-device Wi-Fi/W5500 coexistence. |
 | v1.28 implementation | <https://github.com/micropython/micropython/blob/v1.28.0/ports/esp32/network_lan.c> | W5500 path and `active`, `status`, `isconnected`, `ifconfig`, and `ipconfig` methods exist when compiled in. Runtime verification remains mandatory. |
 | RP32X manual | <https://file.globalso.com/file_manage/4365/20260416/rp32x-series-user-manual_v1-3_en.pdf> | Official family manual covering RP326: hold FEED during power-on and release within about five seconds for self-test; the receipt reports software, interfaces, and printer configuration. |
+| Fnox configuration | <https://fnox.jdx.dev/reference/configuration> | Checked-in `fnox.toml` supports hierarchical project configuration, remote references, profiles, local overrides, and exec-only injection; Fnox 1.31.1 is required for the selected `env = "exec"` setting. |
+| Fnox 1Password provider | <https://fnox.jdx.dev/providers/1password> | A secret mapping may contain an `op://vault/item/field` reference rather than a value; resolution uses 1Password CLI authentication. |
+| 1Password CLI | <https://developer.1password.com/docs/cli/secret-reference-syntax> | `op://` references identify vault/item/field locations and resolve the latest stored value without embedding plaintext in configuration. |
 
 ## Purchased-unit observations
 

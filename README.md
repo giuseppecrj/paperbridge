@@ -52,8 +52,33 @@ just lint
 just test
 ```
 
-`mise.toml` pins Python, `uv`, `just`, Node, and Bun; `uv.lock` and `bun.lock`
-pin their respective packages.
+`mise.toml` pins Python, `uv`, `just`, Node, Bun, Fnox, and the 1Password CLI;
+`uv.lock` and `bun.lock` pin their respective packages.
+
+## Development configuration and secrets
+
+Copy the non-secret local settings and replace the example broker address and
+serial port for this machine:
+
+```sh
+cp .env.example .env
+$EDITOR .env
+```
+
+The checked-in `fnox.toml` maps Paperbridge development secret names to 1Password
+references in the `Agent` vault. Enable 1Password desktop-app CLI integration,
+unlock the app, and verify the mappings without printing values:
+
+```sh
+op vault list
+just secrets-check
+```
+
+Fnox injects secrets only into the recipes that need them. `.env`,
+`fnox.local.toml`, and generated firmware `config.json` are ignored. An optional
+machine-local `OP_SERVICE_ACCOUNT_TOKEN` may live in the OS keychain for
+unattended use; it is never injected into Paperbridge child processes. See
+[`docs/research/fnox-secrets-workflow.md`](docs/research/fnox-secrets-workflow.md).
 
 ## Discover the ESP32 serial port
 
@@ -105,19 +130,19 @@ Do not flash this variant solely from the marketing memory configuration. See
 
 ## Configure and deploy firmware
 
-Read the RP326 self-test receipt before changing its address. Create an ignored
-local configuration and replace the example endpoint with observed values:
+Read the RP326 self-test receipt before changing its address. For the current
+Wi-Fi/MQTT development path, generate the ignored device configuration from
+non-secret `.env` settings and project-scoped Fnox values:
 
 ```sh
-cp firmware/micropython/config.example.json firmware/micropython/config.json
-$EDITOR firmware/micropython/config.json
+just configure-device
 PORT="$PAPERBRIDGE_PORT" just deploy
 ```
 
-Deployment and application RPC are separate: `mpremote` copies files; the
-`paperbridge` CLI sends requests. Wi-Fi and the MQTT tracer are disabled by
-default. Configure and enable both in ignored `config.json`; `config show`
-redacts both passwords.
+For an Ethernet-only setup, copy `config.example.json` manually and leave Wi-Fi
+and MQTT disabled. Deployment and application RPC are separate: `mpremote`
+copies files; the `paperbridge` CLI sends requests. `config show` redacts both
+passwords.
 
 ## Exercise the local path
 
@@ -183,12 +208,13 @@ control-plane layers over USB and run the host probe:
 ```sh
 paperbridge --port "$PAPERBRIDGE_PORT" wifi status
 paperbridge --port "$PAPERBRIDGE_PORT" mqtt status
-fnox exec -- just mqtt-probe
+just mqtt-probe
 ```
 
-`just mqtt-probe` requires `PAPERBRIDGE_MQTT_HOST`, `PAPERBRIDGE_MQTT_USERNAME`,
-`PAPERBRIDGE_MQTT_PASSWORD`, and `PAPERBRIDGE_DEVICE_ID`. It reports a correlated
-transport response, not printer delivery or paper output.
+`just mqtt-probe` reads non-secret host, username, and device settings from
+`.env`, resolves `PAPERBRIDGE_MQTT_PASSWORD` through Fnox, and reports a
+correlated transport response—not printer delivery or paper output. There is no
+live MCP command yet; ADR 0006 describes the planned MCP/API boundary.
 
 ## Simulator
 

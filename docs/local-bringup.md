@@ -8,18 +8,23 @@ remains, so repeat this sequence rather than treating the observations as a
 production reliability claim.
 
 1. `mise install && just bootstrap && just test`.
-2. Connect a known data cable and run `just ports`.
-3. Inspect board revision, download/checksum/flash the selected MicroPython image,
+2. Copy `.env.example` to ignored `.env`, set this machine's non-secret values,
+   unlock 1Password, and run `just secrets-check`.
+3. Connect a known data cable and run `just ports`.
+4. Inspect board revision, download/checksum/flash the selected MicroPython image,
    open the REPL, then run `PORT=... just verify-board`.
-4. Create ignored `firmware/micropython/config.json` from the example and deploy.
-5. Run `device ping`, `device info`, memory, and reset-cause RPCs.
-6. Power the RP326 independently, print its self-test, and record endpoint facts.
-7. Connect ESP32 Ethernet to printer, inspect the single green indicator, run
+5. Run `just configure-device`, inspect only `config show`'s redacted result, and
+   deploy to the explicitly selected port.
+6. Run `device ping`, `device info`, memory, and reset-cause RPCs.
+7. For the no-output control plane, check `wifi status`, then `mqtt status`, then
+   run `just mqtt-probe`.
+8. Power the RP326 independently, print its self-test, and record endpoint facts.
+9. Connect ESP32 Ethernet to printer, inspect the single green indicator, run
    `ethernet init`, `ethernet link-status`, then `ethernet configure-static`.
-8. Run `printer probe`; a TCP connect proves endpoint reachability only.
-9. Run text-only print, then feed, then explicit cut last.
-10. Power-cycle and disconnect/reconnect each device and repeat.
-11. Optional repeatable HIL (not part of `just test`):
+10. Run `printer probe`; a TCP connect proves endpoint reachability only.
+11. Run text-only print, then feed, then explicit cut last.
+12. Power-cycle and disconnect/reconnect each device and repeat.
+13. Optional repeatable HIL (not part of `just test`):
 
 ```sh
 PORT=/dev/cu.usbmodem101 just test-hardware-smoke
