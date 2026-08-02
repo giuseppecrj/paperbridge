@@ -17,3 +17,5 @@ firmware/downloads/
 .env
 fnox.local.toml
 .fnox.local.toml
+.mcp.json
+.pi/plans
