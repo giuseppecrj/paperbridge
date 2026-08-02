@@ -36,8 +36,9 @@ production provisioning is implemented.
   paper-out behavior passed on 2026-08-02. A 27-sample no-output soak trial also
   passed; only the full 72-hour soak remains.
 - The no-output MQTT 3.1.1 tracer over ESP32 Wi-Fi is implemented, host-tested,
-  and physically verified on 2026-08-02: one correlated probe returned while
-  the direct W5500 printer endpoint remained reachable. This is not MQTT job
+  and physically verified on 2026-08-02. Guarded Wi-Fi/MQTT recovery preserved
+  direct printer TCP reachability, and direct W5500 cable recovery preserved
+  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`. This is not MQTT job
   delivery or a production reliability claim.
 
 ## Mac setup

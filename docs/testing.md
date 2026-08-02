@@ -31,9 +31,10 @@ Manual bring-up physically verified USB RPC, direct Ethernet, printer
 reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,
 printer-only and ESP32-only recovery, cover-open buffering, and paper-out
-buffering passed on 2026-08-02. A no-output Wi-Fi/MQTT tracer round trip also
-returned its correlated probe while direct W5500 printer reachability remained
-available. Evidence IDs and observations are recorded in `hardware.md`; the
+buffering passed on 2026-08-02. Full no-output dual-interface recovery passed as
+`hil-network-recovery-89867cf401c3`: Wi-Fi/MQTT failure and recovery preserved
+direct printer TCP reachability, and direct W5500 failure and recovery preserved
+Wi-Fi/MQTT. Evidence IDs and observations are recorded in `hardware.md`; the
 72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
@@ -74,7 +75,9 @@ The harness requires Wi-Fi/MQTT to become observably unavailable while the direc
 W5500 printer probe still succeeds, then requires recovery. Next it asks the
 operator to unplug the direct W5500 cable, requires link and printer-probe
 failure while a new correlated MQTT probe still succeeds, and requires both
-interfaces to recover after reconnection.
+interfaces to recover after reconnection. MicroPython 1.28 can overwrite its LAN
+event status with `ETH_STARTED` when station Wi-Fi regains an IP, so the recovered
+direct path is proved by the TCP probe rather than that stale event value.
 
 Operator confirmation never counts as proof by itself: every transition must be
 observed within the bounded timeout, and every successful MQTT check uses a new

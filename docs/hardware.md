@@ -22,6 +22,8 @@
   IPv4, direct link, and printer probe all succeeded on 2026-08-01. On
   2026-08-02 station-mode Wi-Fi authenticated to local Mosquitto, returned a
   correlated MQTT probe status, and preserved direct-W5500 printer reachability.
+  Full no-output Wi-Fi/W5500 disconnect and recovery passed as
+  `hil-network-recovery-89867cf401c3`.
 
 Official W5500 signal map for this product page:
 
@@ -78,6 +80,7 @@ forbidden.
 | Initial printer IP/port | `192.168.1.87:9100` | 2026-08-01 |
 | Dedicated direct printer subnet | W5500 `192.168.4.50/24` reached printer `192.168.4.87:9100` | 2026-08-02 |
 | Wi-Fi + MQTT tracer | Wi-Fi obtained `192.168.1.110`; lock-protected firmware returned correlated probe `1e087965-b790-4cd9-a4ef-950c1ab86183`; USB RPC and direct printer probe still succeeded | 2026-08-02 |
+| Dual-interface recovery | Guarded Wi-Fi/MQTT disconnect/reconnect preserved direct printer TCP reachability; direct W5500 disconnect/reconnect preserved Wi-Fi/MQTT; `hil-network-recovery-89867cf401c3` | 2026-08-02 |
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |
