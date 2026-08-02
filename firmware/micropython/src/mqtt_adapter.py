@@ -107,6 +107,9 @@ class MqttTracer:
 
     def poll(self):
         self.wifi.poll()
+        if not self.wifi.status().get("connected"):
+            self._set_state(None, "WIFI_DISCONNECTED")
+            return
         client = self._get_client()
         if client is None:
             if self._can_connect():

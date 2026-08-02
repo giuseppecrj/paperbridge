@@ -21,6 +21,8 @@ class CommandRouter:
             "system.reset_cause": self.system_reset_cause,
             "config.show_redacted": self.config_show,
             "wifi.status": self.wifi_status,
+            "wifi.disconnect": self.wifi_disconnect,
+            "wifi.reconnect": self.wifi_reconnect,
             "mqtt.status": self.mqtt_status,
             "ethernet.initialize": self.ethernet_initialize,
             "ethernet.status": self.ethernet_status,
@@ -58,6 +60,21 @@ class CommandRouter:
         if self.wifi is None:
             return {"enabled": False, "connected": False, "last_error": None}
         return self.wifi.status()
+
+    def _require_wifi_confirmation(self, params):
+        wifi = self.wifi
+        if wifi is None:
+            raise RpcError("WIFI_DISABLED", "station Wi-Fi is not configured")
+        confirm = params.get("confirm")
+        if not isinstance(confirm, bool) or not confirm:
+            raise RpcError("INVALID_RPC_REQUEST", "Wi-Fi control requires confirm=true")
+        return wifi
+
+    def wifi_disconnect(self, params):
+        return self._require_wifi_confirmation(params).disconnect()
+
+    def wifi_reconnect(self, params):
+        return self._require_wifi_confirmation(params).reconnect()
 
     def mqtt_status(self, _params):
         if self.mqtt is None:

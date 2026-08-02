@@ -50,11 +50,22 @@ class FakeMqtt:
 
 
 class FakeWiFi:
+    def __init__(self):
+        self.calls = []
+
     def status(self):
         return {
             "connected": True,
             "ifconfig": ("192.168.1.50", "255.255.255.0", "192.168.1.1", "192.168.1.1"),
         }
+
+    def disconnect(self):
+        self.calls.append("disconnect")
+        return {"suspended": True}
+
+    def reconnect(self):
+        self.calls.append("reconnect")
+        return {"suspended": False}
 
 
 class FakeCoordinator:
@@ -124,6 +135,27 @@ def test_wifi_status_exposes_control_plane_without_printer_access():
         "connected": True,
         "ifconfig": ("192.168.1.50", "255.255.255.0", "192.168.1.1", "192.168.1.1"),
     }
+
+
+def test_wifi_control_requires_explicit_confirmation_without_printer_access():
+    wifi = FakeWiFi()
+    instance = CommandRouter(
+        config(), FakeEthernet(), FakeCoordinator(), FakeTransport(), wifi=wifi
+    )
+
+    for params in ({}, {"confirm": False}, {"confirm": 1}):
+        with pytest.raises(RpcError) as error:
+            instance.dispatch("wifi.disconnect", params)
+        assert error.value.code == "INVALID_RPC_REQUEST"
+    assert instance.dispatch("wifi.disconnect", {"confirm": True}) == {"suspended": True}
+    assert instance.dispatch("wifi.reconnect", {"confirm": True}) == {"suspended": False}
+    assert wifi.calls == ["disconnect", "reconnect"]
+
+
+def test_wifi_control_rejects_an_unconfigured_adapter():
+    with pytest.raises(RpcError) as error:
+        router().dispatch("wifi.disconnect", {"confirm": True})
+    assert error.value.code == "WIFI_DISABLED"
 
 
 def test_mqtt_status_exposes_tracer_connectivity_without_printer_access():

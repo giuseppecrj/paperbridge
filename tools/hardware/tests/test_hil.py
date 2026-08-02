@@ -169,7 +169,7 @@ def test_network_recovery_requires_topology_confirmation_before_rpc(tmp_path):
 
 def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(tmp_path):
     state = {"phase": "baseline", "mqtt_probes": 0}
-    phases = iter(("baseline", "wifi_down", "wifi_up", "ethernet_down", "recovered"))
+    phases = iter(("baseline", "ethernet_down", "recovered"))
 
     def prompt(_message):
         state["phase"] = next(phases)
@@ -193,6 +193,16 @@ def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(
             "connected": connected,
             "last_error": None if connected else "MQTT_POLL_FAILED",
         }
+
+    def wifi_disconnect(params):
+        assert params == {"confirm": True}
+        state["phase"] = "wifi_down"
+        return {"suspended": True}
+
+    def wifi_reconnect(params):
+        assert params == {"confirm": True}
+        state["phase"] = "wifi_up"
+        return {"suspended": False}
 
     def ethernet_link_status(_params):
         connected = state["phase"] != "ethernet_down"
@@ -218,6 +228,8 @@ def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(
     client = RecordingClient(
         responses={
             "wifi.status": wifi_status,
+            "wifi.disconnect": wifi_disconnect,
+            "wifi.reconnect": wifi_reconnect,
             "mqtt.status": mqtt_status,
             "ethernet.link_status": ethernet_link_status,
             "printer.probe": printer_probe,
@@ -254,16 +266,14 @@ def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(
     assert evidence["operator"] == {
         "topology_confirmed": True,
         "topology_confirmed_raw": "yes",
-        "wifi_disconnected": True,
-        "wifi_disconnected_raw": "yes",
-        "wifi_restored": True,
-        "wifi_restored_raw": "yes",
         "ethernet_disconnected": True,
         "ethernet_disconnected_raw": "yes",
         "ethernet_restored": True,
         "ethernet_restored_raw": "yes",
     }
     assert {command for command, _params in client.calls}.isdisjoint(OUTPUT_COMMANDS)
+    assert ("wifi.disconnect", {"confirm": True}) in client.calls
+    assert ("wifi.reconnect", {"confirm": True}) in client.calls
     assert [command for command, _params in client.calls].count("printer.probe") == 6
     on_disk = json.loads((tmp_path / "hil-network-recovery-test.json").read_text())
     assert on_disk["outcome"] == "passed"
@@ -284,6 +294,7 @@ def test_network_recovery_requires_observed_wifi_disconnect(tmp_path):
                 "connected": True,
                 "ifconfig": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
             },
+            "wifi.disconnect": {"suspended": True},
             "mqtt.status": {"enabled": True, "connected": True, "last_error": None},
         }
     )
@@ -299,7 +310,7 @@ def test_network_recovery_requires_observed_wifi_disconnect(tmp_path):
                 "device_id": "paperbridge-dev-001",
             },
             broker_endpoint="192.168.1.10:1883",
-            prompt=_answers("yes", "yes"),
+            prompt=_answers("yes"),
             is_interactive=True,
             clock=ManualClock(),
             evidence_dir=tmp_path,
@@ -310,17 +321,14 @@ def test_network_recovery_requires_observed_wifi_disconnect(tmp_path):
 
     evidence = json.loads((tmp_path / "hil-network-no-wifi-transition.json").read_text())
     assert evidence["outcome"] == "failed"
-    assert evidence["operator"]["wifi_disconnected"] is True
+    assert ("wifi.disconnect", {"confirm": True}) in client.calls
     assert {command for command, _params in client.calls}.isdisjoint(OUTPUT_COMMANDS)
 
 
 def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
-    state = {"wifi_down": False, "probe_number": 0, "prompts": 0}
+    state = {"wifi_down": False, "probe_number": 0}
 
     def prompt(_message):
-        state["prompts"] += 1
-        if state["prompts"] == 2:
-            state["wifi_down"] = True
         return "yes"
 
     def connection_status(_params):
@@ -331,6 +339,11 @@ def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
             if state["wifi_down"]
             else ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
         }
+
+    def wifi_disconnect(params):
+        assert params == {"confirm": True}
+        state["wifi_down"] = True
+        return {"suspended": True}
 
     def mqtt_probe():
         state["probe_number"] += 1
@@ -344,6 +357,7 @@ def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
     client = RecordingClient(
         responses={
             "wifi.status": connection_status,
+            "wifi.disconnect": wifi_disconnect,
             "mqtt.status": connection_status,
         }
     )
@@ -366,10 +380,8 @@ def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
 
 def test_network_recovery_rejects_reused_successful_probe_id(tmp_path):
     state = {"phase": "baseline"}
-    phases = iter(("baseline", "wifi_down", "wifi_up"))
 
     def prompt(_message):
-        state["phase"] = next(phases)
         return "yes"
 
     def connection_status(_params):
@@ -379,6 +391,16 @@ def test_network_recovery_rejects_reused_successful_probe_id(tmp_path):
             "connected": connected,
             "ifconfig": ["192.168.1.110"] if connected else None,
         }
+
+    def wifi_disconnect(params):
+        assert params == {"confirm": True}
+        state["phase"] = "wifi_down"
+        return {"suspended": True}
+
+    def wifi_reconnect(params):
+        assert params == {"confirm": True}
+        state["phase"] = "wifi_up"
+        return {"suspended": False}
 
     def mqtt_probe():
         if state["phase"] == "wifi_down":
@@ -393,6 +415,8 @@ def test_network_recovery_rejects_reused_successful_probe_id(tmp_path):
     client = RecordingClient(
         responses={
             "wifi.status": connection_status,
+            "wifi.disconnect": wifi_disconnect,
+            "wifi.reconnect": wifi_reconnect,
             "mqtt.status": connection_status,
         }
     )

@@ -68,9 +68,10 @@ The interactive harness first records the operator's confirmation that the Mac
 and ESP32 are on home Wi-Fi and the printer is directly cabled to W5500. It then
 records a stable `hil-network-recovery-*` test ID and runs a successful
 correlated MQTT probe with direct printer probes immediately before and after
-that exchange. Next it asks the operator to pause only the ESP32 Wi-Fi client,
-requires Wi-Fi/MQTT to become observably unavailable while the direct W5500
-printer probe still succeeds, and requires Wi-Fi/MQTT recovery. Next it asks the
+that exchange. It then sends guarded `wifi.disconnect` and `wifi.reconnect` RPCs;
+the device network thread, not the USB handler, performs the station transition.
+The harness requires Wi-Fi/MQTT to become observably unavailable while the direct
+W5500 printer probe still succeeds, then requires recovery. Next it asks the
 operator to unplug the direct W5500 cable, requires link and printer-probe
 failure while a new correlated MQTT probe still succeeds, and requires both
 interfaces to recover after reconnection.

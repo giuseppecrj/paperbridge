@@ -184,11 +184,12 @@ No print/feed/cut.
 PORT=/dev/cu.usbmodem101 just test-hardware-network-recovery
 ```
 
-Expected: an interactive, no-output loop that verifies Wi-Fi/MQTT failure and
-recovery without losing direct W5500 printer reachability, then verifies W5500
-failure and recovery without losing Wi-Fi/MQTT. Operator answers trigger checks;
-they do not count as proof. The recipe uses Fnox for the MQTT password and writes
-one `hil-network-recovery-*` evidence file under ignored `captures/hardware/`.
+Expected: a no-output loop that uses guarded device Wi-Fi disconnect/reconnect
+RPCs to verify Wi-Fi/MQTT failure and recovery without losing direct W5500
+printer reachability, then interactively verifies W5500 failure and recovery
+without losing Wi-Fi/MQTT. Operator answers trigger only the W5500 steps; they
+do not count as proof. The recipe uses Fnox for the MQTT password and writes one
+`hil-network-recovery-*` evidence file under ignored `captures/hardware/`.
 
 ```sh
 PORT=/dev/cu.usbmodem101 just test-hardware-acceptance

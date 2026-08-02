@@ -17,11 +17,14 @@ class WiFiStation:
         self.wlan = None
         self.last_connect_attempt_ms = None
         self.last_error = None
+        self._suspended = False
+        self._reconnect_requested = False
         self._status = {
             "enabled": True,
             "initialized": False,
             "active": False,
             "connected": False,
+            "suspended": False,
             "raw_status": None,
             "ifconfig": None,
             "last_error": None,
@@ -62,6 +65,34 @@ class WiFiStation:
         elapsed = self.ticks_diff(self.clock_ms(), self.last_connect_attempt_ms)
         return elapsed >= self.settings["retry_interval_ms"]
 
+    def disconnect(self):
+        """Request station Wi-Fi disconnection from the network polling thread."""
+        return self._set_suspended(True)
+
+    def reconnect(self):
+        """Allow the network polling thread to reconnect station Wi-Fi immediately."""
+        return self._set_suspended(False)
+
+    def _set_suspended(self, suspended):
+        self._lock.acquire()
+        try:
+            self._suspended = suspended
+            if not suspended:
+                self._reconnect_requested = True
+            self._status["suspended"] = suspended
+            return dict(self._status)
+        finally:
+            self._lock.release()
+
+    def _network_intent(self):
+        self._lock.acquire()
+        try:
+            reconnect_requested = self._reconnect_requested
+            self._reconnect_requested = False
+            return self._suspended, reconnect_requested
+        finally:
+            self._lock.release()
+
     def _store_status(self, active, connected, raw_status, address, error):
         self._lock.acquire()
         try:
@@ -71,6 +102,7 @@ class WiFiStation:
                 "initialized": self.wlan is not None,
                 "active": active,
                 "connected": connected,
+                "suspended": self._suspended,
                 "raw_status": raw_status,
                 "ifconfig": address,
                 "last_error": error,
@@ -111,6 +143,14 @@ class WiFiStation:
             wlan = self.wlan
             if wlan is None:
                 raise RuntimeError("Wi-Fi station failed to initialize")
+            suspended, reconnect_requested = self._network_intent()
+            if suspended:
+                if wlan.isconnected():
+                    wlan.disconnect()
+                self._refresh_status()
+                return
+            if reconnect_requested:
+                self.last_connect_attempt_ms = None
             if not wlan.isconnected() and self._should_connect():
                 self.last_connect_attempt_ms = self.clock_ms()
                 wlan.connect(self.settings["ssid"], self.settings["password"])

@@ -141,6 +141,19 @@ def test_tracer_rejects_invalid_messages_without_publishing(topic, payload, erro
     assert tracer.last_error == error
 
 
+def test_tracer_marks_mqtt_unavailable_when_wifi_disconnects():
+    tracer, _client = connected_tracer()
+    tracer.wifi.connected = False
+
+    tracer.poll()
+
+    assert tracer.status() == {
+        "enabled": True,
+        "connected": False,
+        "last_error": "WIFI_DISCONNECTED",
+    }
+
+
 def test_tracer_reconnects_and_resubscribes_after_a_poll_failure():
     class FailingClient(FakeClient):
         def check_msg(self):

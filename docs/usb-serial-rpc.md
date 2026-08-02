@@ -16,6 +16,9 @@ Live commands are:
   `system.reboot`
 - `config.show_redacted`
 - `wifi.status`, which reports the station-mode control-plane connection
+- `wifi.disconnect` and `wifi.reconnect`, guarded station-control diagnostics
+  that require literal JSON boolean `confirm: true`; their requests are applied
+  by the network polling thread, not the USB handler
 - `mqtt.status`, which reports the optional tracer's connection state and last
   error without contacting the printer
 - `ethernet.initialize`, `ethernet.status`, `ethernet.link_status`, and
@@ -25,9 +28,14 @@ Live commands are:
 - `job.submit` with `params.job` containing a semantic `print-job.v1` and an
   optional literal `allow_cut: true` for cut blocks
 
-`printer.cut_test` requires literal JSON boolean `confirm: true`; it never runs
-at boot or in unit tests. `job.submit` checks the configured `device_id` before
-printer delivery and returns the semantic `job_id`; its serial `request_id`
+`printer.cut_test`, `wifi.disconnect`, and `wifi.reconnect` require literal
+JSON boolean `confirm: true`. Wi-Fi-control replies acknowledge the requested
+intent; the network poller changes the live interface asynchronously, so the
+recovery HIL waits for its bounded status transition. Wi-Fi controls never
+contact the printer; they are used by the explicit no-output recovery HIL only.
+`job.submit` checks the
+configured `device_id` before printer delivery and returns the semantic `job_id`;
+its serial `request_id`
 continues to provide bounded response replay. `wifi.status` and `mqtt.status`
 report disabled when their adapters are not configured. `system.reboot`
 schedules reset after returning its response. Queue, config reload, fixture

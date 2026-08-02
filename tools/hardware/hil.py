@@ -440,12 +440,11 @@ class HardwareInTheLoop:
                     "printer_endpoint": evidence["probe"].get("printer_endpoint"),
                 }
 
-                self._confirm_yes(
-                    evidence,
-                    "wifi_disconnected",
-                    "Pause only the ESP32 Wi-Fi client, then answer yes [yes/no]: ",
-                    "operator did not confirm ESP32 Wi-Fi disconnection",
-                )
+                disconnected = self._request(client, evidence, "wifi.disconnect", {"confirm": True})
+                if not isinstance(disconnected, dict) or not disconnected.get("suspended"):
+                    raise RuntimeError(
+                        f"wifi.disconnect expected suspended=true, got {disconnected!r}"
+                    )
                 self._wait_for_flag(
                     client,
                     evidence,
@@ -474,12 +473,11 @@ class HardwareInTheLoop:
                 self._validate_smoke_step("printer.probe", probe, [])
                 self._run_mqtt_probe(evidence, "wifi_down", expect_success=False)
 
-                self._confirm_yes(
-                    evidence,
-                    "wifi_restored",
-                    "Restore the ESP32 Wi-Fi client, then answer yes [yes/no]: ",
-                    "operator did not confirm ESP32 Wi-Fi restoration",
-                )
+                reconnected = self._request(client, evidence, "wifi.reconnect", {"confirm": True})
+                if not isinstance(reconnected, dict) or reconnected.get("suspended"):
+                    raise RuntimeError(
+                        f"wifi.reconnect expected suspended=false, got {reconnected!r}"
+                    )
                 self._wait_for_flag(
                     client,
                     evidence,

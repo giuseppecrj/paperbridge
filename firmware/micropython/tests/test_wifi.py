@@ -6,6 +6,7 @@ class FakeWLAN:
         self.active_value = False
         self.connected = False
         self.connect_calls = []
+        self.disconnect_calls = 0
         self.raw_status = 0
         self.status_calls = 0
 
@@ -17,6 +18,11 @@ class FakeWLAN:
     def connect(self, ssid, password):
         self.connect_calls.append((ssid, password))
         self.raw_status = 1
+
+    def disconnect(self):
+        self.disconnect_calls += 1
+        self.connected = False
+        self.raw_status = 0
 
     def isconnected(self):
         return self.connected
@@ -66,6 +72,7 @@ def test_poll_activates_station_and_starts_wifi_connection():
         "initialized": True,
         "active": True,
         "connected": False,
+        "suspended": False,
         "raw_status": 1,
         "ifconfig": None,
         "last_error": None,
@@ -127,6 +134,28 @@ def test_retry_timing_is_safe_across_wrapped_device_ticks():
 
     assert differences == [(5, 1000)]
     assert len(wlan.connect_calls) == 2
+
+
+def test_disconnect_suspends_reconnects_until_an_explicit_reconnect_request():
+    now = [0]
+    wlan = FakeWLAN()
+    wlan.connected = True
+    station = WiFiStation(config(), wlan_factory=lambda: wlan, clock_ms=lambda: now[0])
+    station.poll()
+
+    assert station.disconnect()["suspended"] is True
+    station.poll()
+    now[0] = 10_000
+    station.poll()
+
+    assert wlan.disconnect_calls == 1
+    assert wlan.connect_calls == []
+    assert station.status()["connected"] is False
+
+    assert station.reconnect()["suspended"] is False
+    station.poll()
+
+    assert wlan.connect_calls == [("Paperbridge Test", "not-a-real-password")]
 
 
 def test_status_reads_a_locked_snapshot_without_touching_wlan():
