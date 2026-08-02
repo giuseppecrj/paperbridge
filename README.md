@@ -24,9 +24,9 @@ production provisioning is implemented.
   direct-link negotiation, and printer probe are physically verified.
 - Printer endpoint `192.168.1.87:9100`, ASCII text, feed, and explicit partial
   cut bytes `1d 56 01` are physically verified on the purchased RP326.
-- Local semantic `print-job.v1` USB submission is implemented and
-  host-/simulator-tested; it has not been physically verified as structured-job
-  output.
+- Local semantic `print-job.v1` USB submission is implemented, host-/simulator-
+  tested, and physically verified on 2026-08-02: `job-hello-001` delivered 28
+  bytes and its fixture receipt was observed on the purchased printer.
 - Controlled post-deploy power-cycle smoke and operator-confirmed acceptance
   passed on 2026-08-02; evidence IDs are recorded in `docs/hardware.md`.
 - Board photos confirm `ESP32-S3-ETH` silkscreen with no explicit PCB revision;

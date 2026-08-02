@@ -74,6 +74,7 @@ forbidden.
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |
+| Semantic v1 USB job | `job-hello-001` delivered 28 bytes; fixture receipt physically observed | 2026-08-02 |
 | Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
 | Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
 | Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |

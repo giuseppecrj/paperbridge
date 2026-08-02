@@ -18,5 +18,7 @@ printer-facing socket. `allow_cut: true` is required for a cut block. Serial
 `request_id` remains transport correlation/replay only; it is distinct from
 `job_id`. There is no durable lifecycle, queue, or job-id deduplication.
 
-This path is host- and simulator-tested, not physical structured-job evidence.
-`printed` remains absent until reliable printer status confirmation exists.
+This path is host- and simulator-tested and was physically verified on
+2026-08-02: `job-hello-001` returned `delivered_to_printer` after 28 bytes, and
+an operator observed its fixture receipt. `printed` remains absent until
+reliable printer status confirmation exists.
