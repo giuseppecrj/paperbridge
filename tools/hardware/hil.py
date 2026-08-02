@@ -1,12 +1,15 @@
-"""Opt-in hardware-in-the-loop smoke, acceptance, and soak harness.
+"""Opt-in hardware-in-the-loop smoke, recovery, acceptance, and soak harness.
 
-Never called by ordinary unit tests. Smoke and soak never print/feed/cut/reboot.
-Acceptance requires an interactive operator (or an injected prompt seam).
+Never called by ordinary unit tests. Smoke, recovery, and soak never
+print/feed/cut/reboot. Interactive flows require an operator (or injected test
+seams).
 """
 
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 import uuid
 from contextlib import nullcontext
@@ -43,6 +46,8 @@ OUTPUT_COMMANDS = frozenset(
 CUT_AUTHORIZATION_TOKEN = "CUT"  # exact interactive token; no noninteractive bypass
 LINK_ATTEMPTS = 20
 LINK_RETRY_SECONDS = 0.5
+NETWORK_RECOVERY_TIMEOUT_SECONDS = 60
+NETWORK_RECOVERY_INTERVAL_SECONDS = 1
 SOAK_DURATION_SECONDS = 72 * 60 * 60
 SOAK_INTERVAL_SECONDS = 60
 SOAK_CHECKPOINT_SECONDS = 60 * 60
@@ -84,6 +89,44 @@ def _truthy(answer):
     return answer.strip().lower() in {"y", "yes"}
 
 
+def _configured_broker_endpoint():
+    host = os.environ.get("PAPERBRIDGE_MQTT_HOST", "").strip()
+    if not host:
+        raise ValueError("PAPERBRIDGE_MQTT_HOST is required")
+    try:
+        port = int(os.environ.get("PAPERBRIDGE_MQTT_PORT", "1883"))
+    except ValueError as exc:
+        raise ValueError("PAPERBRIDGE_MQTT_PORT must be an integer") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError("PAPERBRIDGE_MQTT_PORT must be 1..65535")
+    return f"{host}:{port}"
+
+
+def _default_mqtt_probe():
+    try:
+        timeout_ms = int(os.environ.get("PAPERBRIDGE_MQTT_TIMEOUT_MS", "5000"))
+    except ValueError as exc:
+        raise RuntimeError("PAPERBRIDGE_MQTT_TIMEOUT_MS must be an integer") from exc
+    process = subprocess.run(
+        ["bun", "run", "--silent", "mqtt:probe"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=max(10, timeout_ms / 1000 + 5),
+        check=False,
+    )
+    if process.returncode != 0:
+        raise RuntimeError(f"MQTT probe exited with status {process.returncode}")
+    for line in reversed(process.stdout.splitlines()):
+        try:
+            result = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(result, dict):
+            return result
+    raise RuntimeError("MQTT probe returned no JSON object")
+
+
 def _usable_address(result):
     """Return a comparable address tuple from an ethernet status/result object."""
     addr = result.get("ifconfig")
@@ -119,6 +162,8 @@ class HardwareInTheLoop:
         clock=None,
         evidence_dir=None,
         test_id=None,
+        mqtt_probe=None,
+        broker_endpoint=None,
     ):
         self.port = port
         self.client = client
@@ -131,6 +176,8 @@ class HardwareInTheLoop:
         # None means do not write; CLI main passes captures/hardware.
         self.evidence_dir = Path(evidence_dir) if evidence_dir is not None else None
         self.test_id = test_id
+        self.mqtt_probe = mqtt_probe or _default_mqtt_probe
+        self.broker_endpoint = broker_endpoint
         self._owns_client = client is None
 
     def _client_context(self):
@@ -243,6 +290,82 @@ class HardwareInTheLoop:
                 "ethernet.configure_static results disagree "
                 f"(first={static_addresses[0]!r}, second={static_addresses[1]!r})"
             )
+        return static_addresses[0]
+
+    def _wait_for_flag(
+        self,
+        client,
+        evidence,
+        command,
+        field,
+        expected,
+        timeout_seconds,
+        interval_seconds,
+    ):
+        deadline = self.clock.time() + timeout_seconds
+        result = None
+        while True:
+            result = self._request(client, evidence, command, {})
+            if isinstance(result, dict) and result.get(field) is expected:
+                return result
+            remaining = deadline - self.clock.time()
+            if remaining <= 0:
+                break
+            self.clock.sleep(min(interval_seconds, remaining))
+        raise RuntimeError(f"{command} expected {field}={str(expected).lower()}, got {result!r}")
+
+    def _require_connected(self, command, result):
+        if not isinstance(result, dict) or not result.get("enabled"):
+            raise RuntimeError(f"{command} expected enabled=true, got {result!r}")
+        if not result.get("connected"):
+            raise RuntimeError(f"{command} expected connected=true, got {result!r}")
+
+    def _run_mqtt_probe(self, evidence, phase, expect_success):
+        entry = {"phase": phase, "expected": "success" if expect_success else "failure"}
+        evidence["mqtt_probes"].append(entry)
+        try:
+            result = self.mqtt_probe()
+        except Exception as exc:
+            entry["error"] = type(exc).__name__
+            if expect_success:
+                entry["outcome"] = "failed"
+                raise RuntimeError(f"MQTT probe failed during {phase}") from exc
+            entry["outcome"] = "failed_as_expected"
+            return None
+
+        if not expect_success:
+            entry["outcome"] = "unexpectedly_succeeded"
+            entry["result"] = result
+            raise RuntimeError(f"MQTT probe unexpectedly succeeded during {phase}")
+        if (
+            not isinstance(result, dict)
+            or result.get("kind") != "mqtt_probe_status"
+            or result.get("status") != "ok"
+            or not result.get("probe_id")
+            or not result.get("device_id")
+        ):
+            entry["outcome"] = "invalid_result"
+            entry["result"] = result
+            raise RuntimeError(f"MQTT probe returned an invalid result during {phase}: {result!r}")
+        probe_id = result["probe_id"]
+        if any(
+            previous.get("outcome") == "succeeded"
+            and previous.get("result", {}).get("probe_id") == probe_id
+            for previous in evidence["mqtt_probes"][:-1]
+        ):
+            entry["outcome"] = "invalid_result"
+            entry["result"] = result
+            raise RuntimeError(f"MQTT probe reused probe_id during {phase}: {probe_id}")
+        entry["outcome"] = "succeeded"
+        entry["result"] = result
+        return result
+
+    def _expect_request_failure(self, client, evidence, command):
+        try:
+            result = self._request(client, evidence, command, {})
+        except Exception:
+            return
+        raise RuntimeError(f"{command} expected failure, got {result!r}")
 
     def smoke(self):
         evidence = self._new_evidence("smoke")
@@ -251,6 +374,193 @@ class HardwareInTheLoop:
                 self._run_smoke_commands(client, evidence)
                 evidence["outcome"] = "passed"
                 return evidence
+        except Exception as exc:
+            evidence["outcome"] = "failed"
+            evidence["error"] = str(exc)
+            raise
+        finally:
+            self._write_evidence(evidence)
+
+    def network_recovery(
+        self,
+        timeout_seconds: float = NETWORK_RECOVERY_TIMEOUT_SECONDS,
+        interval_seconds: float = NETWORK_RECOVERY_INTERVAL_SECONDS,
+    ):
+        if timeout_seconds <= 0:
+            raise ValueError("network recovery timeout must be greater than zero")
+        if interval_seconds <= 0:
+            raise ValueError("network recovery interval must be greater than zero")
+
+        evidence = self._new_evidence("network-recovery")
+        evidence["timeout_seconds"] = timeout_seconds
+        evidence["interval_seconds"] = interval_seconds
+        evidence["topology"] = None
+        evidence["mqtt_probes"] = []
+        evidence["evidence_classification"] = "not_verified"
+        try:
+            self._require_interactive()
+            if not self.broker_endpoint:
+                raise ValueError("broker endpoint is required")
+            self._confirm_yes(
+                evidence,
+                "topology_confirmed",
+                "Confirm the Mac and ESP32 are on home Wi-Fi and the printer is directly "
+                "cabled to W5500 [yes/no]: ",
+                "operator did not confirm required network topology",
+            )
+            with self._client_context() as client:
+                w5500_address = self._run_smoke_commands(client, evidence)
+                wifi = self._request(client, evidence, "wifi.status", {})
+                self._require_connected("wifi.status", wifi)
+                mqtt = self._request(client, evidence, "mqtt.status", {})
+                self._require_connected("mqtt.status", mqtt)
+                baseline = self._run_mqtt_probe(evidence, "baseline", expect_success=True)
+                if baseline is None:
+                    raise RuntimeError("baseline MQTT probe returned no result")
+                link = self._request(client, evidence, "ethernet.link_status", {})
+                if not isinstance(link, dict) or not link.get("link_up"):
+                    raise RuntimeError(
+                        "ethernet.link_status expected link_up=true after baseline MQTT probe, "
+                        f"got {link!r}"
+                    )
+                probe = self._request(client, evidence, "printer.probe", {})
+                self._validate_smoke_step("printer.probe", probe, [])
+
+                wifi_address = wifi.get("address")
+                if not isinstance(wifi_address, (list, tuple)) or not wifi_address:
+                    raise RuntimeError(f"wifi.status expected connected address, got {wifi!r}")
+                evidence["topology"] = {
+                    "broker_endpoint": self.broker_endpoint,
+                    "device_id": baseline["device_id"],
+                    "wifi_address": wifi_address[0],
+                    "w5500_address": w5500_address[0],
+                    "printer_endpoint": evidence["probe"].get("printer_endpoint"),
+                }
+
+                self._confirm_yes(
+                    evidence,
+                    "wifi_disconnected",
+                    "Pause only the ESP32 Wi-Fi client, then answer yes [yes/no]: ",
+                    "operator did not confirm ESP32 Wi-Fi disconnection",
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "wifi.status",
+                    "connected",
+                    False,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "mqtt.status",
+                    "connected",
+                    False,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                link = self._request(client, evidence, "ethernet.link_status", {})
+                if not isinstance(link, dict) or not link.get("link_up"):
+                    raise RuntimeError(
+                        "ethernet.link_status expected link_up=true during Wi-Fi outage, "
+                        f"got {link!r}"
+                    )
+                probe = self._request(client, evidence, "printer.probe", {})
+                self._validate_smoke_step("printer.probe", probe, [])
+                self._run_mqtt_probe(evidence, "wifi_down", expect_success=False)
+
+                self._confirm_yes(
+                    evidence,
+                    "wifi_restored",
+                    "Restore the ESP32 Wi-Fi client, then answer yes [yes/no]: ",
+                    "operator did not confirm ESP32 Wi-Fi restoration",
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "wifi.status",
+                    "connected",
+                    True,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "mqtt.status",
+                    "connected",
+                    True,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                self._run_mqtt_probe(evidence, "wifi_recovered", expect_success=True)
+                link = self._request(client, evidence, "ethernet.link_status", {})
+                if not isinstance(link, dict) or not link.get("link_up"):
+                    raise RuntimeError(
+                        "ethernet.link_status expected link_up=true after Wi-Fi recovery, "
+                        f"got {link!r}"
+                    )
+                probe = self._request(client, evidence, "printer.probe", {})
+                self._validate_smoke_step("printer.probe", probe, [])
+
+                self._confirm_yes(
+                    evidence,
+                    "ethernet_disconnected",
+                    "Unplug the direct W5500 Ethernet cable, then answer yes [yes/no]: ",
+                    "operator did not confirm W5500 disconnection",
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "ethernet.link_status",
+                    "link_up",
+                    False,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                self._expect_request_failure(client, evidence, "printer.probe")
+                wifi = self._request(client, evidence, "wifi.status", {})
+                self._require_connected("wifi.status", wifi)
+                mqtt = self._request(client, evidence, "mqtt.status", {})
+                self._require_connected("mqtt.status", mqtt)
+                self._run_mqtt_probe(evidence, "ethernet_down", expect_success=True)
+
+                self._confirm_yes(
+                    evidence,
+                    "ethernet_restored",
+                    "Reconnect the direct W5500 Ethernet cable, then answer yes [yes/no]: ",
+                    "operator did not confirm W5500 restoration",
+                )
+                self._wait_for_flag(
+                    client,
+                    evidence,
+                    "ethernet.link_status",
+                    "link_up",
+                    True,
+                    timeout_seconds,
+                    interval_seconds,
+                )
+                probe = self._request(client, evidence, "printer.probe", {})
+                self._validate_smoke_step("printer.probe", probe, [])
+                wifi = self._request(client, evidence, "wifi.status", {})
+                self._require_connected("wifi.status", wifi)
+                mqtt = self._request(client, evidence, "mqtt.status", {})
+                self._require_connected("mqtt.status", mqtt)
+                self._run_mqtt_probe(evidence, "recovered", expect_success=True)
+
+                evidence["evidence_classification"] = "physically_verified"
+                evidence["outcome"] = "passed"
+                return evidence
+        except AcceptanceAborted as exc:
+            evidence["outcome"] = "aborted"
+            evidence["abort_reason"] = str(exc)
+            raise
+        except KeyboardInterrupt:
+            evidence["outcome"] = "aborted"
+            evidence["error"] = "operator interrupted network recovery"
+            raise
         except Exception as exc:
             evidence["outcome"] = "failed"
             evidence["error"] = str(exc)
@@ -454,6 +764,35 @@ def run_smoke(
     ).smoke()
 
 
+def run_network_recovery(
+    port,
+    client=None,
+    mqtt_probe=None,
+    broker_endpoint=None,
+    prompt=None,
+    is_interactive=None,
+    clock=None,
+    evidence_dir=None,
+    test_id=None,
+    timeout_seconds: float = NETWORK_RECOVERY_TIMEOUT_SECONDS,
+    interval_seconds: float = NETWORK_RECOVERY_INTERVAL_SECONDS,
+):
+    return HardwareInTheLoop(
+        port=port,
+        client=client,
+        mqtt_probe=mqtt_probe,
+        broker_endpoint=broker_endpoint,
+        prompt=prompt,
+        is_interactive=is_interactive,
+        clock=clock,
+        evidence_dir=evidence_dir,
+        test_id=test_id,
+    ).network_recovery(
+        timeout_seconds=timeout_seconds,
+        interval_seconds=interval_seconds,
+    )
+
+
 def run_soak(
     port,
     duration_seconds: float = SOAK_DURATION_SECONDS,
@@ -516,17 +855,24 @@ def require_cli_port(port):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or argv[0] not in {"smoke", "acceptance", "soak"}:
+    modes = {"smoke", "network-recovery", "acceptance", "soak"}
+    if not argv or argv[0] not in modes:
         print(
-            "usage: uv run python tools/hardware/hil.py smoke|acceptance|soak --port PORT "
-            "[--duration-seconds N --interval-seconds N]",
+            "usage: uv run python tools/hardware/hil.py "
+            "smoke|network-recovery|acceptance|soak --port PORT "
+            "[network-recovery: --timeout-seconds N --interval-seconds N] "
+            "[soak: --duration-seconds N --interval-seconds N]",
             file=sys.stderr,
         )
         return 2
     mode = argv[0]
     port = None
-    duration_seconds = SOAK_DURATION_SECONDS
-    interval_seconds = SOAK_INTERVAL_SECONDS
+    duration_seconds = (
+        NETWORK_RECOVERY_TIMEOUT_SECONDS if mode == "network-recovery" else SOAK_DURATION_SECONDS
+    )
+    interval_seconds = (
+        NETWORK_RECOVERY_INTERVAL_SECONDS if mode == "network-recovery" else SOAK_INTERVAL_SECONDS
+    )
     args = argv[1:]
     i = 0
     while i < len(args):
@@ -542,11 +888,23 @@ def main(argv=None):
                 return 2
             i += 2
             continue
-        if mode == "soak" and args[i] == "--interval-seconds" and i + 1 < len(args):
+        if (
+            mode in {"network-recovery", "soak"}
+            and args[i] == "--interval-seconds"
+            and i + 1 < len(args)
+        ):
             try:
                 interval_seconds = float(args[i + 1])
             except ValueError:
                 print(f"invalid interval: {args[i + 1]!r}", file=sys.stderr)
+                return 2
+            i += 2
+            continue
+        if mode == "network-recovery" and args[i] == "--timeout-seconds" and i + 1 < len(args):
+            try:
+                duration_seconds = float(args[i + 1])
+            except ValueError:
+                print(f"invalid timeout: {args[i + 1]!r}", file=sys.stderr)
                 return 2
             i += 2
             continue
@@ -557,6 +915,14 @@ def main(argv=None):
         port = require_cli_port(port)
         if mode == "smoke":
             evidence = run_smoke(port=port, evidence_dir=evidence_dir)
+        elif mode == "network-recovery":
+            evidence = run_network_recovery(
+                port=port,
+                broker_endpoint=_configured_broker_endpoint(),
+                evidence_dir=evidence_dir,
+                timeout_seconds=duration_seconds,
+                interval_seconds=interval_seconds,
+            )
         elif mode == "soak":
             evidence = run_soak(
                 port=port,

@@ -4,6 +4,8 @@ import pytest
 
 from hardware.hil import (
     CUT_AUTHORIZATION_TOKEN,
+    NETWORK_RECOVERY_INTERVAL_SECONDS,
+    NETWORK_RECOVERY_TIMEOUT_SECONDS,
     OUTPUT_COMMANDS,
     SMOKE_COMMANDS,
     SOAK_COMMANDS,
@@ -13,6 +15,7 @@ from hardware.hil import (
     main,
     require_cli_port,
     run_acceptance,
+    run_network_recovery,
     run_smoke,
     run_soak,
 )
@@ -118,6 +121,293 @@ def _answers(*values):
         return queue.pop(0)
 
     return prompt
+
+
+def test_network_recovery_requires_topology_confirmation_before_rpc(tmp_path):
+    client = RecordingClient()
+
+    with pytest.raises(AcceptanceAborted, match="topology"):
+        run_network_recovery(
+            port="/dev/cu.test",
+            client=client,
+            mqtt_probe=lambda: None,
+            broker_endpoint="192.168.1.10:1883",
+            prompt=_answers("no"),
+            is_interactive=True,
+            evidence_dir=tmp_path,
+            test_id="hil-network-topology-rejected",
+        )
+
+    assert client.calls == []
+    evidence = json.loads((tmp_path / "hil-network-topology-rejected.json").read_text())
+    assert evidence["outcome"] == "aborted"
+    assert evidence["operator"]["topology_confirmed"] is False
+    assert evidence["evidence_classification"] == "not_verified"
+
+
+def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(tmp_path):
+    state = {"phase": "baseline", "mqtt_probes": 0}
+    phases = iter(("baseline", "wifi_down", "wifi_up", "ethernet_down", "recovered"))
+
+    def prompt(_message):
+        state["phase"] = next(phases)
+        return "yes"
+
+    def wifi_status(_params):
+        connected = state["phase"] != "wifi_down"
+        return {
+            "enabled": True,
+            "connected": connected,
+            "address": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"]
+            if connected
+            else None,
+            "last_error": None if connected else "WIFI_DISCONNECTED",
+        }
+
+    def mqtt_status(_params):
+        connected = state["phase"] != "wifi_down"
+        return {
+            "enabled": True,
+            "connected": connected,
+            "last_error": None if connected else "MQTT_POLL_FAILED",
+        }
+
+    def ethernet_link_status(_params):
+        connected = state["phase"] != "ethernet_down"
+        return {"link_up": connected, "raw_status": 5 if connected else 1}
+
+    def printer_probe(_params):
+        if state["phase"] == "ethernet_down":
+            raise RuntimeError("ETHERNET_LINK_DOWN")
+        return {"reachable": True, "printer_endpoint": "192.168.4.87:9100"}
+
+    def mqtt_probe():
+        state["mqtt_probes"] += 1
+        if state["phase"] == "wifi_down":
+            raise RuntimeError("MQTT probe timed out")
+        return {
+            "schema_version": 1,
+            "kind": "mqtt_probe_status",
+            "probe_id": f"probe-{state['mqtt_probes']}",
+            "device_id": "paperbridge-dev-001",
+            "status": "ok",
+        }
+
+    client = RecordingClient(
+        responses={
+            "wifi.status": wifi_status,
+            "mqtt.status": mqtt_status,
+            "ethernet.link_status": ethernet_link_status,
+            "printer.probe": printer_probe,
+        }
+    )
+    evidence = run_network_recovery(
+        port="/dev/cu.usbmodem101",
+        client=client,
+        mqtt_probe=mqtt_probe,
+        broker_endpoint="192.168.1.10:1883",
+        prompt=prompt,
+        is_interactive=True,
+        clock=ManualClock(start=1_700_000_000.0),
+        evidence_dir=tmp_path,
+        test_id="hil-network-recovery-test",
+    )
+
+    assert evidence["outcome"] == "passed"
+    assert evidence["evidence_classification"] == "physically_verified"
+    assert evidence["topology"] == {
+        "broker_endpoint": "192.168.1.10:1883",
+        "device_id": "paperbridge-dev-001",
+        "wifi_address": "192.168.1.110",
+        "w5500_address": "192.168.1.50",
+        "printer_endpoint": "192.168.4.87:9100",
+    }
+    assert [(probe["phase"], probe["outcome"]) for probe in evidence["mqtt_probes"]] == [
+        ("baseline", "succeeded"),
+        ("wifi_down", "failed_as_expected"),
+        ("wifi_recovered", "succeeded"),
+        ("ethernet_down", "succeeded"),
+        ("recovered", "succeeded"),
+    ]
+    assert evidence["operator"] == {
+        "topology_confirmed": True,
+        "topology_confirmed_raw": "yes",
+        "wifi_disconnected": True,
+        "wifi_disconnected_raw": "yes",
+        "wifi_restored": True,
+        "wifi_restored_raw": "yes",
+        "ethernet_disconnected": True,
+        "ethernet_disconnected_raw": "yes",
+        "ethernet_restored": True,
+        "ethernet_restored_raw": "yes",
+    }
+    assert {command for command, _params in client.calls}.isdisjoint(OUTPUT_COMMANDS)
+    assert [command for command, _params in client.calls].count("printer.probe") == 6
+    on_disk = json.loads((tmp_path / "hil-network-recovery-test.json").read_text())
+    assert on_disk["outcome"] == "passed"
+    assert on_disk["mqtt_probes"][-1]["result"]["probe_id"] == "probe-5"
+    assert any(
+        command["command"] == "printer.probe"
+        and command["ok"] is False
+        and command["error"] == "ETHERNET_LINK_DOWN"
+        for command in on_disk["commands"]
+    )
+
+
+def test_network_recovery_requires_observed_wifi_disconnect(tmp_path):
+    client = RecordingClient(
+        responses={
+            "wifi.status": {
+                "enabled": True,
+                "connected": True,
+                "address": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
+            },
+            "mqtt.status": {"enabled": True, "connected": True, "last_error": None},
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="wifi.status expected connected=false"):
+        run_network_recovery(
+            port="/dev/cu.test",
+            client=client,
+            mqtt_probe=lambda: {
+                "kind": "mqtt_probe_status",
+                "status": "ok",
+                "probe_id": "probe-baseline",
+                "device_id": "paperbridge-dev-001",
+            },
+            broker_endpoint="192.168.1.10:1883",
+            prompt=_answers("yes", "yes"),
+            is_interactive=True,
+            clock=ManualClock(),
+            evidence_dir=tmp_path,
+            test_id="hil-network-no-wifi-transition",
+            timeout_seconds=2,
+            interval_seconds=1,
+        )
+
+    evidence = json.loads((tmp_path / "hil-network-no-wifi-transition.json").read_text())
+    assert evidence["outcome"] == "failed"
+    assert evidence["operator"]["wifi_disconnected"] is True
+    assert {command for command, _params in client.calls}.isdisjoint(OUTPUT_COMMANDS)
+
+
+def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
+    state = {"wifi_down": False, "probe_number": 0, "prompts": 0}
+
+    def prompt(_message):
+        state["prompts"] += 1
+        if state["prompts"] == 2:
+            state["wifi_down"] = True
+        return "yes"
+
+    def connection_status(_params):
+        return {
+            "enabled": True,
+            "connected": not state["wifi_down"],
+            "address": None
+            if state["wifi_down"]
+            else ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
+        }
+
+    def mqtt_probe():
+        state["probe_number"] += 1
+        return {
+            "kind": "mqtt_probe_status",
+            "status": "ok",
+            "probe_id": f"probe-{state['probe_number']}",
+            "device_id": "paperbridge-dev-001",
+        }
+
+    client = RecordingClient(
+        responses={
+            "wifi.status": connection_status,
+            "mqtt.status": connection_status,
+        }
+    )
+    with pytest.raises(RuntimeError, match="unexpectedly succeeded during wifi_down"):
+        run_network_recovery(
+            port="/dev/cu.test",
+            client=client,
+            mqtt_probe=mqtt_probe,
+            broker_endpoint="192.168.1.10:1883",
+            prompt=prompt,
+            is_interactive=True,
+            evidence_dir=tmp_path,
+            test_id="hil-network-mqtt-still-up",
+        )
+
+    evidence = json.loads((tmp_path / "hil-network-mqtt-still-up.json").read_text())
+    assert evidence["outcome"] == "failed"
+    assert evidence["mqtt_probes"][-1]["outcome"] == "unexpectedly_succeeded"
+
+
+def test_network_recovery_rejects_reused_successful_probe_id(tmp_path):
+    state = {"phase": "baseline"}
+    phases = iter(("baseline", "wifi_down", "wifi_up"))
+
+    def prompt(_message):
+        state["phase"] = next(phases)
+        return "yes"
+
+    def connection_status(_params):
+        connected = state["phase"] != "wifi_down"
+        return {
+            "enabled": True,
+            "connected": connected,
+            "address": ["192.168.1.110"] if connected else None,
+        }
+
+    def mqtt_probe():
+        if state["phase"] == "wifi_down":
+            raise RuntimeError("MQTT probe timed out")
+        return {
+            "kind": "mqtt_probe_status",
+            "status": "ok",
+            "probe_id": "reused-probe-id",
+            "device_id": "paperbridge-dev-001",
+        }
+
+    client = RecordingClient(
+        responses={
+            "wifi.status": connection_status,
+            "mqtt.status": connection_status,
+        }
+    )
+    with pytest.raises(RuntimeError, match="reused probe_id"):
+        run_network_recovery(
+            port="/dev/cu.test",
+            client=client,
+            mqtt_probe=mqtt_probe,
+            broker_endpoint="192.168.1.10:1883",
+            prompt=prompt,
+            is_interactive=True,
+            evidence_dir=tmp_path,
+            test_id="hil-network-reused-probe",
+        )
+
+    evidence = json.loads((tmp_path / "hil-network-reused-probe.json").read_text())
+    assert evidence["outcome"] == "failed"
+    assert evidence["mqtt_probes"][-1]["outcome"] == "invalid_result"
+
+
+def test_network_recovery_refuses_noninteractive_execution(tmp_path):
+    client = RecordingClient()
+    with pytest.raises(NonInteractiveError):
+        run_network_recovery(
+            port="/dev/cu.test",
+            client=client,
+            mqtt_probe=lambda: None,
+            broker_endpoint="192.168.1.10:1883",
+            is_interactive=False,
+            evidence_dir=tmp_path,
+            test_id="hil-network-noninteractive",
+        )
+
+    assert client.calls == []
+    evidence = json.loads((tmp_path / "hil-network-noninteractive.json").read_text())
+    assert evidence["outcome"] == "failed"
+    assert evidence["mqtt_probes"] == []
 
 
 def test_smoke_command_order_and_repeated_static_configuration():
@@ -587,5 +877,31 @@ def test_main_rejects_nonexistent_port(monkeypatch, capsys, tmp_path):
     assert "does not exist" in err
 
 
-def test_main_usage_without_mode():
+def test_main_network_recovery_uses_bounded_defaults(monkeypatch, capsys, tmp_path):
+    port = tmp_path / "cu.usbmodem101"
+    port.write_text("")
+    received = {}
+
+    def fake_run_network_recovery(**kwargs):
+        received.update(kwargs)
+        return {"test_id": "hil-network-recovery-cli"}
+
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_HOST", "192.168.1.10")
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_PORT", "1883")
+    monkeypatch.setattr("hardware.hil.run_network_recovery", fake_run_network_recovery)
+
+    assert main(["network-recovery", "--port", str(port)]) == 0
+    assert received["broker_endpoint"] == "192.168.1.10:1883"
+    assert received["timeout_seconds"] == NETWORK_RECOVERY_TIMEOUT_SECONDS
+    assert received["interval_seconds"] == NETWORK_RECOVERY_INTERVAL_SECONDS
+    assert json.loads(capsys.readouterr().out) == {
+        "ok": True,
+        "test_id": "hil-network-recovery-cli",
+    }
+
+
+def test_main_usage_without_mode(capsys):
     assert main([]) == 2
+    usage = capsys.readouterr().err
+    assert "--timeout-seconds" in usage
+    assert "--duration-seconds" in usage

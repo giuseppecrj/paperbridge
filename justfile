@@ -4,6 +4,8 @@ PORT := env_var_or_default("PORT", env_var_or_default("PAPERBRIDGE_PORT", ""))
 FIRMWARE := env_var_or_default("FIRMWARE", "")
 CONFIRM := env_var_or_default("CONFIRM", "")
 TEXT := env_var_or_default("TEXT", "Hello from my Mac")
+NETWORK_RECOVERY_TIMEOUT_SECONDS := env_var_or_default("NETWORK_RECOVERY_TIMEOUT_SECONDS", "60")
+NETWORK_RECOVERY_INTERVAL_SECONDS := env_var_or_default("NETWORK_RECOVERY_INTERVAL_SECONDS", "1")
 SOAK_DURATION_SECONDS := env_var_or_default("SOAK_DURATION_SECONDS", "259200")
 SOAK_INTERVAL_SECONDS := env_var_or_default("SOAK_INTERVAL_SECONDS", "60")
 
@@ -32,6 +34,14 @@ test:
 test-hardware-smoke:
     test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
     uv run python tools/hardware/hil.py smoke --port "{{PORT}}"
+
+# Opt-in no-output dual-interface recovery HIL; MQTT secret stays Fnox-managed.
+test-hardware-network-recovery:
+    test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- uv run python tools/hardware/hil.py network-recovery \
+        --port "{{PORT}}" \
+        --timeout-seconds "{{NETWORK_RECOVERY_TIMEOUT_SECONDS}}" \
+        --interval-seconds "{{NETWORK_RECOVERY_INTERVAL_SECONDS}}"
 
 # Opt-in HIL acceptance: interactive operator confirmations; cutter needs exact token CUT.
 test-hardware-acceptance:

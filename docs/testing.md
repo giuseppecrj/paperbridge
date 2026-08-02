@@ -58,6 +58,41 @@ Expected: `system.ping` ok, `system.info` returned, Ethernet initialized, static
 configuration applied twice, bounded wait for `link_up=true`, and
 `printer.probe` reachable. Does not print, feed, cut, reboot, erase, or flash.
 
+### Dual-interface network recovery (no paper output)
+
+```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-network-recovery
+```
+
+The interactive harness first records the operator's confirmation that the Mac
+and ESP32 are on home Wi-Fi and the printer is directly cabled to W5500. It then
+records a stable `hil-network-recovery-*` test ID and runs a successful
+correlated MQTT probe with direct printer probes immediately before and after
+that exchange. Next it asks the operator to pause only the ESP32 Wi-Fi client,
+requires Wi-Fi/MQTT to become observably unavailable while the direct W5500
+printer probe still succeeds, and requires Wi-Fi/MQTT recovery. Next it asks the
+operator to unplug the direct W5500 cable, requires link and printer-probe
+failure while a new correlated MQTT probe still succeeds, and requires both
+interfaces to recover after reconnection.
+
+Operator confirmation never counts as proof by itself: every transition must be
+observed within the bounded timeout, and every successful MQTT check uses a new
+correlation ID. Evidence records the non-secret broker, Wi-Fi, W5500, and printer
+endpoints, commands, expected failures, and recovery results. A passing physical
+run is classified as `physically_verified`; failed and aborted evidence remains
+`not_verified`. Fnox supplies the MQTT password to the child process without
+writing it to evidence. The flow is interactive and never prints, feeds, cuts,
+reboots, erases, or flashes.
+
+Defaults are a 60-second transition timeout and one-second polling interval. A
+hardware-specific run may override them without changing the code:
+
+```sh
+PORT=/dev/cu.usbmodem101 \
+  NETWORK_RECOVERY_TIMEOUT_SECONDS=90 \
+  just test-hardware-network-recovery
+```
+
 ### Acceptance (operator-confirmed paper path)
 
 ```sh

@@ -33,6 +33,16 @@ PORT=/dev/cu.usbmodem101 just test-hardware-smoke
 Expected: ping/info/init/static×2/bounded link wait/probe only; no paper motion.
 
 ```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-network-recovery
+```
+
+Expected: an interactive no-output flow that observes Wi-Fi/MQTT down and back
+while W5500 remains usable, then observes W5500/printer down and back while
+Wi-Fi/MQTT remains usable. The harness, not the operator confirmation, decides
+whether each bounded transition passed. Fnox supplies the MQTT password, and one
+ignored evidence file records the complete run.
+
+```sh
 PORT=/dev/cu.usbmodem101 just test-hardware-acceptance
 ```
 
