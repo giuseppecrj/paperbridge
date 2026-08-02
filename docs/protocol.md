@@ -25,9 +25,10 @@ and fail rather than being ignored.
 
 The renderer uses Epson-compatible `ESC a`, `ESC E`, `ESC -`, `GS !`, and `GS ( k`
 sequences. It resets neutral style after styled text and QR blocks, and bounds
-each append against the 32 KiB rendered-output limit. These style and QR commands
-are host-/simulator-tested only; appearance and QR readability on the purchased
-RP326 remain hardware acceptance work.
+each append against the 32 KiB rendered-output limit. A `module_size: 5` QR and
+following partial cut were physically observed on the purchased RP326 on
+2026-08-02. Other style/size appearance and QR scan/decode readability remain
+hardware acceptance work.
 
 ## USB ingress
 

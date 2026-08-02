@@ -63,10 +63,10 @@ light density, and default code page CP437.
 
 ASCII text, line feed, and explicit partial cut were physically observed. The
 working cutter bytes are `1d 56 01`; automatic or unconfirmed cutting remains
-forbidden. The documented style and Epson-compatible QR sequences are
-implemented and host-/simulator-tested, but alignment, emphasis, sizing,
-underline, and QR appearance/readability have not been physically verified on
-this purchased RP326.
+forbidden. An Epson-compatible QR rendered at `module_size: 5` and the following
+partial cut were physically observed on this purchased RP326 on 2026-08-02.
+Alignment, emphasis, underline, other QR sizes, and QR scan/decode readability
+have not been separately verified.
 
 ## Purchased-unit observations
 
@@ -91,6 +91,7 @@ this purchased RP326.
 | Semantic v1 USB job | `job-hello-001` delivered 28 bytes; fixture receipt physically observed | 2026-08-02 |
 | REST/MQTT semantic v1 job | `job-hw-acceptance-20260802T203016Z` returned HTTP 200 and delivered 34 bytes; expected receipt physically observed | 2026-08-02 |
 | Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
+| QR size and cut | USB job `job-qr-size5-cut-manual-20260802` delivered 93 bytes; operator confirmed its `module_size: 5` QR and following partial cut | 2026-08-02 |
 | Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
 | Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |
 | Ethernet cable disconnected | link-down failure recorded; `hil-smoke-507b76745250` | 2026-08-02 |

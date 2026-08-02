@@ -34,9 +34,10 @@ correlated results.
 
 No automated test claims hardware success. This includes the local REST and MCP
 semantic-job simulator captures: `delivered_to_printer` is not a physical paper
-observation. The rich v1 style and QR captures are host/simulator evidence only;
-RP326 appearance and QR readability remain hardware acceptance work.
-Manual bring-up physically verified USB RPC, direct Ethernet, printer
+observation. The rich v1 style and QR captures are host/simulator evidence only.
+A separate USB run physically observed a `module_size: 5` QR and following
+partial cut on the RP326; QR scan/decode readability remains hardware acceptance
+work. Manual bring-up physically verified USB RPC, direct Ethernet, printer
 reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,
 printer-only and ESP32-only recovery, cover-open buffering, and paper-out
