@@ -39,7 +39,10 @@ printer-only and ESP32-only recovery, cover-open buffering, and paper-out
 buffering passed on 2026-08-02. Full no-output dual-interface recovery passed as
 `hil-network-recovery-89867cf401c3`: Wi-Fi/MQTT failure and recovery preserved
 direct printer TCP reachability, and direct W5500 failure and recovery preserved
-Wi-Fi/MQTT. Evidence IDs and observations are recorded in `hardware.md`; the
+Wi-Fi/MQTT. The private REST/MQTT path was physically verified on 2026-08-02:
+`job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
+`delivered_to_printer` after 34 bytes, and the operator observed the expected
+receipt. Evidence IDs and observations are recorded in `hardware.md`; the
 72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or

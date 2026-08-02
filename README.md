@@ -11,9 +11,10 @@ ESP32-S3-ETH -- direct W5500 Ethernet / TCP ESC/POS ----------> Rongta RP326
 
 The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. The private single-device REST/MQTT v1 path is implemented and
-simulator-tested; no website, MCP, public backend, image printing, OTA, or
-production provisioning is implemented.
+paper emerged. The private single-device REST/MQTT v1 path is implemented,
+simulator-tested, and physically verified on the purchased device/printer; no
+website, MCP, public backend, image printing, OTA, or production provisioning is
+implemented.
 
 ## Status
 
@@ -40,10 +41,11 @@ production provisioning is implemented.
   and physically verified on 2026-08-02. Guarded Wi-Fi/MQTT recovery preserved
   direct printer TCP reachability, and direct W5500 cable recovery preserved
   Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`.
-- `POST /api/jobs` now validates and delivers bounded `print-job.v1` through
-  authenticated local MQTT to the same firmware coordinator. The full path is
-  host-/simulator-tested with real Mosquitto and a real TCP socket; it has not
-  been physically printed through REST/MQTT.
+- `POST /api/jobs` validates and delivers bounded `print-job.v1` through
+  authenticated local MQTT to the same firmware coordinator. On 2026-08-02,
+  `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
+  `delivered_to_printer` after 34 bytes, and an operator observed the expected
+  receipt on the purchased printer.
 
 ## Mac setup
 

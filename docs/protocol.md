@@ -57,7 +57,10 @@ The HTTP service maps validation/device rejection, body limit, broker
 unavailability, printer failure/partial write, and timeout distinctly. A timeout
 is `unknown`: the service removes only its pending waiter and never republishes
 the job. The complete REST/MQTT path is host-/simulator-tested with real local
-Mosquitto and the real TCP printer simulator; it is not physical paper evidence.
+Mosquitto and the real TCP printer simulator. It was also physically verified
+on 2026-08-02: `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
+`delivered_to_printer` after 34 bytes, and an operator observed its expected
+receipt. The result alone still does not prove paper output.
 
 ## MQTT tracer protocol
 

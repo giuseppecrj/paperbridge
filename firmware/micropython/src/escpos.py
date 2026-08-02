@@ -15,12 +15,15 @@ class RenderError(ValueError):
 def encode_text(text):
     if not isinstance(text, str) or not text:
         raise RenderError("text must be a non-empty string")
-    if any(ord(character) < 32 or ord(character) == 127 for character in text):
-        raise RenderError("text contains control characters")
-    try:
-        return text.encode("ascii")
-    except UnicodeError:
-        raise RenderError("text must contain printable ASCII only") from None
+    encoded = bytearray()
+    for character in text:
+        code = ord(character)
+        if code < 32 or code == 127:
+            raise RenderError("text contains control characters")
+        if code > 126:
+            raise RenderError("text must contain printable ASCII only")
+        encoded.append(code)
+    return bytes(encoded)
 
 
 class EscPosRenderer:

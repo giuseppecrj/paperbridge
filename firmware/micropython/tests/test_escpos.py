@@ -23,6 +23,14 @@ def test_text_fixture_bytes_are_exact():
     assert b"\x1dV" not in expected
 
 
+def test_text_encoding_does_not_depend_on_micropython_ascii_codec_lookup():
+    class DeviceString(str):
+        def encode(self, *_args, **_kwargs):
+            raise RuntimeError("maximum recursion depth exceeded")
+
+    assert encode_text(DeviceString("Hello")) == b"Hello"
+
+
 @pytest.mark.parametrize("text", ["café", "hello\x1b@", "line\nbreak", ""])
 def test_text_rejects_unicode_and_control_bytes(text):
     with pytest.raises(RenderError):

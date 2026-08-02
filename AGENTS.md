@@ -18,13 +18,12 @@ ESP32-S3-ETH -- direct W5500 / TCP ESC/POS -----------------> Rongta RP326
 The Mac does not need a direct network route to the printer. A successful socket
 write is `delivered_to_printer`; it is not proof that paper emerged.
 
-The complete USB print path, controlled power-cycle acceptance, isolated
-Ethernet and device recovery, observable cover-open/paper-out behavior, and a
-no-output Wi-Fi/MQTT tracer have been demonstrated on the purchased hardware.
-The private REST/MQTT v1 job path is host-/simulator-tested only. Treat these as
-bring-up evidence, not a production-reliability claim: the 72-hour soak remains
-a separate gate. Never infer hardware success from host tests or stale
-documentation.
+The complete USB and private REST/MQTT v1 print paths, controlled power-cycle
+acceptance, isolated Ethernet and device recovery, observable
+cover-open/paper-out behavior, and a no-output Wi-Fi/MQTT tracer have been
+demonstrated on the purchased hardware. Treat these as bring-up evidence, not a
+production-reliability claim: the 72-hour soak remains a separate gate. Never
+infer hardware success from host tests or stale documentation.
 
 Not implemented: MCP, web app, public API/authentication, MQTT/TLS, durable job
 delivery, OTA, production provisioning, image printing, or an ESP-IDF firmware
