@@ -1,5 +1,5 @@
 [tools]
-python = "3.13"
+python = "3.13.14"
 uv = "0.11.8"
 just = "1.56.0"
 

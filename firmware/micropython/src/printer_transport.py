@@ -23,9 +23,9 @@ def _map_socket_error(exc, phase):
 
 
 class PrinterTransport:
-    def __init__(self, config, socket_module=socket):
+    def __init__(self, config, socket_module=None):
         self.config = config
-        self.socket_module = socket_module
+        self.socket_module = socket_module or socket
 
     def endpoint(self):
         printer = self.config["printer"]

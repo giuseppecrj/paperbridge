@@ -56,3 +56,15 @@ def test_duplicate_request_id_replays_without_redispatching():
     second = server.handle_line(request())
     assert first == second
     assert calls == ["system.ping"]
+
+
+def test_unexpected_dispatch_exception_maps_to_internal_error():
+    output = io.StringIO()
+
+    def dispatch(_command, _params):
+        raise RuntimeError("boom")
+
+    response = SerialRpcServer(io.StringIO(), output, dispatch).handle_line(request())
+    assert response["ok"] is False
+    assert response["error"]["code"] == "INTERNAL_ERROR"
+    assert response["error"]["message"] == "Internal device error"

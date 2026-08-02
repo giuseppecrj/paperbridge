@@ -1,2 +1,0 @@
-[console_scripts]
-paperbridge = paperbridge_cli.main:main

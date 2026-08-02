@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "job_id": "invalid-style",
+  "device_id": "paperbridge-dev-001",
+  "created_at": "2026-08-01T00:00:00Z",
+  "content": {
+    "kind": "receipt",
+    "blocks": [
+      {
+        "type": "text",
+        "text": "Styled",
+        "align": "center",
+        "bold": true,
+        "underline": false,
+        "width_multiplier": 2,
+        "height_multiplier": 1
+      }
+    ]
+  }
+}

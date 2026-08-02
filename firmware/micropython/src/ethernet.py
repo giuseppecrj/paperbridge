@@ -3,7 +3,10 @@ class EthernetError(Exception):
 
 
 class W5500LAN:
-    """MicroPython 1.28 adapter; purchased board wiring remains physically unverified."""
+    """MicroPython 1.28 W5500 LAN adapter.
+
+    SPI1/GPIO wiring physically verified on the purchased board.
+    """
 
     def __init__(self, config):
         self.config = config
@@ -31,13 +34,18 @@ class W5500LAN:
             raise EthernetError(f"W5500 initialization failed: {exc}") from exc
 
     def configure_static(self):
-        if self.lan is None:
+        if self.lan is None or self.network is None:
             raise EthernetError("Ethernet is not initialized")
+        network = self.network
         settings = self.config["ethernet"]
-        gateway = settings.get("gateway") or "0.0.0.0"
-        dns = settings.get("dns") or "0.0.0.0"
-        # Version seam: MicroPython 1.28 retains the four-field ifconfig API.
-        self.lan.ifconfig((settings["address"], settings["netmask"], gateway, dns))
+        desired = (settings["address"], settings["netmask"])
+        if tuple(self.lan.ipconfig("addr4")) != desired:
+            self.lan.ipconfig(dhcp4=False)
+            self.lan.ipconfig(addr4=desired)
+        if settings.get("gateway"):
+            self.lan.ipconfig(gw4=settings["gateway"])
+        if settings.get("dns"):
+            network.ipconfig(dns=settings["dns"])
         return self.status()
 
     def status(self):
@@ -51,8 +59,16 @@ class W5500LAN:
         if raw == disconnected:
             link_up = False
         try:
-            address = self.lan.ifconfig()
-        except OSError:
+            addr4 = self.lan.ipconfig("addr4")
+            gateway = self.lan.ipconfig("gw4") or "0.0.0.0"
+            try:
+                network = self.network
+                dns = (network.ipconfig("dns") if network is not None else None) or "0.0.0.0"
+            except (OSError, TypeError, ValueError, AttributeError):
+                dns = "0.0.0.0"
+            # RPC shape stays (ip, netmask, gateway, dns).
+            address = (addr4[0], addr4[1], gateway, dns)
+        except (OSError, TypeError, ValueError, IndexError, AttributeError):
             address = None
         return {
             "initialized": True,

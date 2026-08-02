@@ -33,6 +33,3 @@ class PrintCoordinator:
 
     def cut_test(self):
         return self._send(self.renderer.render_cut_test)
-
-    def execute(self, job):
-        return self._send(lambda: self.renderer.render(job))

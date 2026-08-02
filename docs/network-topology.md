@@ -8,8 +8,10 @@ Mac --USB--> ESP32 (192.168.1.50/24) --Ethernet--> printer (observed address)
 
 No gateway or DNS is needed. Preserve the printer's observed subnet for the
 first attempt and do not change its address before reading the self-test.
-Direct-link negotiation and Auto-MDI/MDIX are unverified. Check LEDs and the
-W5500 link status. If no link appears, try a crossover cable or Mode B.
+The purchased ESP32 and RP326 negotiated a direct link on 2026-08-01; W5500
+status reported `link_up: true`, and `192.168.1.87:9100` accepted a probe. Treat
+those as purchased-unit observations, not universal cable or printer defaults.
+If a replacement setup has no link, try a crossover cable or Mode B.
 
 ## Mode B: switch or router
 

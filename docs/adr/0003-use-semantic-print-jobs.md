@@ -12,8 +12,8 @@ senders to printer details.
 
 Use versioned, bounded JSON Schema with receipt blocks. Start with printable
 ASCII text, feed, rule, and an explicitly verified cut. Reject raw bytes, unknown
-versions/types, control injection, unsupported characters, excessive copies, and
-oversized output.
+versions/types, control injection, unsupported characters/options, and oversized
+output.
 
 ## Consequences
 

@@ -57,7 +57,10 @@ def _rpc(args):
         ("printer", "endpoint"): ("printer.endpoint", {}),
         ("printer", "probe"): ("printer.probe", {}),
         ("printer", "feed-test"): ("printer.feed_test", {}),
-        ("printer", "cut-test"): ("printer.cut_test", {"confirm": args.confirm}),
+        ("printer", "cut-test"): (
+            "printer.cut_test",
+            {"confirm": getattr(args, "confirm", False)},
+        ),
     }
     if (args.group, args.action) == ("printer", "print-test"):
         return "printer.print_test", {"text": args.text}
@@ -84,6 +87,8 @@ def main(argv=None):
             command, params = _rpc(args)
             emit(client.request(command, params), args.json_output)
             return 0
+    except KeyboardInterrupt:
+        return 130
     except (DeviceError, PortSelectionError, KeyError) as exc:
         code = getattr(exc, "code", "CLI_ERROR")
         if args.json_output:
@@ -91,8 +96,6 @@ def main(argv=None):
         else:
             print(f"{code}: {exc}", file=sys.stderr)
         return 1
-    except KeyboardInterrupt:
-        return 130
 
 
 if __name__ == "__main__":

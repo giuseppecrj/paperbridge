@@ -1,7 +1,8 @@
 import json
 import time
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import serial
 
@@ -44,7 +45,7 @@ class SerialClient:
                 time.sleep(0.25)
         raise DeviceError("SERIAL_OPEN_FAILED", f"Unable to open {self.port}: {last_error}")
 
-    def __exit__(self, _exc_type, _exc_value, _traceback):
+    def __exit__(self, exc_type, exc_value, traceback):
         if self.serial is not None:
             self.serial.close()
 

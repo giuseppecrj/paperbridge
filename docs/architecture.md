@@ -19,10 +19,12 @@ socket. It does not mean paper, head, or cutter success.
 ## Future contract boundary
 
 Future HTTPS/MQTT ingress must validate the same `print-job.v1` schema and reuse
-the renderer, queue, coordinator, status vocabulary, and ledger. A browser or
-mobile client will never connect directly to a device over the public internet.
-Future topics are `v1/devices/{device_id}/{jobs,commands,status,events,acks}`.
-They are contracts only; no cloud system is implemented.
+the renderer and delivery boundary. A persistent queue, job ledger, externally
+observable lifecycle, and job-submission RPC are not live and will be designed
+with durable `job_id` deduplication. A browser or mobile client will never
+connect directly to a device over the public internet. Future topics are
+`v1/devices/{device_id}/{jobs,commands,status,events,acks}`; they remain contract
+ideas only, with no cloud system implemented.
 
 ## Order and non-goals
 

@@ -1,2 +1,0 @@
-jsonschema<5,>=4.23
-pyserial<4,>=3.5

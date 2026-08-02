@@ -9,6 +9,8 @@
 6. Only then run `printer cut-test --confirm` and record the exact working bytes.
 
 Text rejects control bytes and non-ASCII rather than silently replacing them.
-The candidate partial-cut sequence is `1d 56 01`; it is not verified on the
-purchased RP326 and may require a printer profile change. There is no bitmap,
-Unicode, arbitrary code-page, or status-query support yet.
+On 2026-08-01 the purchased RP326 accepted text and feed at
+`192.168.1.87:9100`, and partial-cut bytes `1d 56 01` physically cut the paper.
+That sequence is specific to the verified RP326 behavior and always requires an
+explicit caller confirmation. There is no bitmap, Unicode, arbitrary code-page,
+or status-query support yet.

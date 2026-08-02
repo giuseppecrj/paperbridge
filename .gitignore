@@ -4,6 +4,7 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
+*.egg-info/
 *.bin
 !packages/protocol/fixtures/*.bin
 *.log

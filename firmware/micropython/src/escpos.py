@@ -1,7 +1,9 @@
 from .constants import MAX_PRINT_BYTES
 
 INITIALIZE = b"\x1b@"
-DEFAULT_PARTIAL_CUT = b"\x1dV\x01"  # Unverified on the purchased RP326; explicit test only.
+# Verified on the purchased Rongta RP326 (2026-08-01): GS V 1 partial cut.
+RP326_TEXT_COLUMNS = 48
+RP326_PARTIAL_CUT = b"\x1dV\x01"
 
 
 class RenderError(ValueError):
@@ -20,8 +22,14 @@ def encode_text(text):
 
 
 class EscPosRenderer:
-    def __init__(self, max_bytes=MAX_PRINT_BYTES, partial_cut=DEFAULT_PARTIAL_CUT):
+    def __init__(
+        self,
+        max_bytes=MAX_PRINT_BYTES,
+        text_columns=RP326_TEXT_COLUMNS,
+        partial_cut=RP326_PARTIAL_CUT,
+    ):
         self.max_bytes = max_bytes
+        self.text_columns = text_columns
         self.partial_cut = partial_cut
 
     def _bounded(self, payload):
@@ -40,7 +48,7 @@ class EscPosRenderer:
     def render_cut_test(self):
         return INITIALIZE + self.partial_cut
 
-    def render(self, job):
+    def render(self, job, allow_cut=False):
         blocks = job["content"]["blocks"]
         payload = bytearray(INITIALIZE)
         for block in blocks:
@@ -49,11 +57,21 @@ class EscPosRenderer:
                 payload.extend(encode_text(block["text"]))
                 payload.extend(b"\n")
             elif block_type == "feed":
-                payload.extend(b"\n" * block["lines"])
+                lines = block["lines"]
+                # bool is int subclass; reject so True never becomes one feed line
+                if isinstance(lines, bool) or not isinstance(lines, int):
+                    raise RenderError("feed.lines must be 1..10")
+                if not 1 <= lines <= 10:
+                    raise RenderError("feed.lines must be 1..10")
+                payload.extend(b"\n" * lines)
             elif block_type == "rule":
-                payload.extend(encode_text(block.get("character", "-")) * 48)
+                payload.extend(encode_text(block["character"]) * self.text_columns)
                 payload.extend(b"\n")
             elif block_type == "cut":
+                if not allow_cut:
+                    raise RenderError("cut requires explicit allow_cut")
+                if block.get("mode") != "partial":
+                    raise RenderError("cut.mode must be partial")
                 payload.extend(self.partial_cut)
             else:
                 raise RenderError("unsupported block type")

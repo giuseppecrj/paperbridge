@@ -12,35 +12,43 @@
 - **Schematic match on purchased unit:** pending physical inspection.
 - **Observed over USB on 2026-08-01:** ESP32-S3 QFN56 revision v0.2, embedded
   8 MB PSRAM, 16 MB flash, and USB-Serial/JTAG mode (`esptool flash-id`).
-- **Current firmware:** vendor application emitting `Wait ETH Connect...`; it is
-  not MicroPython and does not provide an `mpremote` raw REPL.
+- **Current firmware:** official MicroPython 1.28.0
+  `ESP32_GENERIC_S3-SPIRAM_OCT`, physically flashed and verified on 2026-08-01.
+- **Observed application path:** USB RPC ping/info, W5500 initialization, static
+  IPv4, direct link, and printer probe all succeeded on 2026-08-01.
 
 Official W5500 signal map for this product page:
 
 | Signal | GPIO |
 | --- | ---: |
-| SPI controller input (`machine.SPI` keyword `miso`) | 12 |
-| SPI controller output (`mosi`) | 11 |
+| SPI controller input | 12 |
+| SPI controller output | 11 |
 | clock | 13 |
 | chip select | 14 |
 | reset | 9 |
 | interrupt | 10 |
 | PHY address | normally 0 |
 
-This table is documented, not physically verified on the purchased revision.
-The firmware keeps all version-sensitive `network.LAN` construction in
-`firmware/micropython/src/ethernet.py`.
+The mapping is documented by Waveshare and was exercised successfully by the
+purchased board's W5500 link. The board silkscreen revision and schematic match
+still need recording. Firmware keeps version-sensitive `network.LAN`
+construction in `firmware/micropython/src/ethernet.py`.
 
 ## Printer
 
-Purchased Rongta RP326 interfaces: Ethernet, USB, and RS-232. Expected but not
-physically verified: 80 mm paper, about 72 mm/576-dot printable width, 203 dpi,
-up to 250 mm/s, ESC/POS compatibility, and cutter. It uses its own 24 V adapter.
-Neither device powers the other.
+Purchased Rongta RP326 interfaces: Ethernet, USB, and RS-232. Marketing values
+not independently measured here include 80 mm paper, about 72 mm/576-dot
+printable width, 203 dpi, and up to 250 mm/s. ESC/POS text/feed and cutter
+behavior were physically exercised. The printer uses its own 24 V adapter;
+neither device powers the other.
 
-Expected TCP port 9100 and possible factory IP `192.168.1.87` are defaults to
-observe, never constants to trust. Read the printer self-test receipt and record
-actual IP, port, firmware, and interfaces here before changing configuration.
+The purchased printer accepted TCP connections at `192.168.1.87:9100` on
+2026-08-01. That is an observed local endpoint, not a universal default. Its
+firmware version and full self-test details still need recording.
+
+ASCII text, line feed, and explicit partial cut were physically observed. The
+working cutter bytes are `1d 56 01`; automatic or unconfirmed cutting remains
+forbidden.
 
 ## Purchased-unit observations
 
@@ -51,7 +59,13 @@ actual IP, port, firmware, and interfaces here before changing configuration.
 | Detected flash | 16 MB | 2026-08-01 |
 | Detected PSRAM | embedded 8 MB | 2026-08-01 |
 | USB mode | USB-Serial/JTAG; `/dev/cu.usbmodem101` on test Mac | 2026-08-01 |
-| Printer IP/port | pending | — |
+| MicroPython runtime | 1.28.0 SPIRAM_OCT | 2026-08-01 |
+| USB application RPC | `system.ping` and `system.info` succeeded | 2026-08-01 |
+| Device static IPv4 | `192.168.1.50/24`, repeated configuration succeeded | 2026-08-01 |
+| Printer IP/port | `192.168.1.87:9100` | 2026-08-01 |
 | Printer firmware | pending | — |
-| Direct-link negotiation | pending | — |
-| Verified cutter command | pending | — |
+| Direct-link negotiation | `link_up: true` | 2026-08-01 |
+| Printer text/feed | physically observed | 2026-08-01 |
+| Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
+| Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
+| Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |

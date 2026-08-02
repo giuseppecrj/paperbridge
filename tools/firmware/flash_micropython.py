@@ -4,16 +4,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+from device_port import require_device_port
 
-def main():
+
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", required=True)
     parser.add_argument("--firmware", type=Path, required=True)
-    parser.add_argument("--sha256")
-    args = parser.parse_args()
+    parser.add_argument("--sha256", required=True)
+    args = parser.parse_args(argv)
+    require_device_port(args.port)
     payload = args.firmware.read_bytes()
     digest = hashlib.sha256(payload).hexdigest()
-    if args.sha256 and digest.lower() != args.sha256.lower():
+    if digest.lower() != args.sha256.lower():
         raise SystemExit(f"SHA-256 mismatch: {digest}")
     print(f"firmware_sha256={digest}")
     subprocess.run(

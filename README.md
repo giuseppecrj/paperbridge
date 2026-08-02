@@ -16,11 +16,18 @@ production provisioning is implemented.
 ## Status
 
 - Repository foundation and host-only tests: implemented.
-- Milestone 1 serial RPC and CLI: implemented, not physically tested.
-- W5500, TCP probe, ASCII print/feed, and explicit cut paths: implemented for
-  bring-up, not physically tested.
-- Purchased board revision, runtime memory, USB stability, link negotiation,
-  printer endpoint, and cutter bytes: pending physical verification.
+- USB discovery physically observed at `/dev/cu.usbmodem101`; esptool detected an
+  ESP32-S3 revision v0.2, embedded 8 MB PSRAM, 16 MB flash, and USB-Serial/JTAG.
+- Official MicroPython 1.28.0 SPIRAM_OCT is flashed and running on the purchased
+  ESP32-S3; USB RPC `system.ping` and `system.info` are physically verified.
+- W5500 initialization, repeated static configuration at `192.168.1.50/24`,
+  direct-link negotiation, and printer probe are physically verified.
+- Printer endpoint `192.168.1.87:9100`, ASCII text, feed, and explicit partial
+  cut bytes `1d 56 01` are physically verified on the purchased RP326.
+- Controlled post-deploy power-cycle smoke and operator-confirmed acceptance
+  passed on 2026-08-02; evidence IDs are recorded in `docs/hardware.md`.
+- Board silkscreen revision, printer firmware, Ethernet reconnect/fault recovery,
+  and the 72-hour soak remain pending.
 
 ## Mac setup
 
@@ -59,8 +66,8 @@ export PAPERBRIDGE_PORT=/dev/cu.usbmodem101
 
 First inspect the purchased board silkscreen and exact chip/board revision. The
 official Waveshare SKU 28972 documentation says ESP32-S3R8, 16 MB flash, and 8
-MB octal PSRAM. Subject to matching the purchased unit, the selected candidate
-is official MicroPython 1.28.0:
+MB octal PSRAM. The purchased chip and memory matched those runtime requirements;
+the selected and verified image is official MicroPython 1.28.0:
 
 ```sh
 mkdir -p firmware/downloads
@@ -72,7 +79,7 @@ printf '%s  %s\n' \
   firmware/downloads/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin \
   | shasum -a 256 -c -
 
-PORT="$PAPERBRIDGE_PORT" just erase-device
+PORT="$PAPERBRIDGE_PORT" CONFIRM=erase just erase-device
 PORT="$PAPERBRIDGE_PORT" \
 FIRMWARE=firmware/downloads/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin \
   just flash-micropython
@@ -114,7 +121,29 @@ PORT="$PAPERBRIDGE_PORT" just cut-test  # explicit confirmation; run last
 ```
 
 Do not run the cut test until plain text and feed tests succeed. The included
-cutter sequence is a candidate, not verified RP326 behavior.
+partial-cut sequence is verified only on the purchased RP326 and still requires
+explicit confirmation every time.
+
+### Opt-in hardware smoke and acceptance
+
+Ordinary `just test` is host-only and never operates hardware. With a selected
+port:
+
+```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-smoke
+```
+
+Expected: ping, info, Ethernet init, static config twice, link up, printer probe.
+No print/feed/cut.
+
+```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-acceptance
+```
+
+Expected: runs smoke, prints uniquely identified text, asks you to confirm paper
+output, feeds, asks again, requires typing exact token `CUT` before cut, then
+asks for cut confirmation. Evidence JSON is written under ignored
+`captures/hardware/`.
 
 For machine-readable output:
 
@@ -134,17 +163,12 @@ test network. The direct ESP32-to-printer mode does not depend on the simulator.
 
 ## Remaining physical checks
 
-1. Record purchased board revision and verify the official schematic matches it.
-2. Confirm native USB serial stability, flash size, PSRAM, filesystem, reset
-   cause, `network.PHY_W5500`, and the `network.LAN` constructor.
-3. Print the RP326 self-test and record IP, port, firmware, and interfaces.
-4. Power the printer from its 24 V adapter and the board from USB; never cross
-   power them.
-5. Test direct Ethernet link LEDs and `ethernet link-status`; if absent, try a
-   crossover cable, unmanaged switch, or router before changing application code.
-6. Probe, print ASCII without cutting, feed, then explicitly test the cutter.
-7. Repeat after printer/board power cycles and Ethernet disconnect/reconnect.
-8. Run a 72-hour soak test before treating MicroPython as production-capable.
+1. Record the purchased board silkscreen/revision and compare the schematic.
+2. Record the RP326 firmware version and full self-test details.
+3. Repeat acceptance after Ethernet disconnect/reconnect.
+4. Exercise timeout, refusal, reset, paper-out, and cover-open recovery where the
+   printer exposes observable behavior.
+5. Run a 72-hour soak test before treating MicroPython as production-capable.
 
 ## ESP-IDF migration gates
 

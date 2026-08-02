@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=75"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 
 [project]
 name = "paperbridge"
@@ -9,10 +9,7 @@ description = "Local USB-to-ESP32-to-Ethernet thermal-printer bridge"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-dependencies = [
-  "jsonschema>=4.23,<5",
-  "pyserial>=3.5,<4",
-]
+dependencies = ["jsonschema>=4.23,<5", "pyserial>=3.5,<4"]
 
 [project.scripts]
 paperbridge = "paperbridge_cli.main:main"
@@ -25,19 +22,25 @@ dev = [
   "ruff>=0.14,<0.15",
 ]
 
-[tool.setuptools]
-package-dir = {"" = "tools/device-cli"}
-packages = ["paperbridge_cli"]
+[tool.hatch.build.targets.wheel]
+packages = ["tools/device-cli/paperbridge_cli"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
-pythonpath = ["firmware/micropython", "tools/device-cli"]
-testpaths = ["firmware/micropython/tests", "tools/device-cli/tests", "tools/printer-simulator/tests"]
-
-[tool.pyright]
-extraPaths = ["firmware/micropython", "tools/device-cli"]
-venvPath = "."
-venv = ".venv"
+pythonpath = [
+  "firmware/micropython",
+  "tools",
+  "tools/device-cli",
+  "tools/firmware",
+]
+testpaths = [
+  "firmware/micropython/tests",
+  "tools/device-cli/tests",
+  "tools/firmware/tests",
+  "tools/hardware/tests",
+  "tools/provisioning/tests",
+  "tools/printer-simulator/tests",
+]
 
 [tool.ruff]
 target-version = "py310"

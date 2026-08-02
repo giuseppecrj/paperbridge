@@ -1,5 +1,4 @@
 import pytest
-from src.job_queue import JobQueue
 from src.rpc_commands import CommandRouter
 from src.serial_rpc import RpcError
 
@@ -43,7 +42,7 @@ def router():
         "printer": {},
         "queue": {},
     }
-    return CommandRouter(config, FakeEthernet(), FakeCoordinator(), FakeTransport(), JobQueue())
+    return CommandRouter(config, FakeEthernet(), FakeCoordinator(), FakeTransport())
 
 
 def test_ping_and_info():
@@ -71,3 +70,10 @@ def test_unsupported_command_is_stable():
     with pytest.raises(RpcError) as error:
         router().dispatch("cloud.start", {})
     assert error.value.code == "UNSUPPORTED_RPC_COMMAND"
+
+
+def test_unused_bringup_aliases_are_not_wired():
+    for command in ("config.reload", "queue.status", "printer.send_fixture"):
+        with pytest.raises(RpcError) as error:
+            router().dispatch(command, {})
+        assert error.value.code == "UNSUPPORTED_RPC_COMMAND"

@@ -10,10 +10,20 @@ Responses use `type=response`; logs use `type=log`, so startup noise or logs are
 not mistaken for correlated responses. The host ignores non-response lines and
 responses for other IDs. Binary printer data is not accepted over RPC.
 
-Initial commands are the `system.*`, `config.*`, `ethernet.*`, `printer.*`, and
-`queue.status` commands listed in the schemas and CLI. `printer.cut_test`
-requires literal JSON boolean `confirm: true`; it never runs at boot or in unit
-tests. `system.reboot` schedules reset after returning its response.
+Live commands are:
+
+- `system.ping`, `system.info`, `system.memory`, `system.reset_cause`, and
+  `system.reboot`
+- `config.show_redacted`
+- `ethernet.initialize`, `ethernet.status`, `ethernet.link_status`, and
+  `ethernet.configure_static`
+- `printer.endpoint`, `printer.probe`, `printer.print_test`,
+  `printer.feed_test`, and `printer.cut_test`
+
+`printer.cut_test` requires literal JSON boolean `confirm: true`; it never runs
+at boot or in unit tests. `system.reboot` schedules reset after returning its
+response. Queue, config reload, fixture aliases, and semantic print-job
+submission are not live RPC commands.
 
 Application RPC and MicroPython deployment are intentionally separate:
 `mpremote` manages files/REPL; `paperbridge` manages device behavior.

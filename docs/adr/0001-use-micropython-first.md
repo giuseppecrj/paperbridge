@@ -6,13 +6,14 @@
 ## Context
 
 The shortest path to validating USB, W5500, TCP, and ESC/POS is interactive
-firmware with host-testable Python logic. The hardware path is not yet proven.
+firmware with host-testable Python logic. At decision time, the hardware path
+was not yet proven.
 
 ## Decision
 
-Use current stable MicroPython 1.28.0 and its ESP32-S3 octal-SPIRAM candidate
-after board verification. Keep version-sensitive LAN code in one adapter. ESP-IDF
-is the production fallback; Arduino is diagnostic-only.
+Use current stable MicroPython 1.28.0 and its ESP32-S3 octal-SPIRAM build after
+runtime memory verification. Keep version-sensitive LAN code in one adapter.
+ESP-IDF is the production fallback; Arduino is diagnostic-only.
 
 ## Migration criteria
 

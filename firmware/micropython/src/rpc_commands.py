@@ -1,15 +1,14 @@
-from .config import load_config, redacted
+from .config import redacted
 from .device_info import memory_info, reset_cause, system_info
 from .serial_rpc import RpcError
 
 
 class CommandRouter:
-    def __init__(self, config, ethernet, coordinator, transport, queue):
+    def __init__(self, config, ethernet, coordinator, transport):
         self.config = config
         self.ethernet = ethernet
         self.coordinator = coordinator
         self.transport = transport
-        self.queue = queue
 
     def dispatch(self, command, params):
         handlers = {
@@ -18,7 +17,6 @@ class CommandRouter:
             "system.memory": self.system_memory,
             "system.reset_cause": self.system_reset_cause,
             "config.show_redacted": self.config_show,
-            "config.reload": self.config_reload,
             "ethernet.initialize": self.ethernet_initialize,
             "ethernet.status": self.ethernet_status,
             "ethernet.link_status": self.ethernet_link_status,
@@ -28,8 +26,6 @@ class CommandRouter:
             "printer.print_test": self.printer_print_test,
             "printer.feed_test": self.printer_feed_test,
             "printer.cut_test": self.printer_cut_test,
-            "printer.send_fixture": self.printer_send_fixture,
-            "queue.status": self.queue_status,
             "system.reboot": self.system_reboot,
         }
         handler = handlers.get(command)
@@ -51,12 +47,6 @@ class CommandRouter:
 
     def config_show(self, _params):
         return redacted(self.config)
-
-    def config_reload(self, _params):
-        updated = load_config()
-        self.config.clear()
-        self.config.update(updated)
-        return {"status": "reloaded"}
 
     def ethernet_initialize(self, _params):
         try:
@@ -106,15 +96,6 @@ class CommandRouter:
             raise RpcError("INVALID_RPC_REQUEST", "cut test requires confirm=true")
         self._require_ethernet_link()
         return self.coordinator.cut_test()
-
-    def printer_send_fixture(self, params):
-        if params.get("name") != "hello-world":
-            raise RpcError("INVALID_RPC_REQUEST", "unknown fixture")
-        self._require_ethernet_link()
-        return self.coordinator.print_test("Hello from Paperbridge")
-
-    def queue_status(self, _params):
-        return self.queue.status()
 
     def system_reboot(self, _params):
         try:

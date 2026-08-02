@@ -1,6 +1,11 @@
 # Local bring-up
 
 Follow the development order; do not skip forward because later code exists.
+The complete path through explicit partial cut was physically verified on
+2026-08-01. Controlled post-deploy power-cycle smoke and acceptance passed on
+2026-08-02. Reconnect, fault-recovery, and soak gates remain, so repeat this
+sequence rather than treating the observations as a production reliability
+claim.
 
 1. `mise install && just bootstrap && just test`.
 2. Connect a known data cable and run `just ports`.
@@ -14,6 +19,21 @@ Follow the development order; do not skip forward because later code exists.
 8. Run `printer probe`; a TCP connect proves endpoint reachability only.
 9. Run text-only print, then feed, then explicit cut last.
 10. Power-cycle and disconnect/reconnect each device and repeat.
+11. Optional repeatable HIL (not part of `just test`):
+
+```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-smoke
+```
+
+Expected: ping/info/init/static×2/bounded link wait/probe only; no paper motion.
+
+```sh
+PORT=/dev/cu.usbmodem101 just test-hardware-acceptance
+```
+
+Expected: smoke, then interactive text → feed → exact `CUT` token → cut, with
+operator confirmation at each physical step. Evidence lands in
+`captures/hardware/`.
 
 If direct link has no LEDs, use a crossover cable or a small switch/router before
 changing firmware. See `network-topology.md` and `troubleshooting.md`.

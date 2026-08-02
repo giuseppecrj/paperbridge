@@ -1,15 +1,17 @@
 # Print-job protocol
 
 `packages/protocol/schemas/print-job.v1.schema.json` defines a semantic receipt,
-not printer bytes. Version `1` bounds IDs, timestamps, block count, strings,
-feed lines, multipliers, copies, and total firmware-rendered bytes. Text starts
-as printable ASCII; unsupported characters and control bytes are rejected.
-Unknown versions and block types are rejected.
+not printer bytes. Version `1` requires bounded `job_id`, `device_id`, opaque
+`created_at` metadata, and 1–100 receipt blocks. Text is printable ASCII only;
+unsupported fields, control bytes, unknown versions, and unknown block types are
+rejected. Firmware also bounds the final rendered byte count.
 
-V1 blocks are text, feed, rule, and cut. Cut is contractually represented but
-execution requires a physically verified printer profile. Raw ESC/POS and bitmap
-blocks are forbidden. QR may follow stable text/cutter behavior; images do not.
+V1 blocks are text, feed, 48-column rule, and partial cut. Cut is schema-valid
+but validation and rendering both require explicit caller authorization. Raw
+ESC/POS, styling, copies, expiry, bitmap, and QR blocks are not v1 semantics and
+fail rather than being ignored.
 
-Statuses are `received`, `validated`, `rendering`, `connecting_to_printer`,
-`sending_to_printer`, `delivered_to_printer`, `failed`, `rejected`, and `expired`.
-`printed` is intentionally absent until reliable status confirmation is tested.
+The status vocabulary is currently internal scaffolding; no semantic print-job
+RPC or durable lifecycle is live. A future job result may end at
+`delivered_to_printer`, which means bytes reached the printer-facing socket.
+`printed` remains absent until reliable physical status confirmation exists.

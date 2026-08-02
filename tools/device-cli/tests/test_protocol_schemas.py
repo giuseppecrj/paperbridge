@@ -2,14 +2,19 @@ import json
 from pathlib import Path
 
 import pytest
-from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from jsonschema import Draft202012Validator, ValidationError
 
 SCHEMAS = Path("packages/protocol/schemas")
 EXAMPLES = Path("packages/protocol/examples")
+JOB_FIXTURES = Path("packages/protocol/fixtures/print-job-v1")
 
 
 def load(path):
     return json.loads(path.read_text())
+
+
+def job_validator():
+    return Draft202012Validator(load(SCHEMAS / "print-job.v1.schema.json"))
 
 
 def test_serial_ping_matches_schema():
@@ -19,9 +24,61 @@ def test_serial_ping_matches_schema():
 
 
 def test_print_job_schema_accepts_valid_and_rejects_raw_commands():
-    validator = Draft202012Validator(
-        load(SCHEMAS / "print-job.v1.schema.json"), format_checker=FormatChecker()
-    )
+    validator = job_validator()
     validator.validate(load(EXAMPLES / "hello-world-job.json"))
     with pytest.raises(ValidationError):
         validator.validate(load(EXAMPLES / "invalid-job.json"))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "valid-text-feed.json",
+        "valid-rule.json",
+        "valid-cut.json",
+    ],
+)
+def test_print_job_schema_accepts_shared_valid_fixtures(name):
+    job_validator().validate(load(JOB_FIXTURES / name))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "invalid-raw-block.json",
+        "invalid-control-text.json",
+        "invalid-style-fields.json",
+        "invalid-copies.json",
+        "invalid-expires-at.json",
+        "invalid-empty-text.json",
+    ],
+)
+def test_print_job_schema_rejects_shared_invalid_fixtures(name):
+    with pytest.raises(ValidationError):
+        job_validator().validate(load(JOB_FIXTURES / name))
+
+
+def test_print_job_schema_accepts_cut_requires_opt_in_policy_fixture():
+    # Authorization fixture: schema-valid; device/render gate is separate.
+    job_validator().validate(load(JOB_FIXTURES / "cut-requires-opt-in.json"))
+
+
+def test_print_job_schema_rejects_boolean_feed_lines():
+    base = load(JOB_FIXTURES / "valid-text-feed.json")
+    payload = json.loads(json.dumps(base))
+    payload["content"]["blocks"] = [{"type": "feed", "lines": True}]
+    with pytest.raises(ValidationError):
+        job_validator().validate(payload)
+
+
+def test_print_job_schema_rejects_styling_and_options_fields():
+    validator = job_validator()
+    base = load(JOB_FIXTURES / "valid-text-feed.json")
+    styled = json.loads(json.dumps(base))
+    styled["content"]["blocks"][0]["bold"] = True
+    with pytest.raises(ValidationError):
+        validator.validate(styled)
+    with_options = json.loads(json.dumps(base))
+    with_options["options"] = {"copies": 1}
+    with pytest.raises(ValidationError):
+        validator.validate(with_options)
