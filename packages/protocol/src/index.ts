@@ -9,6 +9,8 @@ import printJobSchema from "../schemas/print-job.v1.schema.json" with {
 	type: "json",
 };
 
+export { jobResultSchema, printJobSchema };
+
 export const MQTT_JOB_MAX_BYTES = 1024;
 
 type JsonObject = Record<string, unknown>;
@@ -24,7 +26,7 @@ export type JobResult = JsonObject & {
 	kind: "job_result";
 	job_id: string;
 	device_id: string;
-	status: "delivered_to_printer" | "rejected" | "failed";
+	status: "delivered_to_printer" | "rejected" | "failed" | "duplicate";
 	error_code?: string;
 	bytes_sent?: number;
 };
@@ -38,11 +40,18 @@ export class ProtocolValidationError extends Error {
 	}
 }
 
-const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
+const ajv = new Ajv2020({
+	allErrors: true,
+	strict: true,
+	strictRequired: false,
+});
 const validatePrintJob = ajv.compile<PrintJob>(printJobSchema);
 const validateJobResult = ajv.compile<JobResult>(jobResultSchema);
 
-function validationMessage(prefix: string, errors: typeof validatePrintJob.errors): string {
+function validationMessage(
+	prefix: string,
+	errors: typeof validatePrintJob.errors,
+): string {
 	return `${prefix}: ${ajv.errorsText(errors)}`;
 }
 

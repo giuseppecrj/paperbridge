@@ -11,10 +11,10 @@ ESP32-S3-ETH -- direct W5500 Ethernet / TCP ESC/POS ----------> Rongta RP326
 
 The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. The private single-device REST/MQTT v1 path is implemented,
-simulator-tested, and physically verified on the purchased device/printer; no
-website, MCP, public backend, image printing, OTA, or production provisioning is
-implemented.
+paper emerged. The private single-device REST/MQTT v1 and MCP paths are
+implemented, simulator-tested, and physically verified on the purchased
+device/printer. MCP uses the same application path; no website,
+public backend, image printing, OTA, or production provisioning is implemented.
 
 ## Status
 
@@ -46,6 +46,10 @@ implemented.
   `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
   `delivered_to_printer` after 34 bytes, and an operator observed the expected
   receipt on the purchased printer.
+- Streamable HTTP MCP at `/mcp` exposes one `paperbridge_print` tool through the
+  same application service. It is host-/simulator-tested and was physically
+  verified on 2026-08-02: job `6e46f155-c3f2-4b11-9c56-46f9261f2abe`
+  delivered 42 bytes, and an operator observed the expected receipt.
 
 ## Mac setup
 
@@ -215,7 +219,7 @@ For machine-readable output:
 mise exec -- uv run paperbridge --json --port "$PAPERBRIDGE_PORT" device info
 ```
 
-## Private REST/MQTT path
+## Private REST/MCP/MQTT path
 
 Set up authenticated local Mosquitto from
 [`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's
@@ -245,8 +249,10 @@ just mqtt-probe
 
 `just mqtt-probe` reads non-secret host, username, and device settings from
 `.env`, resolves `PAPERBRIDGE_MQTT_PASSWORD` through Fnox, and reports a
-correlated tracer response—not printer delivery or paper output. There is no
-live MCP command yet; ADR 0006 describes the shared future MCP/application seam.
+correlated tracer response—not printer delivery or paper output. MCP clients
+connect to `http://127.0.0.1:3000/mcp` and call `paperbridge_print` with a v1
+receipt `content` object; the service supplies the job envelope and waits for the
+same honest result as REST.
 
 ## Simulator
 

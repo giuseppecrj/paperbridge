@@ -4,10 +4,7 @@ import test from "node:test";
 
 import type { JobResult, PrintJob } from "@paperbridge/protocol";
 
-import {
-	MqttJobClient,
-	type MqttConnection,
-} from "../src/mqtt-job-client.js";
+import { MqttJobClient, type MqttConnection } from "../src/mqtt-job-client.js";
 import { SubmissionError } from "../src/job-service.js";
 
 class FakeClient extends EventEmitter implements MqttConnection {
@@ -16,7 +13,11 @@ class FakeClient extends EventEmitter implements MqttConnection {
 	published: Array<[string, string, { qos: 1; retain: false }]> = [];
 	ended = false;
 
-	subscribe(topic: string, options: { qos: 1 }, callback: (error?: Error) => void): void {
+	subscribe(
+		topic: string,
+		options: { qos: 1 },
+		callback: (error?: Error) => void,
+	): void {
 		this.subscriptions.push([topic, options]);
 		callback();
 	}
@@ -129,6 +130,31 @@ test("times out as unknown without automatically republishing", async () => {
 	assert.equal(client.published.length, 1);
 });
 
+test("cancellation releases the waiter and ignores a late result", async () => {
+	const client = new FakeClient();
+	const broker = adapter(client, 25);
+	const controller = new AbortController();
+	client.open();
+
+	const cancelled = broker.submit(job, JSON.stringify(job), {
+		signal: controller.signal,
+	});
+	controller.abort();
+
+	await assert.rejects(
+		cancelled,
+		(error: unknown) =>
+			error instanceof DOMException && error.name === "AbortError",
+	);
+	assert.equal(client.published.length, 1);
+	client.message("v1/devices/paperbridge-dev-001/job-results", delivered);
+
+	const retried = broker.submit(job, JSON.stringify(job));
+	assert.equal(client.published.length, 2);
+	client.message("v1/devices/paperbridge-dev-001/job-results", delivered);
+	assert.deepEqual(await retried, delivered);
+});
+
 test("closing rejects pending waiters instead of leaving HTTP requests hanging", async () => {
 	const client = new FakeClient();
 	const broker = adapter(client);
@@ -140,7 +166,8 @@ test("closing rejects pending waiters instead of leaving HTTP requests hanging",
 	await assert.rejects(
 		pending,
 		(error: unknown) =>
-			error instanceof SubmissionError && error.errorCode === "SERVICE_SHUTTING_DOWN",
+			error instanceof SubmissionError &&
+			error.errorCode === "SERVICE_SHUTTING_DOWN",
 	);
 	assert.equal(client.ended, true);
 });

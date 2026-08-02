@@ -1,8 +1,8 @@
-# Private REST/MQTT service
+# Private REST/MCP/MQTT service
 
-This portable Node.js TypeScript package implements the private, single-device
-Phase 2 `POST /api/jobs` path and retains the no-output MQTT probe. It uses
-Node's built-in HTTP server and standard MQTT 3.1.1; Bun is workspace tooling
+This portable Node.js TypeScript package implements Paperbridge's private,
+single-device Phase 2 REST and Streamable HTTP MCP ingress plus the no-output
+MQTT probe. It uses one built-in Node HTTP server; Bun remains workspace tooling
 only.
 
 Start authenticated Mosquitto, set the non-secret `.env` values, then run:
@@ -11,10 +11,18 @@ Start authenticated Mosquitto, set the non-secret `.env` values, then run:
 just api
 ```
 
-The server defaults to `127.0.0.1:3000`. It accepts a raw `print-job.v1` JSON
-body no larger than 1,024 bytes, validates the configured `device_id`, publishes
-one QoS 1 non-retained message, and waits for the correlated `job-result.v1`.
-A successful response ends at `delivered_to_printer`, never `printed`.
+The server defaults to `127.0.0.1:3000` and exposes:
+
+- `POST /api/jobs`, accepting a complete raw `print-job.v1` body no larger than
+  1,024 bytes;
+- Streamable HTTP MCP at `/mcp`, with one `paperbridge_print` tool accepting v1
+  receipt `content` and generating a fresh `job_id`, configured `device_id`, and
+  timestamp; and
+- the separate `just mqtt-probe` no-output diagnostic.
+
+REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
+MQTT message, and wait for the correlated result. Successful delivery ends at
+`delivered_to_printer`, never `printed`.
 
 ```sh
 curl -sS \
@@ -23,9 +31,13 @@ curl -sS \
   http://127.0.0.1:3000/api/jobs
 ```
 
-Timeout returns `unknown` and never republishes automatically. The endpoint is a
-private MVP with no public authentication; keep it on localhost or behind the
-approved Tailscale boundary. MQTT/TLS, durable delivery, multi-device routing,
-and MCP are not implemented.
+MCP uses the official v2 TypeScript SDK's stateless per-request handler. The
+plain Node mount rejects non-loopback Host and Origin values. Timeout returns
+`unknown` and never republishes; cancellation releases only the host waiter, so
+it does not invent a device outcome. Device duplicate suppression is bounded to
+one boot and returns `duplicate` / `DUPLICATE_JOB` without another printer
+connection.
 
-The separate no-output tracer remains available as `just mqtt-probe`.
+This remains a private MVP with no public authentication. Keep it on localhost.
+MQTT/TLS, durable delivery, public OAuth, multi-device routing, and automatic
+retry are not implemented.

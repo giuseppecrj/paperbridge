@@ -1,28 +1,35 @@
 from src.job_ledger import JobLedger
 
 
-def test_ledger_replays_terminal_results_and_evicts_the_oldest():
+def test_ledger_tracks_completed_ids_and_evicts_the_oldest():
     ledger = JobLedger(max_completed_ids=2)
-    first = {"job_id": "job-1", "status": "delivered_to_printer"}
-    second = {"job_id": "job-2", "status": "rejected"}
-    third = {"job_id": "job-3", "status": "failed"}
 
-    ledger.record("job-1", first)
-    ledger.record("job-2", second)
-    assert ledger.get("job-1") == first
+    ledger.record("job-1")
+    ledger.record("job-2")
+    assert ledger.contains("job-1") is True
 
-    ledger.record("job-3", third)
+    ledger.record("job-3")
 
-    assert ledger.get("job-1") is None
-    assert ledger.get("job-2") == second
-    assert ledger.get("job-3") == third
+    assert ledger.contains("job-1") is False
+    assert ledger.contains("job-2") is True
+    assert ledger.contains("job-3") is True
 
 
-def test_recording_the_same_job_keeps_the_original_terminal_result():
+def test_fresh_ledger_forgets_completed_jobs_after_reboot():
+    before_reboot = JobLedger(max_completed_ids=2)
+    before_reboot.record("job-1")
+
+    after_reboot = JobLedger(max_completed_ids=2)
+
+    assert after_reboot.contains("job-1") is False
+
+
+def test_recording_the_same_job_does_not_consume_capacity_twice():
     ledger = JobLedger(max_completed_ids=2)
-    original = {"job_id": "job-1", "status": "delivered_to_printer"}
 
-    ledger.record("job-1", original)
-    ledger.record("job-1", {"job_id": "job-1", "status": "failed"})
+    ledger.record("job-1")
+    ledger.record("job-1")
+    ledger.record("job-2")
 
-    assert ledger.get("job-1") == original
+    assert ledger.contains("job-1") is True
+    assert ledger.contains("job-2") is True

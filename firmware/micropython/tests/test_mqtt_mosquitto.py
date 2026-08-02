@@ -184,7 +184,9 @@ def wait_for_api(port, process):
     not mosquitto or not mosquitto_passwd,
     reason="Mosquitto and mosquitto_passwd are required for this integration test",
 )
-def test_rest_job_round_trips_through_mqtt_firmware_and_printer_simulator(tmp_path):
+def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulator(
+    tmp_path,
+):
     assert mosquitto is not None
     assert mosquitto_passwd is not None
     broker_port = unused_port()
@@ -220,7 +222,7 @@ def test_rest_job_round_trips_through_mqtt_firmware_and_printer_simulator(tmp_pa
     simulator_ready = threading.Event()
     simulator_thread = threading.Thread(
         target=simulator.serve,
-        args=(simulator_args, 1, simulator_ready),
+        args=(simulator_args, 2, simulator_ready),
         daemon=True,
     )
     simulator_thread.start()
@@ -311,11 +313,52 @@ def test_rest_job_round_trips_through_mqtt_firmware_and_printer_simulator(tmp_pa
             "status": "delivered_to_printer",
             "bytes_sent": 28,
         }
+
+        mcp_content = {
+            "kind": "receipt",
+            "blocks": [{"type": "text", "text": "Hello from MCP"}],
+        }
+        mcp_client = subprocess.Popen(
+            [
+                "node",
+                "--import",
+                "tsx",
+                "tests/support/call-mcp.ts",
+                f"http://127.0.0.1:{api_port}/mcp",
+                json.dumps(mcp_content),
+            ],
+            cwd=Path(__file__).resolve().parents[3] / "apps" / "api",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        deadline = time.monotonic() + 3
+        while mcp_client.poll() is None and time.monotonic() < deadline:
+            tracer.poll()
+            time.sleep(0.01)
+        if mcp_client.poll() is None:
+            mcp_client.kill()
+            pytest.fail("MCP client timed out")
+        assert mcp_client.stderr is not None
+        assert mcp_client.returncode == 0, mcp_client.stderr.read()
+        assert mcp_client.stdout is not None
+        mcp_response = json.loads(mcp_client.stdout.read())
+        assert mcp_response["tools"] == ["paperbridge_print"]
+        assert mcp_response["result"]["structuredContent"] == {
+            "schema_version": "1",
+            "kind": "job_result",
+            "job_id": mcp_response["result"]["structuredContent"]["job_id"],
+            "device_id": username,
+            "status": "delivered_to_printer",
+            "bytes_sent": 17,
+        }
+
         simulator_thread.join(1)
         assert not simulator_thread.is_alive()
-        assert [capture.read_bytes() for capture in (tmp_path / "captures").glob("*.bin")] == [
-            b"\x1b@Hello from Paperbridge\n\n\n\n"
-        ]
+        assert {capture.read_bytes() for capture in (tmp_path / "captures").glob("*.bin")} == {
+            b"\x1b@Hello from Paperbridge\n\n\n\n",
+            b"\x1b@Hello from MCP\n",
+        }
     finally:
         if api is not None:
             api.terminate()

@@ -88,8 +88,16 @@ test("rejects an oversized body before parsing or submission", async (t) => {
 	assert.equal(submissions, 0);
 });
 
-test("maps terminal device rejection and delivery failure honestly", async (t) => {
+test("maps duplicate, rejection, and delivery failure honestly", async (t) => {
 	const results: JobResult[] = [
+		{
+			schema_version: "1",
+			kind: "job_result",
+			job_id: "job-duplicate",
+			device_id: "paperbridge-dev-001",
+			status: "duplicate",
+			error_code: "DUPLICATE_JOB",
+		},
 		{
 			schema_version: "1",
 			kind: "job_result",
@@ -108,11 +116,13 @@ test("maps terminal device rejection and delivery failure honestly", async (t) =
 			bytes_sent: 2,
 		},
 	];
-	const server = createApiServer({ submitJob: async () => results.shift() as JobResult });
+	const server = createApiServer({
+		submitJob: async () => results.shift() as JobResult,
+	});
 	t.after(() => server.close());
 	const baseUrl = await listen(server);
 
-	for (const expectedStatus of [422, 502]) {
+	for (const expectedStatus of [409, 422, 502]) {
 		const response = await fetch(`${baseUrl}/api/jobs`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
@@ -124,9 +134,27 @@ test("maps terminal device rejection and delivery failure honestly", async (t) =
 
 test("maps broker, duplicate, and timeout failures without inventing delivery", async (t) => {
 	const errors = [
-		new SubmissionError(503, "BROKER_UNAVAILABLE", "failed", "job-1", "device-1"),
-		new SubmissionError(409, "JOB_ALREADY_PENDING", "rejected", "job-1", "device-1"),
-		new SubmissionError(504, "DEVICE_RESULT_TIMEOUT", "unknown", "job-1", "device-1"),
+		new SubmissionError(
+			503,
+			"BROKER_UNAVAILABLE",
+			"failed",
+			"job-1",
+			"device-1",
+		),
+		new SubmissionError(
+			409,
+			"JOB_ALREADY_PENDING",
+			"rejected",
+			"job-1",
+			"device-1",
+		),
+		new SubmissionError(
+			504,
+			"DEVICE_RESULT_TIMEOUT",
+			"unknown",
+			"job-1",
+			"device-1",
+		),
 	];
 	const server = createApiServer({
 		submitJob: async () => {
@@ -186,7 +214,11 @@ test("public endpoint rejects schema-invalid and wrong-device jobs before MQTT",
 
 	for (const [body, statusCode, errorCode] of [
 		[invalid, 400, "INVALID_PRINT_JOB"],
-		[JSON.stringify({ ...valid, device_id: "other-device" }), 422, "WRONG_DEVICE"],
+		[
+			JSON.stringify({ ...valid, device_id: "other-device" }),
+			422,
+			"WRONG_DEVICE",
+		],
 	] as const) {
 		const response = await fetch(`${baseUrl}/api/jobs`, {
 			method: "POST",
@@ -194,7 +226,10 @@ test("public endpoint rejects schema-invalid and wrong-device jobs before MQTT",
 			body,
 		});
 		assert.equal(response.status, statusCode);
-		assert.equal((await response.json() as { error_code: string }).error_code, errorCode);
+		assert.equal(
+			((await response.json()) as { error_code: string }).error_code,
+			errorCode,
+		);
 	}
 	assert.equal(publishes, 0);
 });

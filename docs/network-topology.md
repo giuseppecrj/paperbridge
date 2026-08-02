@@ -3,7 +3,7 @@
 ## Product topology: Wi-Fi control, direct printer Ethernet
 
 ```text
-HTTP client --> Mac mini REST service --> Mosquitto
+REST/MCP client --> Mac mini Node service --> Mosquitto
                                          |
                                          +-- Wi-Fi --> router --> ESP32
 USB-C (bring-up only) ---------------------------------------------> |
@@ -11,10 +11,10 @@ USB-C (bring-up only) ---------------------------------------------> |
 ESP32 W5500 (192.168.4.50/24) --> printer (192.168.4.87:9100)
 ```
 
-The private REST service binds to localhost by default and publishes semantic
-jobs through Mosquitto. The ESP32 Wi-Fi interface is the MQTT control plane. The
-W5500 interface is printer-only and has no gateway or DNS. The printer does not
-join Wi-Fi or the home router.
+The private REST/MCP service binds to localhost by default and publishes
+semantic jobs through Mosquitto. The ESP32 Wi-Fi interface is the MQTT control
+plane. The W5500 interface is printer-only and has no gateway or DNS. The
+printer does not join Wi-Fi or the home router.
 
 The two interfaces must use different IPv4 subnets so socket routing is
 unambiguous. The purchased setup uses the home LAN's `192.168.1.0/24` over

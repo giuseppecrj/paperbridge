@@ -11,7 +11,7 @@
     "job_id": { "type": "string", "minLength": 1, "maxLength": 128 },
     "device_id": { "type": "string", "minLength": 1, "maxLength": 64 },
     "status": {
-      "enum": ["delivered_to_printer", "rejected", "failed"]
+      "enum": ["delivered_to_printer", "rejected", "failed", "duplicate"]
     },
     "error_code": {
       "enum": [
@@ -25,6 +25,7 @@
         "PRINTER_WRITE_TIMEOUT",
         "PRINTER_CONNECTION_RESET",
         "ESC_POS_RENDER_FAILED",
+        "DUPLICATE_JOB",
         "INTERNAL_ERROR"
       ]
     },
@@ -48,6 +49,14 @@
     {
       "properties": { "status": { "const": "failed" } },
       "required": ["error_code"]
+    },
+    {
+      "properties": {
+        "status": { "const": "duplicate" },
+        "error_code": { "const": "DUPLICATE_JOB" }
+      },
+      "required": ["error_code"],
+      "not": { "required": ["bytes_sent"] }
     }
   ]
 }

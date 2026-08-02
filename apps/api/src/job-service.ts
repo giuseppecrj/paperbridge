@@ -6,15 +6,26 @@ import {
 	type PrintJob,
 } from "@paperbridge/protocol";
 
+export interface JobSubmissionOptions {
+	signal?: AbortSignal;
+}
+
 export interface JobBroker {
-	submit(job: PrintJob, payload: string): Promise<JobResult>;
+	submit(
+		job: PrintJob,
+		payload: string,
+		options?: JobSubmissionOptions,
+	): Promise<JobResult>;
 }
 
 export class SubmissionError extends Error {
 	constructor(
 		public readonly statusCode: number,
 		public readonly errorCode: string,
-		public readonly responseStatus: "rejected" | "failed" | "unknown" = "rejected",
+		public readonly responseStatus:
+			| "rejected"
+			| "failed"
+			| "unknown" = "rejected",
 		public readonly jobId?: string,
 		public readonly deviceId?: string,
 	) {
@@ -37,7 +48,10 @@ export class JobSubmissionService {
 		private readonly broker: JobBroker,
 	) {}
 
-	async submit(value: unknown): Promise<JobResult> {
+	async submit(
+		value: unknown,
+		options: JobSubmissionOptions = {},
+	): Promise<JobResult> {
 		let job: PrintJob;
 		try {
 			job = parsePrintJob(value);
@@ -59,6 +73,6 @@ export class JobSubmissionService {
 			}
 			throw error;
 		}
-		return this.broker.submit(job, payload);
+		return this.broker.submit(job, payload, options);
 	}
 }

@@ -94,6 +94,7 @@ def test_print_job_transport_boundary_fixtures_remain_schema_valid():
     "name",
     [
         "delivered.json",
+        "duplicate.json",
         "rejected-validation.json",
         "transport-failure.json",
         "partial-write.json",

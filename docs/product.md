@@ -76,6 +76,7 @@ The implemented private MVP path includes local USB semantic jobs, a bounded
 `POST /api/jobs` application ingress, correlated MQTT v1 job delivery, the
 no-output Wi-Fi/MQTT tracer, and the device's direct W5500 printer path. The
 networked job path is host-/simulator-tested and was physically printed through
-the purchased device/printer on 2026-08-02. MCP, pairing, public delivery,
-sender authorization, scheduling, cloud services, and the final recipient
-experience remain product work.
+the purchased device/printer on 2026-08-02. Private MCP ingress shares that job
+path and was also physically verified that day. Pairing, public delivery, sender
+authorization, scheduling, cloud services, and the final recipient experience
+remain product work.

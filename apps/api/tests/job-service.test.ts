@@ -9,7 +9,10 @@ import { JobSubmissionService, SubmissionError } from "../src/job-service.js";
 function fixture(name: string): unknown {
 	return JSON.parse(
 		readFileSync(
-			new URL(`../../../packages/protocol/fixtures/print-job-v1/${name}`, import.meta.url),
+			new URL(
+				`../../../packages/protocol/fixtures/print-job-v1/${name}`,
+				import.meta.url,
+			),
 			"utf8",
 		),
 	);
@@ -33,7 +36,10 @@ test("validates and submits one configured device job", async () => {
 		},
 	});
 
-	assert.deepEqual(await service.submit(fixture("valid-text-feed.json")), delivered);
+	assert.deepEqual(
+		await service.submit(fixture("valid-text-feed.json")),
+		delivered,
+	);
 	assert.equal(calls.length, 1);
 	assert.equal(calls[0]?.[0].job_id, "job-hello-001");
 	assert.equal(JSON.parse(calls[0]?.[1] ?? "{}").job_id, "job-hello-001");
@@ -92,6 +98,7 @@ test("does not expose a client cut authorization field", async () => {
 	await assert.rejects(
 		service.submit({ ...job, allow_cut: true }),
 		(error: unknown) =>
-			error instanceof SubmissionError && error.errorCode === "INVALID_PRINT_JOB",
+			error instanceof SubmissionError &&
+			error.errorCode === "INVALID_PRINT_JOB",
 	);
 });

@@ -199,9 +199,18 @@ class MqttTracer:
         if not isinstance(job_id, str) or not 1 <= len(job_id) <= 128:
             self.record_error("INVALID_MQTT_JOB")
             return
-        cached = self.job_ledger.get(job_id)
-        if cached is not None:
-            self._publish(self.job_results_topic, cached)
+        if self.job_ledger.contains(job_id):
+            self._publish(
+                self.job_results_topic,
+                {
+                    "schema_version": "1",
+                    "kind": "job_result",
+                    "job_id": job_id,
+                    "device_id": self.config["device_id"],
+                    "status": "duplicate",
+                    "error_code": "DUPLICATE_JOB",
+                },
+            )
             return
         if self.job_service is None:
             self.record_error("MQTT_JOB_DISABLED")
@@ -222,7 +231,7 @@ class MqttTracer:
         except Exception:
             result = self._error_result(job_id, "INTERNAL_ERROR")
 
-        self.job_ledger.record(job_id, result)
+        self.job_ledger.record(job_id)
         self._publish(self.job_results_topic, result)
 
     def _error_result(self, job_id, code, bytes_sent=None):

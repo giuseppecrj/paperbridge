@@ -16,22 +16,25 @@ printer-simulator socket capture, printer transport failures, Ethernet API
 behavior, flash/deploy safety, port ambiguity, bounded FIFO behavior, status
 transitions, simulator capture hashing, station-mode Wi-Fi connection/retry
 behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
-protocol package, HTTP body/device validation, MQTT result correlation, timeout
-without retry, QoS duplicate replay, device cut policy, and partial-write result
-reporting. The Bun workspace checks both TypeScript packages with `tsc` and Node's
-test runner. When `mosquitto` and `mosquitto_passwd` are installed, integration
-tests also run the Node probe and full REST job path through real local
+protocol package, HTTP body/device validation, MCP discovery/tool calls and
+Host/Origin guards, MQTT result correlation, timeout/cancellation without retry,
+QoS duplicate suppression, device cut policy, and partial-write result reporting.
+The Bun workspace checks both TypeScript packages with `tsc` and Node's test
+runner. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
+also run the Node probe and full REST and MCP job paths through real local
 Mosquitto; otherwise those broker tests are reported as skipped.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.
-Connection refusal is represented by targeting a stopped server. The REST/MQTT
-integration test starts this real TCP seam, runs the CPython-hosted firmware MQTT
-adapter and shared coordinator, posts the authoritative v1 fixture to the Node
-service, and verifies the exact captured ESC/POS bytes plus correlated result.
+Connection refusal is represented by targeting a stopped server. The
+REST/MCP/MQTT integration test starts this real TCP seam, runs the CPython-hosted
+firmware MQTT adapter and shared coordinator, submits through REST and an
+official MCP SDK client, and verifies both exact captured ESC/POS payloads plus
+correlated results.
 
-No automated test claims hardware success. This includes the local semantic-job
-simulator capture: `delivered_to_printer` is not a physical paper observation.
+No automated test claims hardware success. This includes the local REST and MCP
+semantic-job simulator captures: `delivered_to_printer` is not a physical paper
+observation.
 Manual bring-up physically verified USB RPC, direct Ethernet, printer
 reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,

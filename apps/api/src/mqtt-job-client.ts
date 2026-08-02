@@ -10,13 +10,23 @@ import {
 	type PrintJob,
 } from "@paperbridge/protocol";
 
-import { SubmissionError } from "./job-service.js";
+import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 
 export interface MqttConnection {
 	connected: boolean;
-	on(event: "connect" | "close" | "error", listener: (error?: Error) => void): this;
-	on(event: "message", listener: (topic: string, payload: Buffer) => void): this;
-	subscribe(topic: string, options: { qos: 1 }, callback: (error?: Error) => void): void;
+	on(
+		event: "connect" | "close" | "error",
+		listener: (error?: Error) => void,
+	): this;
+	on(
+		event: "message",
+		listener: (topic: string, payload: Buffer) => void,
+	): this;
+	subscribe(
+		topic: string,
+		options: { qos: 1 },
+		callback: (error?: Error) => void,
+	): void;
 	publish(
 		topic: string,
 		payload: string,
@@ -40,6 +50,8 @@ interface PendingResult {
 	resolve(result: JobResult): void;
 	reject(error: Error): void;
 	timer: ReturnType<typeof setTimeout>;
+	signal?: AbortSignal;
+	onAbort?: () => void;
 }
 
 export class MqttJobClient {
@@ -73,10 +85,21 @@ export class MqttJobClient {
 		this.client.on("error", () => {
 			this.ready = false;
 		});
-		this.client.on("message", (topic, payload) => this.handleResult(topic, payload));
+		this.client.on("message", (topic, payload) =>
+			this.handleResult(topic, payload),
+		);
 	}
 
-	submit(job: PrintJob, payload: string): Promise<JobResult> {
+	submit(
+		job: PrintJob,
+		payload: string,
+		options: JobSubmissionOptions = {},
+	): Promise<JobResult> {
+		if (options.signal?.aborted) {
+			return Promise.reject(
+				new DOMException("Request cancelled", "AbortError"),
+			);
+		}
 		if (!this.ready || !this.client.connected) {
 			return Promise.reject(
 				new SubmissionError(
@@ -101,8 +124,12 @@ export class MqttJobClient {
 		}
 
 		return new Promise((resolve, reject) => {
+			const signal = options.signal;
 			const timer = setTimeout(() => {
 				this.pending.delete(job.job_id);
+				if (signal && pending.onAbort) {
+					signal.removeEventListener("abort", pending.onAbort);
+				}
 				reject(
 					new SubmissionError(
 						504,
@@ -113,8 +140,22 @@ export class MqttJobClient {
 					),
 				);
 			}, this.config.timeoutMs);
-			const pending = { resolve, reject, timer };
+			const pending: PendingResult = { resolve, reject, timer, signal };
+			if (signal) {
+				pending.onAbort = () => {
+					if (this.pending.get(job.job_id) !== pending) return;
+					clearTimeout(timer);
+					this.pending.delete(job.job_id);
+					signal.removeEventListener("abort", pending.onAbort as () => void);
+					reject(new DOMException("Request cancelled", "AbortError"));
+				};
+			}
 			this.pending.set(job.job_id, pending);
+			if (signal && pending.onAbort) {
+				signal.addEventListener("abort", pending.onAbort, { once: true });
+				if (signal.aborted) pending.onAbort();
+			}
+			if (this.pending.get(job.job_id) !== pending) return;
 			this.client.publish(
 				this.topics.jobs,
 				payload,
@@ -123,6 +164,9 @@ export class MqttJobClient {
 					if (!error || this.pending.get(job.job_id) !== pending) return;
 					clearTimeout(timer);
 					this.pending.delete(job.job_id);
+					if (signal && pending.onAbort) {
+						signal.removeEventListener("abort", pending.onAbort);
+					}
 					reject(
 						new SubmissionError(
 							503,
@@ -147,6 +191,9 @@ export class MqttJobClient {
 		this.ready = false;
 		for (const [jobId, pending] of this.pending) {
 			clearTimeout(pending.timer);
+			if (pending.signal && pending.onAbort) {
+				pending.signal.removeEventListener("abort", pending.onAbort);
+			}
 			pending.reject(
 				new SubmissionError(
 					503,
@@ -180,6 +227,9 @@ export class MqttJobClient {
 		if (!pending) return;
 		clearTimeout(pending.timer);
 		this.pending.delete(result.job_id);
+		if (pending.signal && pending.onAbort) {
+			pending.signal.removeEventListener("abort", pending.onAbort);
+		}
 		pending.resolve(result);
 	}
 }

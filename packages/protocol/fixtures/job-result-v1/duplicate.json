@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "kind": "job_result",
+  "job_id": "job-hello-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "duplicate",
+  "error_code": "DUPLICATE_JOB"
+}

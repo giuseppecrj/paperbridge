@@ -17,6 +17,7 @@ facts, not physical verification of purchased units.
 | Fnox configuration | <https://fnox.jdx.dev/reference/configuration> | Checked-in `fnox.toml` supports hierarchical project configuration, remote references, profiles, local overrides, and exec-only injection; Fnox 1.31.1 is required for the selected `env = "exec"` setting. |
 | Fnox 1Password provider | <https://fnox.jdx.dev/providers/1password> | A secret mapping may contain an `op://vault/item/field` reference rather than a value; resolution uses 1Password CLI authentication. |
 | 1Password CLI | <https://developer.1password.com/docs/cli/secret-reference-syntax> | `op://` references identify vault/item/field locations and resolve the latest stored value without embedding plaintext in configuration. |
+| MCP TypeScript SDK v2 | <https://ts.sdk.modelcontextprotocol.io/v2/serving/http.html> | `@modelcontextprotocol/server` provides stateless per-request `createMcpHandler`; `@modelcontextprotocol/node` adapts it to plain Node HTTP. Tool cancellation is exposed as `ctx.mcpReq.signal`; plain mounts must add Host/Origin validation and close the handler during shutdown. |
 
 ## Purchased-unit observations
 

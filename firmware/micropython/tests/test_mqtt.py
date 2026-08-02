@@ -209,7 +209,7 @@ def test_mqtt_job_returns_a_correlated_terminal_result():
     )
 
 
-def test_qos_redelivery_replays_the_result_without_a_second_printer_delivery():
+def test_qos_redelivery_reports_duplicate_without_a_second_printer_delivery():
     settings = config()
     transport = RecordingTransport()
     service = JobService(settings, PrintCoordinator(EscPosRenderer(), transport))
@@ -222,7 +222,15 @@ def test_qos_redelivery_replays_the_result_without_a_second_printer_delivery():
     callback(b"v1/devices/paperbridge-dev-001/print-jobs", payload)
 
     assert transport.payloads == [b"\x1b@Hello from Paperbridge\n\n\n\n"]
-    assert client.published[-1] == client.published[-2]
+    assert client.published[-2][1]["status"] == "delivered_to_printer"
+    assert client.published[-1][1] == {
+        "schema_version": "1",
+        "kind": "job_result",
+        "job_id": "job-hello-001",
+        "device_id": "paperbridge-dev-001",
+        "status": "duplicate",
+        "error_code": "DUPLICATE_JOB",
+    }
 
 
 def test_mqtt_job_reports_partial_delivery_and_preserves_bytes_sent():

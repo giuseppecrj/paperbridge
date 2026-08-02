@@ -25,7 +25,7 @@ This path is host-/simulator-tested and was physically verified on 2026-08-02:
 observed its fixture receipt. `printed` remains absent until reliable printer
 status confirmation exists.
 
-## REST and MQTT job ingress
+## REST, MCP, and MQTT job ingress
 
 The private single-device service accepts the raw `print-job.v1` object at
 `POST /api/jobs`. HTTP rejects a body larger than 1,024 bytes before JSON
@@ -36,8 +36,8 @@ non-integral `feed.lines`.
 After validation, the service publishes the compact raw job to
 `v1/devices/{device_id}/print-jobs`. Firmware checks the exact topic, payload
 limit, schema, configured device, and private cut policy before calling the same
-semantic coordinator used by USB. REST/MQTT callers cannot provide `allow_cut`;
-`mqtt.allow_cut` defaults to false on the device.
+semantic coordinator used by USB. REST/MCP/MQTT callers cannot provide
+`allow_cut`; `mqtt.allow_cut` defaults to false on the device.
 
 Firmware publishes a non-retained QoS 1 result to
 `v1/devices/{device_id}/job-results`. The closed
@@ -45,22 +45,33 @@ Firmware publishes a non-retained QoS 1 result to
 
 - string `schema_version: "1"` and `kind: "job_result"`;
 - the correlated `job_id` and configured `device_id`;
-- terminal `status`: `delivered_to_printer`, `rejected`, or `failed`;
-- a stable `error_code` for rejection/failure; and
+- terminal `status`: `delivered_to_printer`, `rejected`, `failed`, or
+  `duplicate`;
+- a stable `error_code` for rejection, failure, or `DUPLICATE_JOB`; and
 - `bytes_sent` for success or a partial write.
 
-A bounded in-memory firmware ledger stores terminal results for one device boot.
-MQTT QoS 1 redelivery of the same `job_id` replays that result without another
-printer socket. It is not a durable queue and does not survive reboot.
+A bounded in-memory firmware ledger stores completed `job_id` values for one
+boot. MQTT QoS 1 redelivery of the same `job_id` publishes `duplicate` /
+`DUPLICATE_JOB` without another printer socket. It is not a durable queue and
+does not survive reboot.
 
-The HTTP service maps validation/device rejection, body limit, broker
+Streamable HTTP MCP is mounted at `/mcp`. Its `paperbridge_print` tool accepts
+the authoritative v1 receipt `content`; the service generates a fresh `job_id`,
+configured `device_id`, and timestamp before calling the same
+`JobSubmissionService` as REST. The transport is stateless per request. Client
+cancellation removes only the host waiter and does not label the device outcome.
+
+The REST and MCP service maps validation/device rejection, body limit, broker
 unavailability, printer failure/partial write, and timeout distinctly. A timeout
 is `unknown`: the service removes only its pending waiter and never republishes
-the job. The complete REST/MQTT path is host-/simulator-tested with real local
-Mosquitto and the real TCP printer simulator. It was also physically verified
-on 2026-08-02: `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
-`delivered_to_printer` after 34 bytes, and an operator observed its expected
-receipt. The result alone still does not prove paper output.
+the job. The complete REST/MCP/MQTT path is host-/simulator-tested with real
+local Mosquitto and the real TCP printer simulator. REST/MQTT was physically
+verified on 2026-08-02: `job-hw-acceptance-20260802T203016Z` returned HTTP 200
+with `delivered_to_printer` after 34 bytes, and an operator observed its expected
+receipt. MCP was physically verified the same day through a Pi MCP client: job
+`6e46f155-c3f2-4b11-9c56-46f9261f2abe` returned `delivered_to_printer` after 42
+bytes, and an operator observed its expected receipt. Results alone still do not
+prove paper output.
 
 ## MQTT tracer protocol
 

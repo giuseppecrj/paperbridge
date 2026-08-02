@@ -10,10 +10,14 @@
     "mqtt:probe": "node --import tsx src/main.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "@paperbridge/protocol": "workspace:*",
-    "mqtt": "^5.14.1"
+    "mqtt": "^5.14.1",
+    "zod": "4.2.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@types/node": "^24.10.1",
     "tsx": "^4.19.2",
     "typescript": "^5.9.3"
