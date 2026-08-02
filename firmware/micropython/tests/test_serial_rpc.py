@@ -68,3 +68,18 @@ def test_unexpected_dispatch_exception_maps_to_internal_error():
     assert response["ok"] is False
     assert response["error"]["code"] == "INTERNAL_ERROR"
     assert response["error"]["message"] == "Internal device error"
+
+
+def test_serve_once_discards_the_remainder_of_an_oversized_line():
+    output = io.StringIO()
+    server = SerialRpcServer(
+        io.StringIO("x" * 129 + "\n" + request() + "\n"), output, lambda *_args: {}
+    )
+    server.max_line_bytes = 128
+
+    server.serve_once()
+    response = server.serve_once()
+
+    assert response is not None
+    assert response["ok"] is True
+    assert json.loads(output.getvalue().splitlines()[0])["error"]["code"] == "INVALID_RPC_REQUEST"

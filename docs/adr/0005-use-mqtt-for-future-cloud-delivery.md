@@ -1,6 +1,6 @@
 # ADR 0005: Use MQTT for future cloud delivery
 
-- Status: Proposed; implementation deferred
+- Status: Superseded by ADR 0006
 - Date: 2026-08-01
 
 ## Context
@@ -16,5 +16,8 @@ topics. Reuse the semantic job and coordinator contracts.
 
 ## Consequences
 
-No MQTT broker, client, backend, or website is initialized now. Failure of
-memory, routing, TLS, soak, OTA, or credential gates triggers ESP-IDF evaluation.
+ADR 0006 now governs the local MQTT 3.1.1 tracer: it is limited to an
+authenticated no-output probe and does not implement a backend or MQTT job
+delivery. TLS, cloud MQTT, and the full credential lifecycle remain deferred.
+Failure of memory, routing, TLS, soak, OTA, or credential gates triggers ESP-IDF
+evaluation.

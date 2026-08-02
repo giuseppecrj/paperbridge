@@ -11,5 +11,7 @@ __pycache__/
 config.json
 secrets.py
 captures/
+tools/mosquitto/mosquitto.local.conf
+tools/mosquitto/*.passwd
 firmware/downloads/
 .env

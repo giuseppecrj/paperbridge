@@ -5,11 +5,12 @@ from .serial_rpc import RpcError
 
 
 class CommandRouter:
-    def __init__(self, config, ethernet, coordinator, transport):
+    def __init__(self, config, ethernet, coordinator, transport, mqtt=None):
         self.config = config
         self.ethernet = ethernet
         self.coordinator = coordinator
         self.transport = transport
+        self.mqtt = mqtt
 
     def dispatch(self, command, params):
         handlers = {
@@ -18,6 +19,7 @@ class CommandRouter:
             "system.memory": self.system_memory,
             "system.reset_cause": self.system_reset_cause,
             "config.show_redacted": self.config_show,
+            "mqtt.status": self.mqtt_status,
             "ethernet.initialize": self.ethernet_initialize,
             "ethernet.status": self.ethernet_status,
             "ethernet.link_status": self.ethernet_link_status,
@@ -49,6 +51,11 @@ class CommandRouter:
 
     def config_show(self, _params):
         return redacted(self.config)
+
+    def mqtt_status(self, _params):
+        if self.mqtt is None:
+            return {"enabled": False, "connected": False, "last_error": None}
+        return self.mqtt.status()
 
     def ethernet_initialize(self, _params):
         try:

@@ -54,6 +54,30 @@ def validate_config(config):
         value = queue.get(field)
         if not isinstance(value, int) or not 1 <= value <= 1000:
             raise ConfigurationError(f"queue.{field} must be 1..1000")
+
+    mqtt = config.get("mqtt")
+    if mqtt is not None:
+        if not isinstance(mqtt, dict):
+            raise ConfigurationError("mqtt must be an object")
+        if not isinstance(mqtt.get("enabled"), bool):
+            raise ConfigurationError("mqtt.enabled must be a boolean")
+        for field, limit in (("host", 253), ("client_id", 64), ("username", 64), ("password", 128)):
+            value = mqtt.get(field)
+            if not isinstance(value, str) or not 1 <= len(value) <= limit:
+                raise ConfigurationError(f"mqtt.{field} must be 1..{limit} characters")
+        if not isinstance(mqtt.get("port"), int) or not 1 <= mqtt["port"] <= 65535:
+            raise ConfigurationError("mqtt.port must be 1..65535")
+        if not isinstance(mqtt.get("topic_prefix"), str) or mqtt["topic_prefix"] != "v1/devices":
+            raise ConfigurationError("mqtt.topic_prefix must be v1/devices")
+        keepalive = mqtt.get("keepalive_seconds")
+        if not isinstance(keepalive, int) or not 5 <= keepalive <= 120:
+            raise ConfigurationError("mqtt.keepalive_seconds must be 5..120")
+        retry_interval = mqtt.get("retry_interval_ms")
+        if not isinstance(retry_interval, int) or not 100 <= retry_interval <= 60000:
+            raise ConfigurationError("mqtt.retry_interval_ms must be 100..60000")
+        max_message_bytes = mqtt.get("max_message_bytes")
+        if not isinstance(max_message_bytes, int) or not 128 <= max_message_bytes <= 4096:
+            raise ConfigurationError("mqtt.max_message_bytes must be 128..4096")
     return config
 
 
@@ -66,8 +90,10 @@ def load_config(path="config.json"):
 
 
 def redacted(config):
-    # No secrets exist yet; return a JSON-safe copy so future redaction has one seam.
     try:
-        return json.loads(json.dumps(config))
+        value = json.loads(json.dumps(config))
     except (TypeError, ValueError) as exc:
         raise ConfigurationError("configuration is not JSON-compatible") from exc
+    if "mqtt" in value:
+        value["mqtt"]["password"] = "***"
+    return value

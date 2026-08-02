@@ -14,7 +14,11 @@ configuration validation, shared schema/device/renderer fixtures, raw/control
 rejection, exact ESC/POS bytes, semantic `job.submit` request replay with a real
 printer-simulator socket capture, printer transport failures, Ethernet API
 behavior, flash/deploy safety, port ambiguity, bounded FIFO behavior, status
-transitions, and simulator capture hashing.
+transitions, simulator capture hashing, and the bounded no-output MQTT tracer.
+The Bun workspace checks Node TypeScript with `tsc` and runs its tracer contract
+tests. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
+also run the Node probe through local Mosquitto and a CPython test client using
+the firmware `MqttTracer`; otherwise they are reported as skipped.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.
@@ -30,7 +34,8 @@ buffering passed on 2026-08-02. Evidence IDs and observations are recorded in
 `hardware.md`; only the 72-hour soak gate remains.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
-operates the printer.
+operates the printer. The MQTT tracer tests send no semantic job or printer
+bytes. They do not establish purchased-device, W5500, or paper-output evidence.
 
 ## Opt-in hardware-in-the-loop (HIL)
 

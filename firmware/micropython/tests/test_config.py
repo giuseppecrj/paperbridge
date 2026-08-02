@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
-from src.config import ConfigurationError, validate_config
+from src.config import ConfigurationError, redacted, validate_config
 
 
 def example():
@@ -12,6 +12,13 @@ def example():
 
 def test_example_configuration_is_valid():
     assert validate_config(example())["printer"]["port"] == 9100
+
+
+def test_mqtt_password_is_redacted_from_configuration_output():
+    config = example()
+
+    assert validate_config(config)["mqtt"]["port"] == 1883
+    assert redacted(config)["mqtt"]["password"] == "***"
 
 
 @pytest.mark.parametrize(

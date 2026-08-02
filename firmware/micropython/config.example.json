@@ -19,5 +19,17 @@
   "queue": {
     "max_pending": 20,
     "max_completed_ids": 100
+  },
+  "mqtt": {
+    "enabled": false,
+    "host": "192.0.2.1",
+    "port": 1883,
+    "client_id": "paperbridge-dev-001",
+    "username": "paperbridge-dev-001",
+    "password": "CHANGE_ME",
+    "keepalive_seconds": 30,
+    "retry_interval_ms": 1000,
+    "max_message_bytes": 1024,
+    "topic_prefix": "v1/devices"
   }
 }

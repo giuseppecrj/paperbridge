@@ -16,9 +16,10 @@ If a replacement setup has no link, try a crossover cable or Mode B.
 ## Mode B: switch or router
 
 Connect ESP32 and printer with separate cables to a small switch/router. Use this
-when direct negotiation fails, DHCP aids inspection, or the printer utility needs
-a shared network. The Mac still controls the ESP32 over USB; Mode B is not a
-requirement for the application protocol.
+when direct negotiation fails, DHCP aids inspection, the printer utility needs a
+shared network, or the optional local MQTT tracer needs to reach the Mac mini.
+The Mac still controls the ESP32 over USB; Mode B is not a requirement for the
+USB application path.
 
-Address, netmask, optional gateway/DNS, printer host, and printer port are
-independent configuration fields.
+Address, netmask, optional gateway/DNS, printer host, printer port, and MQTT
+broker host are independent configuration fields.

@@ -100,14 +100,17 @@ class SerialRpcServer:
         self.writer.write(json.dumps(response) + "\n")
         return response
 
+    def serve_once(self):
+        line = self.reader.readline(self.max_line_bytes + 1)
+        if not line:
+            return None
+        if len(line) > self.max_line_bytes and not _line_complete(line):
+            while True:
+                remainder = self.reader.readline(self.max_line_bytes + 1)
+                if not remainder or _line_complete(remainder):
+                    break
+        return self.handle_line(line)
+
     def run_forever(self):
         while True:
-            line = self.reader.readline(self.max_line_bytes + 1)
-            if not line:
-                continue
-            if len(line) > self.max_line_bytes and not _line_complete(line):
-                while True:
-                    remainder = self.reader.readline(self.max_line_bytes + 1)
-                    if not remainder or _line_complete(remainder):
-                        break
-            self.handle_line(line)
+            self.serve_once()

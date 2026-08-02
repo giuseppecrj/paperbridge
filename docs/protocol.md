@@ -22,3 +22,41 @@ This path is host- and simulator-tested and was physically verified on
 2026-08-02: `job-hello-001` returned `delivered_to_printer` after 28 bytes, and
 an operator observed its fixture receipt. `printed` remains absent until
 reliable printer status confirmation exists.
+
+## MQTT tracer protocol
+
+The optional local tracer is not a semantic print job and cannot reach the
+printer coordinator. It uses authenticated MQTT 3.1.1, QoS 1, and non-retained
+messages. The device subscribes only to `v1/devices/{device_id}/jobs` and
+publishes only to `v1/devices/{device_id}/status`.
+
+A request is UTF-8 JSON no larger than the configured 1024-byte default:
+
+```json
+{
+  "schema_version": 1,
+  "kind": "mqtt_probe",
+  "probe_id": "probe-001",
+  "device_id": "paperbridge-dev-001",
+  "created_at": "2026-08-02T00:00:00Z"
+}
+```
+
+The device requires exactly these fields, matching `device_id`, a 1–128
+character `probe_id`, and a 1–64 character opaque `created_at`; wrong topic,
+device, malformed JSON, oversized payload, and unknown fields are rejected
+without a response or printer call. A successful correlated response is:
+
+```json
+{
+  "schema_version": 1,
+  "kind": "mqtt_probe_status",
+  "probe_id": "probe-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "ok",
+  "ts_ms": 123
+}
+```
+
+This reports only tracer receipt. It does not indicate job validation,
+`delivered_to_printer`, or physical paper output.

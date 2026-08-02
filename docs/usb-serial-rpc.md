@@ -15,6 +15,8 @@ Live commands are:
 - `system.ping`, `system.info`, `system.memory`, `system.reset_cause`, and
   `system.reboot`
 - `config.show_redacted`
+- `mqtt.status`, which reports the optional tracer's connection state and last
+  error without contacting the printer
 - `ethernet.initialize`, `ethernet.status`, `ethernet.link_status`, and
   `ethernet.configure_static`
 - `printer.endpoint`, `printer.probe`, `printer.print_test`,
@@ -25,7 +27,8 @@ Live commands are:
 `printer.cut_test` requires literal JSON boolean `confirm: true`; it never runs
 at boot or in unit tests. `job.submit` checks the configured `device_id` before
 printer delivery and returns the semantic `job_id`; its serial `request_id`
-continues to provide bounded response replay. `system.reboot` schedules reset
+continues to provide bounded response replay. `mqtt.status` reports disabled
+when no MQTT tracer is configured. `system.reboot` schedules reset
 after returning its response. Queue, config reload, fixture aliases, and durable
 job-id deduplication are not live RPC commands.
 

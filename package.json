@@ -1,0 +1,15 @@
+{
+  "name": "paperbridge",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "bun run --filter @paperbridge/api lint",
+    "typecheck": "bun run --filter @paperbridge/api typecheck",
+    "test": "bun run --filter @paperbridge/api test",
+    "mqtt:probe": "bun run --filter @paperbridge/api mqtt:probe"
+  }
+}

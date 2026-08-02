@@ -10,8 +10,8 @@ Mac -- USB-C serial JSON RPC --> Waveshare ESP32-S3-ETH
 
 The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. No website, backend, MQTT, Wi-Fi, image printing, OTA, or
-production provisioning is implemented.
+paper emerged. No website, backend, MQTT job delivery, Wi-Fi, image printing,
+OTA, or production provisioning is implemented.
 
 ## Status
 
@@ -34,6 +34,8 @@ production provisioning is implemented.
 - Ethernet hot reconnect, printer-only and ESP32-only recovery, cover-open, and
   paper-out behavior passed on 2026-08-02. A 27-sample no-output soak trial also
   passed; only the full 72-hour soak remains.
+- A no-output MQTT 3.1.1 tracer is implemented and host-tested. Its device and
+  local-Mosquitto path is not physically verified.
 
 ## Mac setup
 
@@ -47,7 +49,8 @@ just lint
 just test
 ```
 
-`mise.toml` pins Python, `uv`, and `just`; `uv.lock` pins Python packages.
+`mise.toml` pins Python, `uv`, `just`, Node, and Bun; `uv.lock` and `bun.lock`
+pin their respective packages.
 
 ## Discover the ESP32 serial port
 
@@ -78,7 +81,8 @@ the selected and verified image is official MicroPython 1.28.0:
 ```sh
 mkdir -p firmware/downloads
 curl -fL \
-  https://micropython.org/resources/firmware/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin \
+  'https://micropython.org/resources/firmware/'\
+'ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin' \
   -o firmware/downloads/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin
 printf '%s  %s\n' \
   67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a62ff5dd \
@@ -108,7 +112,9 @@ PORT="$PAPERBRIDGE_PORT" just deploy
 ```
 
 Deployment and application RPC are separate: `mpremote` copies files; the
-`paperbridge` CLI sends requests.
+`paperbridge` CLI sends requests. The MQTT tracer is disabled by default. To
+enable it, set its ignored local `mqtt.enabled` flag and broker credentials in
+`config.json`; `config show` redacts the password.
 
 ## Exercise the local path
 
@@ -160,6 +166,25 @@ For machine-readable output:
 ```sh
 mise exec -- uv run paperbridge --json --port "$PAPERBRIDGE_PORT" device info
 ```
+
+## MQTT tracer (no paper output)
+
+This tracer exchanges a bounded correlated probe only; it never invokes the
+printer coordinator. Set up authenticated local Mosquitto from
+[`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's wired-LAN
+broker address and non-placeholder credentials in ignored
+`firmware/micropython/config.json`, enable MQTT, and deploy only with explicit
+hardware authorization. Once the device is connected, inspect it over USB and
+run the host probe:
+
+```sh
+paperbridge --port "$PAPERBRIDGE_PORT" mqtt status
+just mqtt-probe
+```
+
+`just mqtt-probe` requires `PAPERBRIDGE_MQTT_HOST`, `PAPERBRIDGE_MQTT_USERNAME`,
+`PAPERBRIDGE_MQTT_PASSWORD`, and `PAPERBRIDGE_DEVICE_ID`. It reports a correlated
+transport response, not printer delivery or paper output.
 
 ## Simulator
 

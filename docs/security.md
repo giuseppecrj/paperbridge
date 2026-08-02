@@ -2,11 +2,12 @@
 
 The current trust boundary is local USB plus the configured printer LAN. RPC
 still bounds line size, validates envelopes/configuration, rejects raw bytes and
-control injection, uses explicit timeouts, and hides future secrets behind a
-redaction seam. No credentials are needed or committed.
+control injection, uses explicit timeouts, and redacts the ignored local MQTT
+password from `config.show_redacted`. No credentials are committed.
 
-Future public clients submit semantic jobs only to an authenticated HTTPS
-backend. Devices initiate outbound MQTT over TLS; no public inbound device port
-or browser-to-device connection is planned. Device identity, credential storage,
-rotation, TLS validation, replay protection, signed updates, and OTA are future
-work and may trigger ESP-IDF migration.
+The no-output tracer uses an authenticated local Mosquitto listener on the wired
+LAN. MQTT/TLS, production credential provisioning and rotation, and public
+broker exposure are not implemented. Future public clients submit semantic jobs
+only to an authenticated HTTPS backend. Device identity, TLS validation, replay
+protection, signed updates, and OTA remain future work and may trigger ESP-IDF
+migration.

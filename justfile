@@ -12,9 +12,11 @@ MICROPYTHON_SHA256 := "67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a
 
 bootstrap:
     uv sync
+    bun install
 
 lint:
     uv run ruff check .
+    bun run lint
 
 format:
     uv run ruff format .
@@ -24,6 +26,7 @@ format-check:
 
 test:
     uv run pytest
+    bun run test
 
 # Opt-in HIL: never part of ordinary `just test`. Requires a selected PORT.
 test-hardware-smoke:
@@ -94,6 +97,10 @@ serial-monitor:
 
 printer-simulator:
     uv run python tools/printer-simulator/server.py
+
+# No-output MQTT tracer; requires the configured local Mosquitto credentials.
+mqtt-probe:
+    bun run mqtt:probe
 
 clean:
     rm -rf .pytest_cache .ruff_cache .venv captures
