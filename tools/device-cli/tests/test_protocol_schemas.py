@@ -44,6 +44,9 @@ def test_print_job_schema_accepts_valid_and_rejects_raw_commands():
     [
         "valid-text-feed.json",
         "valid-rule.json",
+        "valid-styled-text.json",
+        "valid-qr.json",
+        "valid-rich-receipt.json",
         "valid-cut.json",
     ],
 )
@@ -56,7 +59,11 @@ def test_print_job_schema_accepts_shared_valid_fixtures(name):
     [
         "invalid-raw-block.json",
         "invalid-control-text.json",
-        "invalid-style-fields.json",
+        "invalid-qr-control-data.json",
+        "invalid-qr-oversized.json",
+        "invalid-oversized-text.json",
+        "invalid-style-alignment.json",
+        "invalid-style-multiplier.json",
         "invalid-copies.json",
         "invalid-expires-at.json",
         "invalid-empty-text.json",
@@ -109,13 +116,10 @@ def test_job_result_schema_and_firmware_share_stable_error_codes():
     assert set(schema["properties"]["error_code"]["enum"]) == JOB_RESULT_ERROR_CODES
 
 
-def test_print_job_schema_rejects_styling_and_options_fields():
+def test_print_job_schema_accepts_styled_text_and_rejects_unknown_options():
     validator = job_validator()
+    validator.validate(load(JOB_FIXTURES / "valid-styled-text.json"))
     base = load(JOB_FIXTURES / "valid-text-feed.json")
-    styled = json.loads(json.dumps(base))
-    styled["content"]["blocks"][0]["bold"] = True
-    with pytest.raises(ValidationError):
-        validator.validate(styled)
     with_options = json.loads(json.dumps(base))
     with_options["options"] = {"copies": 1}
     with pytest.raises(ValidationError):

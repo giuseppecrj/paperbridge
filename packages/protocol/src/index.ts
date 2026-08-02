@@ -15,10 +15,33 @@ export const MQTT_JOB_MAX_BYTES = 1024;
 
 type JsonObject = Record<string, unknown>;
 
+export type PrintJobTextBlock = {
+	type: "text";
+	text: string;
+	align?: "left" | "center" | "right";
+	bold?: boolean;
+	underline?: boolean;
+	width_multiplier?: 1 | 2;
+	height_multiplier?: 1 | 2;
+};
+
+export type PrintJobBlock =
+	| PrintJobTextBlock
+	| { type: "qr"; data: string }
+	| { type: "feed"; lines: number }
+	| { type: "rule"; character: string }
+	| { type: "cut"; mode: "partial" };
+
+export type PrintJobContent = {
+	kind: "receipt";
+	blocks: PrintJobBlock[];
+};
+
 export type PrintJob = JsonObject & {
 	schema_version: "1";
 	job_id: string;
 	device_id: string;
+	content: PrintJobContent;
 };
 
 export type JobResult = JsonObject & {

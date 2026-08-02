@@ -72,25 +72,24 @@ device registry, pairing flow, account ownership, or multi-device routing.
 
 ### Job and rendering boundary
 
-Preserve `print-job.v1` unchanged. Define `print-job.v2` for expressive 80 mm
-monochrome receipts composed from controlled blocks:
+Evolve the pre-release `print-job.v1` contract compatibly in place for expressive
+80 mm monochrome receipts composed from controlled blocks:
 
-- styled and aligned text;
+- styled and aligned text with bounded 1–2× size multipliers;
 - rules and spacing/feed;
-- QR codes;
-- bounded raster images or logos; and
+- fixed-policy QR codes with bounded printable-ASCII data; and
 - explicit cut.
+
+Existing valid v1 jobs and their rendered bytes remain unchanged. A future
+incompatible contract change may introduce a new version; this phase does not
+add a version dispatcher, second MCP tool, or new MQTT topic. Bounded raster
+images or logos remain a later v1-compatible extension behind a separate
+schema/design and physical-memory spike.
 
 Phase 2 does not promise arbitrary PDF, HTML, color, or page-sized document
 printing. Raw ESC/POS remains unavailable at MCP, REST, and MQTT trust
-boundaries.
-
-Jobs are self-contained. The API accepts bounded embedded PNG or JPEG input and
-performs expensive image decoding, resizing, and monochrome dithering. The
-device-facing job carries only bounded, prepared raster content. Firmware
-validates the controlled blocks and performs final ESC/POS rendering and printer
-delivery. Exact source limits, prepared raster limits, and encoding are set by a
-schema-design task plus a physical memory/printing spike rather than by this ADR.
+boundaries. Firmware validates the controlled blocks and performs final
+ESC/POS rendering and printer delivery.
 
 ### Delivery behavior
 

@@ -32,6 +32,9 @@ def test_accepts_bounded_text_job():
     [
         "valid-text-feed.json",
         "valid-rule.json",
+        "valid-styled-text.json",
+        "valid-qr.json",
+        "valid-rich-receipt.json",
     ],
 )
 def test_shared_valid_fixtures_pass(name):
@@ -50,7 +53,11 @@ def test_shared_cut_fixture_requires_opt_in():
     [
         "invalid-raw-block.json",
         "invalid-control-text.json",
-        "invalid-style-fields.json",
+        "invalid-qr-control-data.json",
+        "invalid-qr-oversized.json",
+        "invalid-oversized-text.json",
+        "invalid-style-alignment.json",
+        "invalid-style-multiplier.json",
         "invalid-copies.json",
         "invalid-expires-at.json",
         "invalid-empty-text.json",
@@ -79,7 +86,9 @@ def test_cut_requires_opt_in_fixture_is_policy_not_schema_invalid():
         {"type": "feed", "lines": 100},
         {"type": "feed", "lines": True},
         {"type": "cut", "mode": "partial"},
-        {"type": "text", "text": "Styled", "bold": True},
+        {"type": "text", "text": "Styled", "align": "justify"},
+        {"type": "text", "text": "Styled", "align": []},
+        {"type": "text", "text": "Styled", "width_multiplier": 3},
     ],
 )
 def test_rejects_unsafe_or_unsupported_blocks(value):

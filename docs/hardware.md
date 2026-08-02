@@ -63,7 +63,10 @@ light density, and default code page CP437.
 
 ASCII text, line feed, and explicit partial cut were physically observed. The
 working cutter bytes are `1d 56 01`; automatic or unconfirmed cutting remains
-forbidden.
+forbidden. The documented style and Epson-compatible QR sequences are
+implemented and host-/simulator-tested, but alignment, emphasis, sizing,
+underline, and QR appearance/readability have not been physically verified on
+this purchased RP326.
 
 ## Purchased-unit observations
 

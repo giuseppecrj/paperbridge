@@ -11,7 +11,11 @@ import {
 	localhostOriginValidation,
 	toNodeHandler,
 } from "@modelcontextprotocol/node";
-import { printJobSchema, type JobResult } from "@paperbridge/protocol";
+import {
+	printJobSchema,
+	type JobResult,
+	type PrintJobContent,
+} from "@paperbridge/protocol";
 
 import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 
@@ -27,7 +31,7 @@ interface McpEndpointOptions {
 	now?: () => string;
 }
 
-const inputSchema = fromJsonSchema<{ content: unknown }>({
+const inputSchema = fromJsonSchema<{ content: PrintJobContent }>({
 	type: "object",
 	additionalProperties: false,
 	required: ["content"],

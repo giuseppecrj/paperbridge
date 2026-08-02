@@ -59,5 +59,5 @@ never a client field.
 
 USB ping/info precedes direct W5500 initialization; printer reachability remains
 separate from paper output. Public authentication, MQTT/TLS, durable queues,
-automatic retries, multi-device routing, v2/image content, OTA, and production
+automatic retries, multi-device routing, raster images, OTA, and production
 provisioning remain out of scope.

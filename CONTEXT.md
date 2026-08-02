@@ -68,8 +68,8 @@ not job expiry, printer failure, or permission to submit the job again.
 _Avoid_: Failed, expired, retryable
 
 **Block**:
-A bounded content unit within a semantic print job, such as text, feed, rule, or
-cut.
+A bounded content unit within a semantic print job, such as text, feed, rule, QR,
+or cut.
 _Avoid_: Command, payload
 
 **Bring-up Test**:

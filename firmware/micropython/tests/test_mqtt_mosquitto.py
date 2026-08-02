@@ -314,10 +314,10 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
             "bytes_sent": 28,
         }
 
-        mcp_content = {
-            "kind": "receipt",
-            "blocks": [{"type": "text", "text": "Hello from MCP"}],
-        }
+        rich_job = json.loads(
+            Path("packages/protocol/fixtures/print-job-v1/valid-rich-receipt.json").read_text()
+        )
+        mcp_content = rich_job["content"]
         mcp_client = subprocess.Popen(
             [
                 "node",
@@ -350,14 +350,16 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
             "job_id": mcp_response["result"]["structuredContent"]["job_id"],
             "device_id": username,
             "status": "delivered_to_printer",
-            "bytes_sent": 17,
+            "bytes_sent": len(
+                Path("packages/protocol/fixtures/expected-rich-receipt.bin").read_bytes()
+            ),
         }
 
         simulator_thread.join(1)
         assert not simulator_thread.is_alive()
         assert {capture.read_bytes() for capture in (tmp_path / "captures").glob("*.bin")} == {
             b"\x1b@Hello from Paperbridge\n\n\n\n",
-            b"\x1b@Hello from MCP\n",
+            Path("packages/protocol/fixtures/expected-rich-receipt.bin").read_bytes(),
         }
     finally:
         if api is not None:

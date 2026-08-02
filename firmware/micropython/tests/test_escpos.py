@@ -56,6 +56,51 @@ def test_render_shared_rule_fixture_uses_rp326_columns():
     assert payload == b"\x1b@TOTAL\n" + (b"-" * 48) + b"\n\n"
 
 
+def test_render_styled_text_uses_exact_commands_and_resets():
+    payload = EscPosRenderer().render(load("valid-styled-text.json"))
+    assert payload == (
+        b"\x1b@\x1ba\x01\x1bE\x01\x1b-\x00\x1d!\x10Styled\n\x1ba\x00\x1bE\x00\x1b-\x00\x1d!\x00"
+    )
+
+
+def test_render_styled_text_does_not_leak_to_next_block():
+    job = {
+        "content": {
+            "blocks": [
+                {"type": "text", "text": "Bold", "bold": True},
+                {"type": "text", "text": "Plain"},
+            ]
+        }
+    }
+    assert EscPosRenderer().render(job) == (
+        b"\x1b@\x1ba\x00\x1bE\x01\x1b-\x00\x1d!\x00Bold\n"
+        b"\x1ba\x00\x1bE\x00\x1b-\x00\x1d!\x00Plain\n"
+    )
+
+
+def test_render_qr_uses_fixed_epson_commands_and_centering():
+    payload = EscPosRenderer().render(load("valid-qr.json"))
+    assert payload == (
+        b"\x1b@\x1ba\x01"
+        b"\x1d(k\x04\x00\x31\x41\x32\x00"
+        b"\x1d(k\x03\x00\x31\x43\x03"
+        b"\x1d(k\x03\x00\x31\x45\x31"
+        b"\x1d(k\x22\x00\x31\x50\x30https://example.com/paperbridge"
+        b"\x1d(k\x03\x00\x31\x51\x30"
+        b"\x1ba\x00\x1bE\x00\x1b-\x00\x1d!\x00"
+    )
+
+
+def test_render_rejects_qr_output_before_growing_past_limit():
+    with pytest.raises(RenderError, match="rendered job exceeds byte limit"):
+        EscPosRenderer(max_bytes=32).render(load("valid-qr.json"))
+
+
+def test_render_shared_rich_receipt_matches_binary_fixture():
+    expected = Path("packages/protocol/fixtures/expected-rich-receipt.bin").read_bytes()
+    assert EscPosRenderer().render(load("valid-rich-receipt.json")) == expected
+
+
 def test_render_shared_cut_fixture_requires_opt_in():
     cut_job = load("valid-cut.json")
     with pytest.raises(RenderError, match="allow_cut"):

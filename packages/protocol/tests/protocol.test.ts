@@ -24,6 +24,9 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 	for (const name of [
 		"valid-text-feed.json",
 		"valid-rule.json",
+		"valid-styled-text.json",
+		"valid-qr.json",
+		"valid-rich-receipt.json",
 		"valid-cut.json",
 	]) {
 		assert.equal(
@@ -34,7 +37,11 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 	for (const name of [
 		"invalid-raw-block.json",
 		"invalid-control-text.json",
-		"invalid-style-fields.json",
+		"invalid-qr-control-data.json",
+		"invalid-qr-oversized.json",
+		"invalid-oversized-text.json",
+		"invalid-style-alignment.json",
+		"invalid-style-multiplier.json",
 		"invalid-copies.json",
 		"invalid-expires-at.json",
 		"invalid-empty-text.json",
@@ -42,6 +49,14 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 	]) {
 		assert.throws(() => parsePrintJob(jsonFixture("print-job-v1", name)));
 	}
+});
+
+test("keeps the representative rich receipt below the MQTT limit", () => {
+	const rich = parsePrintJob(
+		jsonFixture("print-job-v1", "valid-rich-receipt.json"),
+	);
+	assert.equal(JSON.stringify(rich).length, 811);
+	assert.doesNotThrow(() => encodePrintJob(rich));
 });
 
 test("keeps schema validity separate from the 1024-byte MQTT limit", () => {

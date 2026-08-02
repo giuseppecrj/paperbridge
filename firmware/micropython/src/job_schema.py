@@ -18,8 +18,8 @@ def _bounded_string(value, field, maximum, minimum=1):
         raise JobValidationError(f"{field} must be {minimum}..{maximum} characters")
 
 
-def _printable_ascii(value, field):
-    _bounded_string(value, field, 2048)
+def _printable_ascii(value, field, maximum=2048):
+    _bounded_string(value, field, maximum)
     for character in value:
         code = ord(character)
         if code < _PRINTABLE_ASCII_MIN or code > _PRINTABLE_ASCII_MAX:
@@ -58,8 +58,34 @@ def validate_job(job, allow_cut=False):
         _require_object(block, "block")
         block_type = block.get("type")
         if block_type == "text":
-            _reject_unknown_keys(block, {"type", "text"}, "text")
+            _reject_unknown_keys(
+                block,
+                {
+                    "type",
+                    "text",
+                    "align",
+                    "bold",
+                    "underline",
+                    "width_multiplier",
+                    "height_multiplier",
+                },
+                "text",
+            )
             _printable_ascii(block.get("text"), "text")
+            if "align" in block and block["align"] not in ("left", "center", "right"):
+                raise JobValidationError("text.align must be left, center, or right")
+            for field in ("bold", "underline"):
+                if field in block and not isinstance(block[field], bool):
+                    raise JobValidationError(f"text.{field} must be a boolean")
+            for field in ("width_multiplier", "height_multiplier"):
+                value = block.get(field)
+                if field in block and (
+                    isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 2
+                ):
+                    raise JobValidationError(f"text.{field} must be 1..2")
+        elif block_type == "qr":
+            _reject_unknown_keys(block, {"type", "data"}, "qr")
+            _printable_ascii(block.get("data"), "qr.data", 256)
         elif block_type == "feed":
             _reject_unknown_keys(block, {"type", "lines"}, "feed")
             lines = block.get("lines")

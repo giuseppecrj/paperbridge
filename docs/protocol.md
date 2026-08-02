@@ -6,10 +6,21 @@ not printer bytes. Version `"1"` requires bounded `job_id`, `device_id`, opaque
 unsupported fields, control bytes, unknown versions/types, and unknown block
 types are rejected. Firmware also bounds the rendered output to 32 KiB.
 
-V1 blocks are text, feed, 48-column rule, and partial cut. Cut is schema-valid,
-but execution policy and rendering must authorize it. Raw ESC/POS, styling,
-copies, expiry, bitmap, and QR blocks are not v1 semantics and fail rather than
-being ignored.
+V1 is a pre-release semantic receipt contract that evolves compatibly in place.
+Existing text, feed, 48-column rule, and partial-cut jobs remain valid and retain
+their exact rendered bytes. Text may add bounded alignment, bold, single
+underline, and 1–2× width/height multipliers. A QR block accepts printable
+ASCII up to 256 bytes and renders with fixed model 2, module size 3, error
+correction M, and centered alignment. Cut is schema-valid, but execution policy
+and rendering
+must authorize it. Raw ESC/POS, copies, expiry, bitmap, color, and arbitrary
+layout remain unsupported and fail rather than being ignored.
+
+The renderer uses Epson-compatible `ESC a`, `ESC E`, `ESC -`, `GS !`, and `GS ( k`
+sequences. It resets neutral style after styled text and QR blocks, and bounds
+each append against the 32 KiB rendered-output limit. These style and QR commands
+are host-/simulator-tested only; appearance and QR readability on the purchased
+RP326 remain hardware acceptance work.
 
 ## USB ingress
 
