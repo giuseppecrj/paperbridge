@@ -108,7 +108,6 @@ class CommandRouter:
             raise RpcError("ETHERNET_LINK_DOWN", "W5500 physical link is down")
 
     def printer_probe(self, _params):
-        self._require_ethernet_link()
         try:
             return self.transport.probe()
         except Exception as exc:

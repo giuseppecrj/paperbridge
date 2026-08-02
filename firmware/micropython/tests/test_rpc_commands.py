@@ -118,12 +118,41 @@ def test_cut_requires_explicit_boolean_confirmation():
     assert router().dispatch("printer.cut_test", {"confirm": True}) == {"cut": True}
 
 
-def test_printer_commands_require_physical_link():
+def test_printer_probe_uses_tcp_reachability_when_lan_status_is_stale():
     instance = router()
-    instance.ethernet.status = lambda: {"link_up": False}
+    instance.ethernet.status = lambda: {"link_up": False, "raw_status": 1}
+
+    assert instance.dispatch("printer.probe", {}) == {"reachable": True}
+
+
+@pytest.mark.parametrize(
+    ("command", "params"),
+    [
+        ("printer.print_test", {"text": "test"}),
+        ("printer.feed_test", {}),
+        ("printer.cut_test", {"confirm": True}),
+    ],
+)
+def test_printer_output_commands_still_require_physical_link(command, params):
+    instance = router()
+    instance.ethernet.status = lambda: {"link_up": False, "raw_status": 1}
+
     with pytest.raises(RpcError) as error:
-        instance.dispatch("printer.probe", {})
+        instance.dispatch(command, params)
+
     assert error.value.code == "ETHERNET_LINK_DOWN"
+
+
+def test_print_job_still_requires_physical_link():
+    transport = FakeTransport()
+    instance = print_job_router(transport)
+    instance.ethernet.status = lambda: {"link_up": False, "raw_status": 1}
+
+    with pytest.raises(RpcError) as error:
+        instance.dispatch("job.submit", {"job": load("valid-text-feed.json")})
+
+    assert error.value.code == "ETHERNET_LINK_DOWN"
+    assert transport.payloads == []
 
 
 def test_wifi_status_exposes_control_plane_without_printer_access():
