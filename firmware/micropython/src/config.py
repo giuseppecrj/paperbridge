@@ -24,7 +24,7 @@ def _ipv4(value, field, nullable=False):
 def validate_config(config):
     if not isinstance(config, dict):
         raise ConfigurationError("configuration must be an object")
-    for key in ("device_id", "environment", "serial", "ethernet", "printer", "queue"):
+    for key in ("device_id", "environment", "serial", "ethernet", "wifi", "printer", "queue"):
         if key not in config:
             raise ConfigurationError(f"missing configuration field: {key}")
     if not isinstance(config["device_id"], str) or not 1 <= len(config["device_id"]) <= 64:
@@ -55,6 +55,19 @@ def validate_config(config):
         if not isinstance(value, int) or not 1 <= value <= 1000:
             raise ConfigurationError(f"queue.{field} must be 1..1000")
 
+    wifi = config["wifi"]
+    if not isinstance(wifi, dict):
+        raise ConfigurationError("wifi must be an object")
+    if not isinstance(wifi.get("enabled"), bool):
+        raise ConfigurationError("wifi.enabled must be a boolean")
+    for field, minimum, maximum in (("ssid", 1, 32), ("password", 8, 64)):
+        value = wifi.get(field)
+        if not isinstance(value, str) or not minimum <= len(value) <= maximum:
+            raise ConfigurationError(f"wifi.{field} must be {minimum}..{maximum} characters")
+    wifi_retry = wifi.get("retry_interval_ms")
+    if not isinstance(wifi_retry, int) or not 100 <= wifi_retry <= 60000:
+        raise ConfigurationError("wifi.retry_interval_ms must be 100..60000")
+
     mqtt = config.get("mqtt")
     if mqtt is not None:
         if not isinstance(mqtt, dict):
@@ -78,6 +91,8 @@ def validate_config(config):
         max_message_bytes = mqtt.get("max_message_bytes")
         if not isinstance(max_message_bytes, int) or not 128 <= max_message_bytes <= 4096:
             raise ConfigurationError("mqtt.max_message_bytes must be 128..4096")
+        if mqtt["enabled"] and not wifi["enabled"]:
+            raise ConfigurationError("mqtt requires wifi.enabled=true")
     return config
 
 
@@ -96,4 +111,6 @@ def redacted(config):
         raise ConfigurationError("configuration is not JSON-compatible") from exc
     if "mqtt" in value:
         value["mqtt"]["password"] = "***"
+    if "wifi" in value:
+        value["wifi"]["password"] = "***"
     return value

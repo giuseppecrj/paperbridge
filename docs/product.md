@@ -72,6 +72,8 @@ device and its permitted senders.
 
 ## Current boundary
 
-The proven implementation is the local host-to-device-to-printer path. Pairing,
-remote delivery, sender authorization, scheduling, cloud services, and the final
-recipient experience remain product work.
+The proven implementation includes the local USB semantic-job path, a no-output
+Wi-Fi/MQTT device-control tracer, and the device's direct W5500 printer path.
+MQTT print-job delivery, pairing, remote delivery, sender authorization,
+scheduling, cloud services, and the final recipient experience remain product
+work.

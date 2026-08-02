@@ -4,14 +4,15 @@ Paperbridge is a local-first thermal-printer appliance project. The implemented
 bring-up path is:
 
 ```text
-Mac -- USB-C serial JSON RPC --> Waveshare ESP32-S3-ETH
-    -- W5500 Ethernet / TCP ESC/POS --> Rongta RP326
+Mac -- USB-C serial JSON RPC -----------------------> Waveshare ESP32-S3-ETH
+Mac/Mosquitto -- home Wi-Fi MQTT probe ------------>          |
+ESP32-S3-ETH -- direct W5500 Ethernet / TCP ESC/POS ----------> Rongta RP326
 ```
 
 The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. No website, backend, MQTT job delivery, Wi-Fi, image printing,
-OTA, or production provisioning is implemented.
+paper emerged. No website, backend, MQTT job delivery, image printing, OTA, or
+production provisioning is implemented.
 
 ## Status
 
@@ -20,10 +21,10 @@ OTA, or production provisioning is implemented.
   ESP32-S3 revision v0.2, embedded 8 MB PSRAM, 16 MB flash, and USB-Serial/JTAG.
 - Official MicroPython 1.28.0 SPIRAM_OCT is flashed and running on the purchased
   ESP32-S3; USB RPC `system.ping` and `system.info` are physically verified.
-- W5500 initialization, repeated static configuration at `192.168.1.50/24`,
-  direct-link negotiation, and printer probe are physically verified.
-- Printer endpoint `192.168.1.87:9100`, ASCII text, feed, and explicit partial
-  cut bytes `1d 56 01` are physically verified on the purchased RP326.
+- The dedicated direct-printer network at
+  `192.168.4.50 -> 192.168.4.87:9100` has physically verified W5500 link and
+  reachability. ASCII text, feed, and explicit partial-cut bytes `1d 56 01`
+  were physically verified before the subnet change.
 - Local semantic `print-job.v1` USB submission is implemented, host-/simulator-
   tested, and physically verified on 2026-08-02: `job-hello-001` delivered 28
   bytes and its fixture receipt was observed on the purchased printer.
@@ -34,8 +35,10 @@ OTA, or production provisioning is implemented.
 - Ethernet hot reconnect, printer-only and ESP32-only recovery, cover-open, and
   paper-out behavior passed on 2026-08-02. A 27-sample no-output soak trial also
   passed; only the full 72-hour soak remains.
-- A no-output MQTT 3.1.1 tracer is implemented and host-tested. Its device and
-  local-Mosquitto path is not physically verified.
+- The no-output MQTT 3.1.1 tracer over ESP32 Wi-Fi is implemented, host-tested,
+  and physically verified on 2026-08-02: one correlated probe returned while
+  the direct W5500 printer endpoint remained reachable. This is not MQTT job
+  delivery or a production reliability claim.
 
 ## Mac setup
 
@@ -112,9 +115,9 @@ PORT="$PAPERBRIDGE_PORT" just deploy
 ```
 
 Deployment and application RPC are separate: `mpremote` copies files; the
-`paperbridge` CLI sends requests. The MQTT tracer is disabled by default. To
-enable it, set its ignored local `mqtt.enabled` flag and broker credentials in
-`config.json`; `config show` redacts the password.
+`paperbridge` CLI sends requests. Wi-Fi and the MQTT tracer are disabled by
+default. Configure and enable both in ignored `config.json`; `config show`
+redacts both passwords.
 
 ## Exercise the local path
 
@@ -171,15 +174,16 @@ mise exec -- uv run paperbridge --json --port "$PAPERBRIDGE_PORT" device info
 
 This tracer exchanges a bounded correlated probe only; it never invokes the
 printer coordinator. Set up authenticated local Mosquitto from
-[`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's wired-LAN
-broker address and non-placeholder credentials in ignored
-`firmware/micropython/config.json`, enable MQTT, and deploy only with explicit
-hardware authorization. Once the device is connected, inspect it over USB and
-run the host probe:
+[`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's
+home-LAN broker address, Wi-Fi SSID, and non-placeholder credentials in ignored
+`firmware/micropython/config.json`, enable Wi-Fi and MQTT, and deploy only with
+explicit hardware authorization. Once the device is connected, inspect both
+control-plane layers over USB and run the host probe:
 
 ```sh
+paperbridge --port "$PAPERBRIDGE_PORT" wifi status
 paperbridge --port "$PAPERBRIDGE_PORT" mqtt status
-just mqtt-probe
+fnox exec -- just mqtt-probe
 ```
 
 `just mqtt-probe` requires `PAPERBRIDGE_MQTT_HOST`, `PAPERBRIDGE_MQTT_USERNAME`,

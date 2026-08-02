@@ -5,9 +5,29 @@ import pytest
 MqttTracer = __import__("src.mqtt_adapter", None, None, ("MqttTracer",)).MqttTracer
 
 
-class ConnectedEthernet:
+class ConnectedWiFi:
+    def __init__(self, connected=True):
+        self.connected = connected
+        self.poll_calls = 0
+
+    def poll(self):
+        self.poll_calls += 1
+
     def status(self):
-        return {"link_up": True}
+        return {"connected": self.connected}
+
+
+class TrackingLock:
+    def __init__(self):
+        self.acquires = 0
+        self.depth = 0
+
+    def acquire(self):
+        self.acquires += 1
+        self.depth += 1
+
+    def release(self):
+        self.depth -= 1
 
 
 class FakeClient:
@@ -52,14 +72,16 @@ def config():
 
 def connected_tracer():
     client = FakeClient()
+    wifi = ConnectedWiFi()
     tracer = MqttTracer(
         config(),
-        ConnectedEthernet(),
+        wifi,
         client_factory=lambda **_kwargs: client,
         clock_ms=lambda: 123,
     )
     tracer.poll()
     assert client.callback is not None
+    assert wifi.poll_calls == 1
     return tracer, client
 
 
@@ -130,7 +152,7 @@ def test_tracer_reconnects_and_resubscribes_after_a_poll_failure():
     clients = [first, second]
     tracer = MqttTracer(
         config(),
-        ConnectedEthernet(),
+        ConnectedWiFi(),
         client_factory=lambda **_kwargs: clients.pop(0),
         clock_ms=lambda: now[0],
     )
@@ -148,9 +170,58 @@ def test_tracer_records_broker_connection_failure():
     def unavailable_client(**_kwargs):
         raise OSError("connection refused")
 
-    tracer = MqttTracer(config(), ConnectedEthernet(), client_factory=unavailable_client)
+    tracer = MqttTracer(config(), ConnectedWiFi(), client_factory=unavailable_client)
 
     tracer.poll()
 
     assert tracer.client is None
     assert tracer.last_error == "MQTT_CONNECT_FAILED: connection refused"
+
+
+def test_broker_retry_timing_is_safe_across_wrapped_device_ticks():
+    now = [1000]
+    differences = []
+    attempts = []
+
+    def unavailable_client(**_kwargs):
+        attempts.append(True)
+        raise OSError("connection refused")
+
+    def ticks_diff(new, old):
+        differences.append((new, old))
+        return 1000
+
+    tracer = MqttTracer(
+        config(),
+        ConnectedWiFi(),
+        client_factory=unavailable_client,
+        clock_ms=lambda: now[0],
+        ticks_diff=ticks_diff,
+    )
+    tracer.poll()
+    now[0] = 5
+    tracer.poll()
+
+    assert differences == [(5, 1000)]
+    assert len(attempts) == 2
+
+
+def test_status_reads_mqtt_state_under_lock():
+    lock = TrackingLock()
+    tracer = MqttTracer(config(), ConnectedWiFi(), lock=lock)
+
+    assert tracer.status()["connected"] is False
+    assert lock.acquires == 1
+    assert lock.depth == 0
+
+
+def test_tracer_does_not_connect_before_wifi_has_an_address():
+    client = FakeClient()
+    wifi = ConnectedWiFi(connected=False)
+    tracer = MqttTracer(config(), wifi, client_factory=lambda **_kwargs: client)
+
+    tracer.poll()
+
+    assert wifi.poll_calls == 1
+    assert tracer.client is None
+    assert client.connected is False

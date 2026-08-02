@@ -5,13 +5,19 @@
     "max_line_bytes": 4096
   },
   "ethernet": {
-    "address": "192.168.1.50",
+    "address": "192.168.4.50",
     "netmask": "255.255.255.0",
     "gateway": null,
     "dns": null
   },
+  "wifi": {
+    "enabled": false,
+    "ssid": "CHANGE_ME",
+    "password": "CHANGE_ME",
+    "retry_interval_ms": 5000
+  },
   "printer": {
-    "host": "192.168.1.87",
+    "host": "192.168.4.87",
     "port": 9100,
     "connect_timeout_ms": 3000,
     "write_timeout_ms": 5000

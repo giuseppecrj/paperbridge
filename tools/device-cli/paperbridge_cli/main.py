@@ -26,6 +26,9 @@ def _parser():
     config = groups.add_parser("config").add_subparsers(dest="action", required=True)
     config.add_parser("show")
 
+    wifi = groups.add_parser("wifi").add_subparsers(dest="action", required=True)
+    wifi.add_parser("status")
+
     mqtt = groups.add_parser("mqtt").add_subparsers(dest="action", required=True)
     mqtt.add_parser("status")
 
@@ -60,6 +63,7 @@ def _rpc(args):
         ("device", "info"): ("system.info", {}),
         ("device", "reboot"): ("system.reboot", {}),
         ("config", "show"): ("config.show_redacted", {}),
+        ("wifi", "status"): ("wifi.status", {}),
         ("mqtt", "status"): ("mqtt.status", {}),
         ("ethernet", "init"): ("ethernet.initialize", {}),
         ("ethernet", "status"): ("ethernet.status", {}),

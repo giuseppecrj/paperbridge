@@ -14,11 +14,23 @@ mosquitto = shutil.which("mosquitto")
 mosquitto_passwd = shutil.which("mosquitto_passwd")
 
 
+class ConnectedWiFi:
+    def poll(self):
+        return None
+
+    def status(self):
+        return {"connected": True}
+
+
 class PahoClient:
     def __init__(self, client_id, host, port, username, password, keepalive_seconds):
         mqtt = __import__("paho.mqtt.client", None, None, ("Client",))
 
-        self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
+        self.client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id=client_id,
+            protocol=mqtt.MQTTv311,
+        )
         self.host = host
         self.port = port
         self.keepalive_seconds = keepalive_seconds
@@ -103,13 +115,13 @@ def test_node_probe_round_trips_through_the_firmware_mqtt_tracer(tmp_path):
                     "topic_prefix": "v1/devices",
                 },
             },
-            type("Ethernet", (), {"status": lambda _self: {"link_up": True}})(),
+            ConnectedWiFi(),
             client_factory=PahoClient,
         )
         tracer.poll()
         process = subprocess.Popen(
-            ["bun", "run", "mqtt:probe"],
-            cwd=Path(__file__).resolve().parents[3],
+            ["node", "--import", "tsx", "src/main.ts"],
+            cwd=Path(__file__).resolve().parents[3] / "apps" / "api",
             env={
                 **os.environ,
                 "PAPERBRIDGE_MQTT_HOST": "127.0.0.1",
@@ -120,6 +132,7 @@ def test_node_probe_round_trips_through_the_firmware_mqtt_tracer(tmp_path):
                 "PAPERBRIDGE_MQTT_CLIENT_ID": "paperbridge-host-test",
             },
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
         )
         deadline = time.monotonic() + 3

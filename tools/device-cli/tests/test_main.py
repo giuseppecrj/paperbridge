@@ -8,6 +8,10 @@ def test_ping_mapping_does_not_require_cut_confirmation_argument():
     assert _rpc(Namespace(group="device", action="ping")) == ("system.ping", {})
 
 
+def test_wifi_status_mapping():
+    assert _rpc(Namespace(group="wifi", action="status")) == ("wifi.status", {})
+
+
 def test_mqtt_status_mapping():
     assert _rpc(Namespace(group="mqtt", action="status")) == ("mqtt.status", {})
 

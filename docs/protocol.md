@@ -26,8 +26,9 @@ reliable printer status confirmation exists.
 ## MQTT tracer protocol
 
 The optional local tracer is not a semantic print job and cannot reach the
-printer coordinator. It uses authenticated MQTT 3.1.1, QoS 1, and non-retained
-messages. The device subscribes only to `v1/devices/{device_id}/jobs` and
+printer coordinator. It uses the ESP32 Wi-Fi control plane with authenticated
+MQTT 3.1.1, QoS 1, and non-retained messages; the direct W5500 printer link is
+not involved. The device subscribes only to `v1/devices/{device_id}/jobs` and
 publishes only to `v1/devices/{device_id}/status`.
 
 A request is UTF-8 JSON no larger than the configured 1024-byte default:

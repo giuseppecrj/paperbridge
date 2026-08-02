@@ -49,6 +49,14 @@ class FakeMqtt:
         return {"connected": False, "last_error": "MQTT_CONNECT_FAILED: connection refused"}
 
 
+class FakeWiFi:
+    def status(self):
+        return {
+            "connected": True,
+            "ifconfig": ("192.168.1.50", "255.255.255.0", "192.168.1.1", "192.168.1.1"),
+        }
+
+
 class FakeCoordinator:
     def print_test(self, text):
         return {"text": text}
@@ -105,6 +113,17 @@ def test_printer_commands_require_physical_link():
     with pytest.raises(RpcError) as error:
         instance.dispatch("printer.probe", {})
     assert error.value.code == "ETHERNET_LINK_DOWN"
+
+
+def test_wifi_status_exposes_control_plane_without_printer_access():
+    instance = CommandRouter(
+        config(), FakeEthernet(), FakeCoordinator(), FakeTransport(), wifi=FakeWiFi()
+    )
+
+    assert instance.dispatch("wifi.status", {}) == {
+        "connected": True,
+        "ifconfig": ("192.168.1.50", "255.255.255.0", "192.168.1.1", "192.168.1.1"),
+    }
 
 
 def test_mqtt_status_exposes_tracer_connectivity_without_printer_access():

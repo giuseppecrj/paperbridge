@@ -4,17 +4,21 @@
 
 The host CLI speaks newline-delimited JSON over USB serial. Firmware dispatches
 commands to one shared configuration, W5500 adapter, ESC/POS renderer, and TCP
-transport. `job.submit` validates semantic v1 work at
-this boundary; diagnostic print, feed, and cut commands remain separate.
-Rendering is separate from delivery. The transport serializes one payload per
-socket and closes deterministically. When enabled, one MQTT tracer shares the
-W5500 adapter and cooperatively polls alongside USB RPC; it has no coordinator
-or printer-transport reference.
+transport. `job.submit` validates semantic v1 work at this boundary; diagnostic
+print, feed, and cut commands remain separate. Rendering is separate from
+delivery. The transport serializes one payload per socket and closes
+deterministically.
+
+When enabled, one station-mode Wi-Fi adapter supplies the MQTT control plane.
+A background network thread polls Wi-Fi directly or, when MQTT is enabled, the
+MQTT tracer that drives it. The original blocking USB RPC loop remains intact;
+the tracer has no coordinator or printer-transport reference. The W5500 remains
+dedicated to the directly attached printer on a separate subnet.
 
 ```text
-paperbridge CLI -> serial RPC -> command router -> print coordinator
-                                             |-> ESC/POS renderer
-                                             `-> TCP printer transport -> RP326
+Mac/Mosquitto -- home Wi-Fi --> ESP32 Wi-Fi -- MQTT probe/status
+USB CLI ---------------------> ESP32 RPC
+                               ESP32 W5500 -- direct TCP ESC/POS --> RP326
 ```
 
 `delivered_to_printer` means all bytes were accepted by the printer-facing TCP
@@ -35,7 +39,7 @@ never connect directly to a device over the public internet.
 
 ## Order and non-goals
 
-USB ping/info precedes W5500 initialization; link state precedes static address;
-the no-output tracer can connect only after that link is ready; probe precedes
-text; feed and cut are separate. Queue persistence, Wi-Fi, MQTT job delivery,
-backend, web, image printing, OTA, and production provisioning are out of scope.
+USB ping/info precedes direct W5500 initialization; link state precedes static
+address; Wi-Fi status precedes MQTT status; printer probe precedes text; feed
+and cut are separate. Queue persistence, MQTT job delivery, backend, web, image
+printing, OTA, and production provisioning are out of scope.

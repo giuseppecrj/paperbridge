@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-01
+- Corrected: 2026-08-02 (Wi-Fi control plane; dedicated printer Ethernet)
 
 ## Context
 
@@ -49,16 +50,21 @@ standard MQTT 3.1.1 behavior, not Mosquitto- or EMQX-specific APIs, plugins,
 rules, registries, or job systems. Use QoS 1 and the versioned per-device topic
 shape established in `docs/architecture.md`.
 
-The Mac mini, ESP32 W5500 interface, and printer share the wired home LAN through
-a router or switch. The ESP32 uses that one Ethernet interface for both MQTT to
-the Mac mini and TCP ESC/POS to the printer. Wi-Fi and simultaneous Wi-Fi/W5500
-operation are not required for this phase.
+The Mac mini and ESP32 join the home LAN over Wi-Fi. The ESP32 uses Wi-Fi only
+for its outbound MQTT control plane. Its W5500 interface remains directly cabled
+to the printer and uses a separate private IPv4 subnet with no gateway or DNS.
+This keeps the physical inbox install as one device attached to one printer;
+the printer itself does not join Wi-Fi or the home router.
 
-The broker listens only on the required home-LAN interface, rejects anonymous
-connections, and uses development username/password credentials stored outside
-the repository. Local MQTT/TLS and production device provisioning are deferred.
-Tailscale protects MCP/API access; it does not expose the MQTT broker to the
-public internet.
+Wi-Fi and W5500 must coexist reliably on the purchased ESP32. Failure to keep
+MQTT responsive while preserving direct printer reachability is an ESP-IDF
+migration signal under ADR 0001.
+
+The broker listens only on the required home-LAN Wi-Fi address, rejects
+anonymous connections, and uses development username/password credentials
+stored outside the repository. Local MQTT/TLS and production device
+provisioning are deferred. Tailscale protects MCP/API access; it does not expose
+the MQTT broker to the public internet.
 
 Phase 2 supports exactly one configured device and printer. Topics and jobs keep
 their `device_id`, but callers cannot select arbitrary devices. There is no
@@ -113,9 +119,9 @@ observability.
 
 Broker choice remains replaceable. Provider-specific publishing APIs, webhooks,
 rules, authentication, or provisioning must stay behind adapters. Before the
-full Phase 3 migration, a focused spike must point the device at a candidate
-managed broker and physically verify W5500 routing, MQTT/TLS, memory behavior,
-job receipt, printing, and result publication.
+full Phase 3 migration, a focused spike must point the device Wi-Fi interface at
+a candidate managed broker and physically verify MQTT/TLS, memory behavior, job
+receipt, direct-W5500 printing, and result publication.
 
 ## Consequences
 

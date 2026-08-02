@@ -14,8 +14,9 @@ configuration validation, shared schema/device/renderer fixtures, raw/control
 rejection, exact ESC/POS bytes, semantic `job.submit` request replay with a real
 printer-simulator socket capture, printer transport failures, Ethernet API
 behavior, flash/deploy safety, port ambiguity, bounded FIFO behavior, status
-transitions, simulator capture hashing, and the bounded no-output MQTT tracer.
-The Bun workspace checks Node TypeScript with `tsc` and runs its tracer contract
+transitions, simulator capture hashing, station-mode Wi-Fi connection/retry
+behavior, and the bounded no-output MQTT tracer. The Bun workspace checks Node
+TypeScript with `tsc` and runs its tracer contract
 tests. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
 also run the Node probe through local Mosquitto and a CPython test client using
 the firmware `MqttTracer`; otherwise they are reported as skipped.
@@ -30,12 +31,15 @@ Manual bring-up physically verified USB RPC, direct Ethernet, printer
 reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,
 printer-only and ESP32-only recovery, cover-open buffering, and paper-out
-buffering passed on 2026-08-02. Evidence IDs and observations are recorded in
-`hardware.md`; only the 72-hour soak gate remains.
+buffering passed on 2026-08-02. A no-output Wi-Fi/MQTT tracer round trip also
+returned its correlated probe while direct W5500 printer reachability remained
+available. Evidence IDs and observations are recorded in `hardware.md`; the
+72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
-operates the printer. The MQTT tracer tests send no semantic job or printer
-bytes. They do not establish purchased-device, W5500, or paper-output evidence.
+operates the printer. The Wi-Fi/MQTT tracer tests send no semantic job or
+printer bytes. They do not establish purchased-device Wi-Fi/W5500 coexistence
+or paper-output evidence.
 
 ## Opt-in hardware-in-the-loop (HIL)
 

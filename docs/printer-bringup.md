@@ -9,8 +9,14 @@
 6. Only then run `printer cut-test --confirm` and record the exact working bytes.
 
 Text rejects control bytes and non-ASCII rather than silently replacing them.
-On 2026-08-01 the purchased RP326 accepted text and feed at
-`192.168.1.87:9100`, and partial-cut bytes `1d 56 01` physically cut the paper.
-That sequence is specific to the verified RP326 behavior and always requires an
-explicit caller confirmation. There is no bitmap, Unicode, arbitrary code-page,
-or status-query support yet.
+On 2026-08-01 the purchased RP326 accepted text and feed at its initial
+`192.168.1.87:9100` address, and partial-cut bytes `1d 56 01` physically cut the
+paper. The dedicated direct-printer network now uses W5500 `192.168.4.50/24`
+and printer `192.168.4.87:9100`, with no gateway or DNS. Reachability on that
+subnet was physically verified without repeating paper output.
+
+For dual-interface checks, verify `wifi status` first, then initialize/configure
+W5500 and run the printer probe before MQTT. This sequence is specific to the
+verified RP326 behavior and always requires explicit caller confirmation before
+paper output. There is no bitmap, Unicode, arbitrary code-page, or status-query
+support yet.

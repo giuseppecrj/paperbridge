@@ -1,25 +1,31 @@
 # Network topology
 
-## Mode A: direct cable
+## Product topology: Wi-Fi control, direct printer Ethernet
 
 ```text
-Mac --USB--> ESP32 (192.168.1.50/24) --Ethernet--> printer (observed address)
+Mac mini + Mosquitto -- Wi-Fi --> home router -- Wi-Fi --> ESP32
+                                                       |
+USB-C (bring-up only) ---------------------------------+
+                                                       |
+ESP32 W5500 (192.168.4.50/24) -- direct Ethernet --> printer (192.168.4.87:9100)
 ```
 
-No gateway or DNS is needed. Preserve the printer's observed subnet for the
-first attempt and do not change its address before reading the self-test.
-The purchased ESP32 and RP326 negotiated a direct link on 2026-08-01; W5500
-status reported `link_up: true`, and `192.168.1.87:9100` accepted a probe. Treat
-those as purchased-unit observations, not universal cable or printer defaults.
-If a replacement setup has no link, try a crossover cable or Mode B.
+The ESP32 Wi-Fi interface is the MQTT control plane. The W5500 interface is
+printer-only and has no gateway or DNS. The printer does not join Wi-Fi or the
+home router.
 
-## Mode B: switch or router
+The two interfaces must use different IPv4 subnets so socket routing is
+unambiguous. The purchased setup uses the home LAN's `192.168.1.0/24` over
+Wi-Fi and the dedicated `192.168.4.0/24` direct-printer network. These are local
+observations/configuration, not universal defaults.
 
-Connect ESP32 and printer with separate cables to a small switch/router. Use this
-when direct negotiation fails, DHCP aids inspection, the printer utility needs a
-shared network, or the optional local MQTT tracer needs to reach the Mac mini.
-The Mac still controls the ESP32 over USB; Mode B is not a requirement for the
-USB application path.
+## Bring-up fallback: printer on router or switch
 
-Address, netmask, optional gateway/DNS, printer host, printer port, and MQTT
-broker host are independent configuration fields.
+The printer may be temporarily connected to the home router to inspect or change
+its embedded Ethernet configuration page. This is a setup tool, not the intended
+installation. Reconnect it directly to the ESP32 after configuration.
+
+The original direct link at `192.168.1.50 -> 192.168.1.87:9100` was physically
+verified before Wi-Fi was introduced. On 2026-08-02 the direct network was moved
+to `192.168.4.50 -> 192.168.4.87:9100`; W5500 link and printer reachability were
+physically verified without printing.

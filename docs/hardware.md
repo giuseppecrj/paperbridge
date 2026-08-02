@@ -19,7 +19,9 @@
 - **Current firmware:** official MicroPython 1.28.0
   `ESP32_GENERIC_S3-SPIRAM_OCT`, physically flashed and verified on 2026-08-01.
 - **Observed application path:** USB RPC ping/info, W5500 initialization, static
-  IPv4, direct link, and printer probe all succeeded on 2026-08-01.
+  IPv4, direct link, and printer probe all succeeded on 2026-08-01. On
+  2026-08-02 station-mode Wi-Fi authenticated to local Mosquitto, returned a
+  correlated MQTT probe status, and preserved direct-W5500 printer reachability.
 
 Official W5500 signal map for this product page:
 
@@ -49,8 +51,11 @@ behavior were physically exercised. The printer uses its own 24 V adapter;
 neither device powers the other.
 
 The purchased printer accepted TCP connections at `192.168.1.87:9100` on
-2026-08-01. That is an observed local endpoint, not a universal default. The
-2026-08-02 self-test reported firmware `GD207_V1.14` dated `26-01-28`, EPSON
+2026-08-01. On 2026-08-02 its dedicated direct-link address was changed to
+`192.168.4.87:9100`; the ESP32 W5500 at `192.168.4.50/24` reached it over the
+direct cable without printing. These are observed local endpoints, not
+universal defaults. The 2026-08-02 self-test reported firmware `GD207_V1.14`
+dated `26-01-28`, EPSON
 ESC/POS mode, DHCP disabled, 10/100 Ethernet, 48 Font-A or 64 Font-B/C columns,
 light density, and default code page CP437.
 
@@ -69,8 +74,10 @@ forbidden.
 | USB mode | USB-Serial/JTAG; `/dev/cu.usbmodem101` on test Mac | 2026-08-01 |
 | MicroPython runtime | 1.28.0 SPIRAM_OCT | 2026-08-01 |
 | USB application RPC | `system.ping` and `system.info` succeeded | 2026-08-01 |
-| Device static IPv4 | `192.168.1.50/24`, repeated configuration succeeded | 2026-08-01 |
-| Printer IP/port | `192.168.1.87:9100` | 2026-08-01 |
+| Initial device static IPv4 | `192.168.1.50/24`, repeated configuration succeeded | 2026-08-01 |
+| Initial printer IP/port | `192.168.1.87:9100` | 2026-08-01 |
+| Dedicated direct printer subnet | W5500 `192.168.4.50/24` reached printer `192.168.4.87:9100` | 2026-08-02 |
+| Wi-Fi + MQTT tracer | Wi-Fi obtained `192.168.1.110`; lock-protected firmware returned correlated probe `1e087965-b790-4cd9-a4ef-950c1ab86183`; USB RPC and direct printer probe still succeeded | 2026-08-02 |
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |

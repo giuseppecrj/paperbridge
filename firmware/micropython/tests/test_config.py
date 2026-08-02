@@ -14,11 +14,20 @@ def test_example_configuration_is_valid():
     assert validate_config(example())["printer"]["port"] == 9100
 
 
-def test_mqtt_password_is_redacted_from_configuration_output():
+def test_network_passwords_are_redacted_from_configuration_output():
     config = example()
 
     assert validate_config(config)["mqtt"]["port"] == 1883
     assert redacted(config)["mqtt"]["password"] == "***"
+    assert redacted(config)["wifi"]["password"] == "***"
+
+
+def test_enabled_mqtt_requires_enabled_wifi():
+    config = example()
+    config["mqtt"]["enabled"] = True
+
+    with pytest.raises(ConfigurationError, match="mqtt requires wifi.enabled=true"):
+        validate_config(config)
 
 
 @pytest.mark.parametrize(
@@ -27,6 +36,7 @@ def test_mqtt_password_is_redacted_from_configuration_output():
         (("ethernet", "address"), "999.1.1.1"),
         (("printer", "port"), 0),
         (("serial", "max_line_bytes"), 1_000_000),
+        (("wifi", "ssid"), ""),
     ],
 )
 def test_invalid_configuration_is_rejected(path, value):
