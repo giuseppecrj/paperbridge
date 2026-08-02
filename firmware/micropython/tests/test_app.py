@@ -22,8 +22,11 @@ def test_build_app_composes_one_mqtt_tracer_when_enabled(tmp_path):
     assert wifi is not None
     assert tracer is not None
     assert tracer.jobs_topic == b"v1/devices/paperbridge-dev-001/jobs"
+    assert tracer.print_jobs_topic == b"v1/devices/paperbridge-dev-001/print-jobs"
     assert tracer.wifi is not None
     assert tracer.wifi.settings == config["wifi"]
+    router = server.dispatch.__self__
+    assert tracer.job_service is router.job_service
 
 
 def test_build_app_composes_wifi_without_mqtt_when_only_wifi_is_enabled(tmp_path):

@@ -1,63 +1,72 @@
 # Print-job protocol
 
 `packages/protocol/schemas/print-job.v1.schema.json` defines a semantic receipt,
-not printer bytes. Version `1` requires bounded `job_id`, `device_id`, opaque
+not printer bytes. Version `"1"` requires bounded `job_id`, `device_id`, opaque
 `created_at` metadata, and 1–100 receipt blocks. Text is printable ASCII only;
-unsupported fields, control bytes, unknown versions, and unknown block types are
-rejected. Firmware also bounds the final rendered byte count.
+unsupported fields, control bytes, unknown versions/types, and unknown block
+types are rejected. Firmware also bounds the rendered output to 32 KiB.
 
-V1 blocks are text, feed, 48-column rule, and partial cut. Cut is schema-valid
-but validation and rendering both require explicit caller authorization. Raw
-ESC/POS, styling, copies, expiry, bitmap, and QR blocks are not v1 semantics and
-fail rather than being ignored.
+V1 blocks are text, feed, 48-column rule, and partial cut. Cut is schema-valid,
+but execution policy and rendering must authorize it. Raw ESC/POS, styling,
+copies, expiry, bitmap, and QR blocks are not v1 semantics and fail rather than
+being ignored.
+
+## USB ingress
 
 Local USB RPC implements `job.submit`. It validates a submitted v1 job against
 the configured `device_id`, renders it through the shared coordinator, and
 returns its `job_id` with `delivered_to_printer` when all bytes reached the
-printer-facing socket. `allow_cut: true` is required for a cut block. Serial
-`request_id` remains transport correlation/replay only; it is distinct from
-`job_id`. There is no durable lifecycle, queue, or job-id deduplication.
+printer-facing socket. `allow_cut: true` is an explicit local USB authorization.
+Serial `request_id` remains transport correlation/replay only; it is distinct
+from `job_id`.
 
-This path is host- and simulator-tested and was physically verified on
-2026-08-02: `job-hello-001` returned `delivered_to_printer` after 28 bytes, and
-an operator observed its fixture receipt. `printed` remains absent until
-reliable printer status confirmation exists.
+This path is host-/simulator-tested and was physically verified on 2026-08-02:
+`job-hello-001` returned `delivered_to_printer` after 28 bytes, and an operator
+observed its fixture receipt. `printed` remains absent until reliable printer
+status confirmation exists.
+
+## REST and MQTT job ingress
+
+The private single-device service accepts the raw `print-job.v1` object at
+`POST /api/jobs`. HTTP rejects a body larger than 1,024 bytes before JSON
+parsing. The TypeScript protocol package loads the authoritative JSON Schema
+with Ajv; it rejects the same unsupported values as firmware, including
+non-integral `feed.lines`.
+
+After validation, the service publishes the compact raw job to
+`v1/devices/{device_id}/print-jobs`. Firmware checks the exact topic, payload
+limit, schema, configured device, and private cut policy before calling the same
+semantic coordinator used by USB. REST/MQTT callers cannot provide `allow_cut`;
+`mqtt.allow_cut` defaults to false on the device.
+
+Firmware publishes a non-retained QoS 1 result to
+`v1/devices/{device_id}/job-results`. The closed
+`packages/protocol/schemas/job-result.v1.schema.json` shape contains:
+
+- string `schema_version: "1"` and `kind: "job_result"`;
+- the correlated `job_id` and configured `device_id`;
+- terminal `status`: `delivered_to_printer`, `rejected`, or `failed`;
+- a stable `error_code` for rejection/failure; and
+- `bytes_sent` for success or a partial write.
+
+A bounded in-memory firmware ledger stores terminal results for one device boot.
+MQTT QoS 1 redelivery of the same `job_id` replays that result without another
+printer socket. It is not a durable queue and does not survive reboot.
+
+The HTTP service maps validation/device rejection, body limit, broker
+unavailability, printer failure/partial write, and timeout distinctly. A timeout
+is `unknown`: the service removes only its pending waiter and never republishes
+the job. The complete REST/MQTT path is host-/simulator-tested with real local
+Mosquitto and the real TCP printer simulator; it is not physical paper evidence.
 
 ## MQTT tracer protocol
 
-The optional local tracer is not a semantic print job and cannot reach the
-printer coordinator. It uses the ESP32 Wi-Fi control plane with authenticated
-MQTT 3.1.1, QoS 1, and non-retained messages; the direct W5500 printer link is
-not involved. The device subscribes only to `v1/devices/{device_id}/jobs` and
-publishes only to `v1/devices/{device_id}/status`.
+The optional tracer remains no-output and cannot reach the printer coordinator.
+It uses `v1/devices/{device_id}/jobs` for `mqtt_probe` and
+`v1/devices/{device_id}/status` for `mqtt_probe_status`. Its numeric
+`schema_version: 1` remains a separate tracer contract.
 
-A request is UTF-8 JSON no larger than the configured 1024-byte default:
-
-```json
-{
-  "schema_version": 1,
-  "kind": "mqtt_probe",
-  "probe_id": "probe-001",
-  "device_id": "paperbridge-dev-001",
-  "created_at": "2026-08-02T00:00:00Z"
-}
-```
-
-The device requires exactly these fields, matching `device_id`, a 1–128
-character `probe_id`, and a 1–64 character opaque `created_at`; wrong topic,
-device, malformed JSON, oversized payload, and unknown fields are rejected
-without a response or printer call. A successful correlated response is:
-
-```json
-{
-  "schema_version": 1,
-  "kind": "mqtt_probe_status",
-  "probe_id": "probe-001",
-  "device_id": "paperbridge-dev-001",
-  "status": "ok",
-  "ts_ms": 123
-}
-```
-
-This reports only tracer receipt. It does not indicate job validation,
-`delivered_to_printer`, or physical paper output.
+Tracer requests are UTF-8 JSON no larger than 1,024 bytes, require exactly
+`schema_version`, `kind`, `probe_id`, `device_id`, and `created_at`, and are
+correlated by `probe_id`. A successful status reports tracer receipt only; it
+does not indicate job validation, printer delivery, or paper output.

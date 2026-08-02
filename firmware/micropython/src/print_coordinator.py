@@ -5,25 +5,30 @@ from .status import StatusTracker
 
 
 class PrintCoordinator:
-    def __init__(self, renderer, transport):
+    def __init__(self, renderer, transport, lock=None):
         self.renderer = renderer
         self.transport = transport
+        self._lock = lock or __import__("_thread").allocate_lock()
 
     def _send(self, render):
-        tracker = StatusTracker()
+        self._lock.acquire()
         try:
-            tracker.transition("validated")
-            tracker.transition("rendering")
-            payload = render()
-            tracker.transition("connecting_to_printer")
-            tracker.transition("sending_to_printer")
-            result = self.transport.send(payload)
-            tracker.transition("delivered_to_printer")
-            return result
-        except RenderError as exc:
-            raise RpcError(exc.code, str(exc)) from exc
-        except TransportError as exc:
-            raise RpcError(exc.code, exc.message) from exc
+            tracker = StatusTracker()
+            try:
+                tracker.transition("validated")
+                tracker.transition("rendering")
+                payload = render()
+                tracker.transition("connecting_to_printer")
+                tracker.transition("sending_to_printer")
+                result = self.transport.send(payload)
+                tracker.transition("delivered_to_printer")
+                return result
+            except RenderError as exc:
+                raise RpcError(exc.code, str(exc)) from exc
+            except TransportError as exc:
+                raise RpcError(exc.code, exc.message, bytes_sent=exc.bytes_sent) from exc
+        finally:
+            self._lock.release()
 
     def print_test(self, text):
         return self._send(lambda: self.renderer.render_text_test(text))

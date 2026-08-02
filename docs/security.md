@@ -1,10 +1,11 @@
 # Security
 
-The current trust boundary is local USB plus the configured printer LAN. RPC
-still bounds line size, validates envelopes/configuration, rejects raw bytes and
-control injection, uses explicit timeouts, and redacts the ignored local Wi-Fi
-and MQTT passwords from `config.show_redacted`. No credential values are
-committed.
+The current trust boundary is local USB plus a private localhost/Tailscale REST
+service, authenticated local MQTT, and the configured printer LAN. USB and HTTP
+bound input before parsing, validate the authoritative semantic contract, reject
+raw printer bytes/control injection, and use explicit timeouts. Device
+`config.show_redacted` hides ignored Wi-Fi and MQTT passwords. No credential
+values are committed.
 
 Development values live in 1Password. Checked-in `fnox.toml` contains only
 remote references and injects values into bounded child commands; the optional
@@ -19,12 +20,14 @@ not depend on Fnox or 1Password at runtime. Keep `PAPERBRIDGE_*` names stable
 where their meaning survives the migration; device Wi-Fi credentials remain
 provisioning data, not Worker bindings.
 
-The no-output tracer uses ESP32 station-mode Wi-Fi to reach an authenticated
-local Mosquitto listener on the home LAN. The direct W5500 printer subnet has no
-gateway or DNS. Phase 2 requires a password-protected Wi-Fi network; open WLANs
-are not supported. MQTT/TLS, production credential provisioning and rotation,
-and public broker exposure are not implemented. Future public clients submit
-semantic jobs only to an authenticated HTTPS backend. Device identity, TLS
-validation, replay
-protection, signed updates, and OTA remain future work and may trigger ESP-IDF
-migration.
+The ESP32 uses station-mode Wi-Fi to reach an authenticated local Mosquitto
+listener; its direct W5500 printer subnet has no gateway or DNS. Semantic MQTT
+jobs are non-retained QoS 1 and bounded to 1,024 bytes. Duplicate suppression is
+bounded to one boot, not durable replay protection. Remote cut is device policy
+and defaults off; REST callers cannot grant it.
+
+The REST service binds to `127.0.0.1` by default and has no public authentication.
+Keep it local or behind the approved Tailscale boundary. MQTT/TLS, production
+credential provisioning/rotation, public broker exposure, public sender
+authorization, signed updates, and OTA remain future work and may trigger
+ESP-IDF migration.

@@ -4,10 +4,11 @@ from .constants import DEFAULT_MAX_LINE_BYTES
 
 
 class RpcError(Exception):
-    def __init__(self, code, message):
+    def __init__(self, code, message, bytes_sent=None):
         super().__init__(message)
         self.code = code
         self.message = message
+        self.bytes_sent = bytes_sent
 
 
 def _line_complete(line):

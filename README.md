@@ -11,7 +11,8 @@ ESP32-S3-ETH -- direct W5500 Ethernet / TCP ESC/POS ----------> Rongta RP326
 
 The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. No website, backend, MQTT job delivery, image printing, OTA, or
+paper emerged. The private single-device REST/MQTT v1 path is implemented and
+simulator-tested; no website, MCP, public backend, image printing, OTA, or
 production provisioning is implemented.
 
 ## Status
@@ -38,8 +39,11 @@ production provisioning is implemented.
 - The no-output MQTT 3.1.1 tracer over ESP32 Wi-Fi is implemented, host-tested,
   and physically verified on 2026-08-02. Guarded Wi-Fi/MQTT recovery preserved
   direct printer TCP reachability, and direct W5500 cable recovery preserved
-  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`. This is not MQTT job
-  delivery or a production reliability claim.
+  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`.
+- `POST /api/jobs` now validates and delivers bounded `print-job.v1` through
+  authenticated local MQTT to the same firmware coordinator. The full path is
+  host-/simulator-tested with real Mosquitto and a real TCP socket; it has not
+  been physically printed through REST/MQTT.
 
 ## Mac setup
 
@@ -207,15 +211,27 @@ For machine-readable output:
 mise exec -- uv run paperbridge --json --port "$PAPERBRIDGE_PORT" device info
 ```
 
-## MQTT tracer (no paper output)
+## Private REST/MQTT path
 
-This tracer exchanges a bounded correlated probe only; it never invokes the
-printer coordinator. Set up authenticated local Mosquitto from
+Set up authenticated local Mosquitto from
 [`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's
 home-LAN broker address, Wi-Fi SSID, and non-placeholder credentials in ignored
 `firmware/micropython/config.json`, enable Wi-Fi and MQTT, and deploy only with
-explicit hardware authorization. Once the device is connected, inspect both
-control-plane layers over USB and run the host probe:
+explicit hardware authorization. `mqtt.allow_cut` defaults to false and is
+device policy; REST callers cannot override it. Start the private API and submit
+a fixture with:
+
+```sh
+just api
+curl -sS -H 'content-type: application/json' \
+  --data-binary @packages/protocol/fixtures/print-job-v1/valid-text-feed.json \
+  http://127.0.0.1:3000/api/jobs
+```
+
+The raw HTTP/MQTT job body is limited to 1,024 bytes before parsing. A timeout is
+reported as `unknown` and does not republish the job. Once the device is
+connected, inspect both control-plane layers over USB and run the no-output host
+probe:
 
 ```sh
 paperbridge --port "$PAPERBRIDGE_PORT" wifi status
@@ -225,8 +241,8 @@ just mqtt-probe
 
 `just mqtt-probe` reads non-secret host, username, and device settings from
 `.env`, resolves `PAPERBRIDGE_MQTT_PASSWORD` through Fnox, and reports a
-correlated transport response—not printer delivery or paper output. There is no
-live MCP command yet; ADR 0006 describes the planned MCP/API boundary.
+correlated tracer response—not printer delivery or paper output. There is no
+live MCP command yet; ADR 0006 describes the shared future MCP/application seam.
 
 ## Simulator
 

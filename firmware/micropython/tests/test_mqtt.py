@@ -1,8 +1,16 @@
 import json
+from pathlib import Path
 
 import pytest
+from src.escpos import EscPosRenderer
+from src.job_ledger import JobLedger
+from src.print_coordinator import PrintCoordinator
+from src.serial_rpc import RpcError
 
+JobService = __import__("src.job_service", None, None, ("JobService",)).JobService
 MqttTracer = __import__("src.mqtt_adapter", None, None, ("MqttTracer",)).MqttTracer
+
+FIXTURES = Path("packages/protocol/fixtures/print-job-v1")
 
 
 class ConnectedWiFi:
@@ -28,6 +36,32 @@ class TrackingLock:
 
     def release(self):
         self.depth -= 1
+
+
+class FakeJobService:
+    def __init__(self, result=None, error=None):
+        self.result = result or {
+            "job_id": "job-hello-001",
+            "status": "delivered_to_printer",
+            "bytes_sent": 28,
+        }
+        self.error = error
+        self.calls = []
+
+    def submit(self, job, allow_cut=False):
+        self.calls.append((job, allow_cut))
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+class RecordingTransport:
+    def __init__(self):
+        self.payloads = []
+
+    def send(self, payload):
+        self.payloads.append(payload)
+        return {"status": "delivered_to_printer", "bytes_sent": len(payload)}
 
 
 class FakeClient:
@@ -66,18 +100,21 @@ def config():
             "retry_interval_ms": 1000,
             "max_message_bytes": 1024,
             "topic_prefix": "v1/devices",
+            "allow_cut": False,
         },
     }
 
 
-def connected_tracer():
+def connected_tracer(job_service=None, job_ledger=None, settings=None):
     client = FakeClient()
     wifi = ConnectedWiFi()
     tracer = MqttTracer(
-        config(),
+        settings or config(),
         wifi,
         client_factory=lambda **_kwargs: client,
         clock_ms=lambda: 123,
+        job_service=job_service,
+        job_ledger=job_ledger,
     )
     tracer.poll()
     assert client.callback is not None
@@ -98,7 +135,10 @@ def test_tracer_returns_correlated_probe_after_connecting():
     )
 
     assert client.connected is True
-    assert client.subscriptions == [(b"v1/devices/paperbridge-dev-001/jobs", 1)]
+    assert client.subscriptions == [
+        (b"v1/devices/paperbridge-dev-001/jobs", 1),
+        (b"v1/devices/paperbridge-dev-001/print-jobs", 1),
+    ]
     assert client.published == [
         (
             b"v1/devices/paperbridge-dev-001/status",
@@ -141,6 +181,125 @@ def test_tracer_rejects_invalid_messages_without_publishing(topic, payload, erro
     assert tracer.last_error == error
 
 
+def test_mqtt_job_returns_a_correlated_terminal_result():
+    service = FakeJobService()
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2))
+    callback = client.callback
+    assert callback is not None
+    job = json.loads((FIXTURES / "valid-text-feed.json").read_text())
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        json.dumps(job).encode(),
+    )
+
+    assert service.calls == [(job, False)]
+    assert client.published[-1] == (
+        b"v1/devices/paperbridge-dev-001/job-results",
+        {
+            "schema_version": "1",
+            "kind": "job_result",
+            "job_id": "job-hello-001",
+            "device_id": "paperbridge-dev-001",
+            "status": "delivered_to_printer",
+            "bytes_sent": 28,
+        },
+        1,
+        False,
+    )
+
+
+def test_qos_redelivery_replays_the_result_without_a_second_printer_delivery():
+    settings = config()
+    transport = RecordingTransport()
+    service = JobService(settings, PrintCoordinator(EscPosRenderer(), transport))
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2), settings)
+    callback = client.callback
+    assert callback is not None
+    payload = (FIXTURES / "valid-text-feed.json").read_bytes()
+
+    callback(b"v1/devices/paperbridge-dev-001/print-jobs", payload)
+    callback(b"v1/devices/paperbridge-dev-001/print-jobs", payload)
+
+    assert transport.payloads == [b"\x1b@Hello from Paperbridge\n\n\n\n"]
+    assert client.published[-1] == client.published[-2]
+
+
+def test_mqtt_job_reports_partial_delivery_and_preserves_bytes_sent():
+    service = FakeJobService(
+        error=RpcError(
+            "PRINTER_CONNECTION_RESET",
+            "Printer closed during write",
+            bytes_sent=2,
+        )
+    )
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2))
+    callback = client.callback
+    assert callback is not None
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        (FIXTURES / "valid-text-feed.json").read_bytes(),
+    )
+
+    assert client.published[-1][1] == {
+        "schema_version": "1",
+        "kind": "job_result",
+        "job_id": "job-hello-001",
+        "device_id": "paperbridge-dev-001",
+        "status": "failed",
+        "error_code": "PRINTER_CONNECTION_RESET",
+        "bytes_sent": 2,
+    }
+
+
+def test_unrecognized_device_errors_are_normalized_to_stable_internal_error():
+    service = FakeJobService(error=RpcError("NOT_A_STABLE_CODE", "boom"))
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2))
+    callback = client.callback
+    assert callback is not None
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        (FIXTURES / "valid-text-feed.json").read_bytes(),
+    )
+
+    assert client.published[-1][1]["status"] == "failed"
+    assert client.published[-1][1]["error_code"] == "INTERNAL_ERROR"
+
+
+def test_mqtt_cut_policy_defaults_to_rejected_without_client_override():
+    service = FakeJobService(error=RpcError("UNAUTHORIZED_CUT", "cut is disabled"))
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2))
+    callback = client.callback
+    assert callback is not None
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        (FIXTURES / "valid-cut.json").read_bytes(),
+    )
+
+    assert service.calls[0][1] is False
+    assert client.published[-1][1]["status"] == "rejected"
+    assert client.published[-1][1]["error_code"] == "UNAUTHORIZED_CUT"
+
+
+def test_mqtt_cut_policy_can_be_enabled_only_by_device_configuration():
+    settings = config()
+    settings["mqtt"]["allow_cut"] = True
+    service = FakeJobService()
+    tracer, client = connected_tracer(service, JobLedger(max_completed_ids=2), settings)
+    callback = client.callback
+    assert callback is not None
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        (FIXTURES / "valid-cut.json").read_bytes(),
+    )
+
+    assert service.calls[0][1] is True
+
+
 def test_tracer_marks_mqtt_unavailable_when_wifi_disconnects():
     tracer, _client = connected_tracer()
     tracer.wifi.connected = False
@@ -176,7 +335,10 @@ def test_tracer_reconnects_and_resubscribes_after_a_poll_failure():
     tracer.poll()
 
     assert tracer.client is second
-    assert second.subscriptions == [(b"v1/devices/paperbridge-dev-001/jobs", 1)]
+    assert second.subscriptions == [
+        (b"v1/devices/paperbridge-dev-001/jobs", 1),
+        (b"v1/devices/paperbridge-dev-001/print-jobs", 1),
+    ]
 
 
 def test_tracer_records_broker_connection_failure():

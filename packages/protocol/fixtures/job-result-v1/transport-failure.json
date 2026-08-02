@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "kind": "job_result",
+  "job_id": "job-refused-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "failed",
+  "error_code": "PRINTER_CONNECTION_REFUSED"
+}

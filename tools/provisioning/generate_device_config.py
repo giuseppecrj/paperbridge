@@ -22,6 +22,17 @@ def integer_env(name, default):
         raise SystemExit(f"{name} must be an integer") from exc
 
 
+def boolean_env(name, default):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    if value == "true":
+        return True
+    if value == "false":
+        return False
+    raise SystemExit(f"{name} must be true or false")
+
+
 def apply_environment(template):
     device_id = required_env("PAPERBRIDGE_DEVICE_ID")
     template["device_id"] = device_id
@@ -39,6 +50,7 @@ def apply_environment(template):
         client_id=device_id,
         username=required_env("PAPERBRIDGE_MQTT_USERNAME"),
         password=required_env("PAPERBRIDGE_MQTT_PASSWORD"),
+        allow_cut=boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False),
     )
 
 

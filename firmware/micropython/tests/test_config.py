@@ -11,7 +11,9 @@ def example():
 
 
 def test_example_configuration_is_valid():
-    assert validate_config(example())["printer"]["port"] == 9100
+    config = validate_config(example())
+    assert config["printer"]["port"] == 9100
+    assert config["mqtt"]["allow_cut"] is False
 
 
 def test_network_passwords_are_redacted_from_configuration_output():
@@ -20,6 +22,14 @@ def test_network_passwords_are_redacted_from_configuration_output():
     assert validate_config(config)["mqtt"]["port"] == 1883
     assert redacted(config)["mqtt"]["password"] == "***"
     assert redacted(config)["wifi"]["password"] == "***"
+
+
+def test_device_id_must_be_a_safe_mqtt_topic_segment():
+    config = example()
+    config["device_id"] = "device/other"
+
+    with pytest.raises(ConfigurationError, match="safe MQTT topic segment"):
+        validate_config(config)
 
 
 def test_enabled_mqtt_requires_enabled_wifi():
@@ -37,6 +47,8 @@ def test_enabled_mqtt_requires_enabled_wifi():
         (("printer", "port"), 0),
         (("serial", "max_line_bytes"), 1_000_000),
         (("wifi", "ssid"), ""),
+        (("mqtt", "allow_cut"), 1),
+        (("mqtt", "max_message_bytes"), 2048),
     ],
 )
 def test_invalid_configuration_is_rejected(path, value):

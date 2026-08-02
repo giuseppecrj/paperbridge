@@ -1,8 +1,20 @@
 import json
 
+from .constants import JOB_RESULT_ERROR_CODES
+from .job_ledger import JobLedger  # type: ignore[reportMissingImports]
+from .serial_rpc import RpcError
+
+_REJECTION_CODES = {
+    "INVALID_PRINT_JOB",
+    "WRONG_DEVICE",
+    "UNAUTHORIZED_CUT",
+    "JOB_TOO_LARGE",
+    "ESC_POS_RENDER_FAILED",
+}
+
 
 class MqttTracer:
-    """Bounded no-output MQTT probe responder for the configured device."""
+    """Bounded MQTT probe and semantic-job adapter for the configured device."""
 
     def __init__(
         self,
@@ -12,6 +24,8 @@ class MqttTracer:
         clock_ms=None,
         ticks_diff=None,
         lock=None,
+        job_service=None,
+        job_ledger=None,
     ):
         self.config = config
         self.wifi = wifi
@@ -20,6 +34,11 @@ class MqttTracer:
         self.clock_ms = clock_ms or self._default_clock_ms
         self.ticks_diff = ticks_diff or self._default_ticks_diff
         self._lock = lock or __import__("_thread").allocate_lock()
+        self.job_service = job_service
+        self.job_ledger = job_ledger or JobLedger(
+            config.get("queue", {}).get("max_completed_ids", 100)
+        )
+        self.allow_cut = self.settings.get("allow_cut", False)
         self.client = None
         self.last_error = None
         self.last_connect_attempt_ms = None
@@ -27,6 +46,8 @@ class MqttTracer:
         device_id = config["device_id"]
         self.jobs_topic = (f"{prefix}/{device_id}/jobs").encode()
         self.status_topic = (f"{prefix}/{device_id}/status").encode()
+        self.print_jobs_topic = (f"{prefix}/{device_id}/print-jobs").encode()
+        self.job_results_topic = (f"{prefix}/{device_id}/job-results").encode()
 
     @staticmethod
     def _default_client_factory(**settings):
@@ -101,6 +122,7 @@ class MqttTracer:
             client.set_callback(self._handle_message)
             client.connect()
             client.subscribe(self.jobs_topic, qos=1)
+            client.subscribe(self.print_jobs_topic, qos=1)
             self._set_state(client, None)
         except Exception as exc:
             self._set_state(None, f"MQTT_CONNECT_FAILED: {exc}")
@@ -132,7 +154,7 @@ class MqttTracer:
             self._lock.release()
 
     def _handle_message(self, topic, payload):
-        if topic != self.jobs_topic:
+        if topic not in (self.jobs_topic, self.print_jobs_topic):
             self.record_error("UNEXPECTED_MQTT_TOPIC")
             return
         if not isinstance(payload, bytes) or len(payload) > self.settings["max_message_bytes"]:
@@ -143,23 +165,80 @@ class MqttTracer:
         except (UnicodeError, ValueError):
             self.record_error("INVALID_MQTT_PAYLOAD")
             return
-        if not self._valid_probe(message):
-            self.record_error("INVALID_MQTT_PROBE")
-            return
-        response = {
-            "schema_version": 1,
-            "kind": "mqtt_probe_status",
-            "probe_id": message["probe_id"],
-            "device_id": self.config["device_id"],
-            "status": "ok",
-            "ts_ms": self.clock_ms(),
-        }
+        if topic == self.jobs_topic:
+            self._handle_probe(message)
+        else:
+            self._handle_job(message)
+
+    def _publish(self, topic, response):
         client = self._get_client()
         if client is None:
             self.record_error("MQTT_NOT_CONNECTED")
             return
-        client.publish(self.status_topic, json.dumps(response), qos=1, retain=False)
+        client.publish(topic, json.dumps(response), qos=1, retain=False)
         self.record_error(None)
+
+    def _handle_probe(self, message):
+        if not self._valid_probe(message):
+            self.record_error("INVALID_MQTT_PROBE")
+            return
+        self._publish(
+            self.status_topic,
+            {
+                "schema_version": 1,
+                "kind": "mqtt_probe_status",
+                "probe_id": message["probe_id"],
+                "device_id": self.config["device_id"],
+                "status": "ok",
+                "ts_ms": self.clock_ms(),
+            },
+        )
+
+    def _handle_job(self, job):
+        job_id = job.get("job_id") if isinstance(job, dict) else None
+        if not isinstance(job_id, str) or not 1 <= len(job_id) <= 128:
+            self.record_error("INVALID_MQTT_JOB")
+            return
+        cached = self.job_ledger.get(job_id)
+        if cached is not None:
+            self._publish(self.job_results_topic, cached)
+            return
+        if self.job_service is None:
+            self.record_error("MQTT_JOB_DISABLED")
+            return
+
+        try:
+            delivered = self.job_service.submit(job, allow_cut=self.allow_cut)
+            result = {
+                "schema_version": "1",
+                "kind": "job_result",
+                "job_id": job_id,
+                "device_id": self.config["device_id"],
+                "status": "delivered_to_printer",
+                "bytes_sent": delivered["bytes_sent"],
+            }
+        except RpcError as exc:
+            result = self._error_result(job_id, exc.code, exc.bytes_sent)
+        except Exception:
+            result = self._error_result(job_id, "INTERNAL_ERROR")
+
+        self.job_ledger.record(job_id, result)
+        self._publish(self.job_results_topic, result)
+
+    def _error_result(self, job_id, code, bytes_sent=None):
+        if code not in JOB_RESULT_ERROR_CODES:
+            code = "INTERNAL_ERROR"
+        result = {
+            "schema_version": "1",
+            "kind": "job_result",
+            "job_id": job_id,
+            "device_id": self.config["device_id"],
+            "status": "rejected" if code in _REJECTION_CODES else "failed",
+            "error_code": code,
+        }
+        if isinstance(bytes_sent, int) and bytes_sent > 0:
+            result["bytes_sent"] = bytes_sent
+        return result
 
     def _valid_probe(self, message):
         if not isinstance(message, dict) or set(message) != {

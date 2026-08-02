@@ -54,6 +54,7 @@ def test_shared_cut_fixture_requires_opt_in():
         "invalid-copies.json",
         "invalid-expires-at.json",
         "invalid-empty-text.json",
+        "invalid-fractional-feed.json",
     ],
 )
 def test_shared_invalid_fixtures_fail(name):

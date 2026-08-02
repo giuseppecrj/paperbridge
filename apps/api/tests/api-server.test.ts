@@ -1,0 +1,218 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import type { Server } from "node:http";
+import test from "node:test";
+
+import type { JobResult } from "@paperbridge/protocol";
+
+import { createApiServer } from "../src/api-server.js";
+import { JobSubmissionService, SubmissionError } from "../src/job-service.js";
+
+async function listen(server: Server): Promise<string> {
+	await new Promise<void>((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", resolve);
+	});
+	const address = server.address();
+	assert(address && typeof address !== "string");
+	return `http://127.0.0.1:${address.port}`;
+}
+
+const delivered: JobResult = {
+	schema_version: "1",
+	kind: "job_result",
+	job_id: "job-hello-001",
+	device_id: "paperbridge-dev-001",
+	status: "delivered_to_printer",
+	bytes_sent: 28,
+};
+
+test("POST /api/jobs returns the correlated terminal result", async (t) => {
+	let submitted: unknown;
+	const server = createApiServer({
+		submitJob: async (value) => {
+			submitted = value;
+			return delivered;
+		},
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+	const job = {
+		schema_version: "1",
+		job_id: "job-hello-001",
+		device_id: "paperbridge-dev-001",
+		created_at: "2026-08-02T00:00:00Z",
+		content: { kind: "receipt", blocks: [{ type: "text", text: "Hello" }] },
+	};
+
+	const response = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(job),
+	});
+
+	assert.equal(response.status, 200);
+	assert.deepEqual(await response.json(), delivered);
+	assert.deepEqual(submitted, job);
+});
+
+test("rejects an oversized body before parsing or submission", async (t) => {
+	let submissions = 0;
+	const server = createApiServer({
+		submitJob: async () => {
+			submissions += 1;
+			return delivered;
+		},
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	const overLimit = readFileSync(
+		new URL(
+			"../../../packages/protocol/fixtures/print-job-v1/schema-valid-over-mqtt-limit.json",
+			import.meta.url,
+		),
+	);
+	assert.equal(overLimit.byteLength, 1025);
+	const response = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: new Uint8Array(overLimit),
+	});
+
+	assert.equal(response.status, 413);
+	assert.deepEqual(await response.json(), {
+		status: "rejected",
+		error_code: "PAYLOAD_TOO_LARGE",
+	});
+	assert.equal(submissions, 0);
+});
+
+test("maps terminal device rejection and delivery failure honestly", async (t) => {
+	const results: JobResult[] = [
+		{
+			schema_version: "1",
+			kind: "job_result",
+			job_id: "job-rejected",
+			device_id: "paperbridge-dev-001",
+			status: "rejected",
+			error_code: "UNAUTHORIZED_CUT",
+		},
+		{
+			schema_version: "1",
+			kind: "job_result",
+			job_id: "job-partial",
+			device_id: "paperbridge-dev-001",
+			status: "failed",
+			error_code: "PRINTER_CONNECTION_RESET",
+			bytes_sent: 2,
+		},
+	];
+	const server = createApiServer({ submitJob: async () => results.shift() as JobResult });
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	for (const expectedStatus of [422, 502]) {
+		const response = await fetch(`${baseUrl}/api/jobs`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "{}",
+		});
+		assert.equal(response.status, expectedStatus);
+	}
+});
+
+test("maps broker, duplicate, and timeout failures without inventing delivery", async (t) => {
+	const errors = [
+		new SubmissionError(503, "BROKER_UNAVAILABLE", "failed", "job-1", "device-1"),
+		new SubmissionError(409, "JOB_ALREADY_PENDING", "rejected", "job-1", "device-1"),
+		new SubmissionError(504, "DEVICE_RESULT_TIMEOUT", "unknown", "job-1", "device-1"),
+	];
+	const server = createApiServer({
+		submitJob: async () => {
+			throw errors.shift();
+		},
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	for (const [statusCode, responseStatus, errorCode] of [
+		[503, "failed", "BROKER_UNAVAILABLE"],
+		[409, "rejected", "JOB_ALREADY_PENDING"],
+		[504, "unknown", "DEVICE_RESULT_TIMEOUT"],
+	] as const) {
+		const response = await fetch(`${baseUrl}/api/jobs`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "{}",
+		});
+		assert.equal(response.status, statusCode);
+		assert.deepEqual(await response.json(), {
+			job_id: "job-1",
+			device_id: "device-1",
+			status: responseStatus,
+			error_code: errorCode,
+		});
+	}
+});
+
+test("public endpoint rejects schema-invalid and wrong-device jobs before MQTT", async (t) => {
+	let publishes = 0;
+	const jobs = new JobSubmissionService("paperbridge-dev-001", {
+		submit: async () => {
+			publishes += 1;
+			return delivered;
+		},
+	});
+	const server = createApiServer({ submitJob: (value) => jobs.submit(value) });
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+	const invalid = readFileSync(
+		new URL(
+			"../../../packages/protocol/fixtures/print-job-v1/invalid-fractional-feed.json",
+			import.meta.url,
+		),
+		"utf8",
+	);
+	const valid = JSON.parse(
+		readFileSync(
+			new URL(
+				"../../../packages/protocol/fixtures/print-job-v1/valid-text-feed.json",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	) as Record<string, unknown>;
+
+	for (const [body, statusCode, errorCode] of [
+		[invalid, 400, "INVALID_PRINT_JOB"],
+		[JSON.stringify({ ...valid, device_id: "other-device" }), 422, "WRONG_DEVICE"],
+	] as const) {
+		const response = await fetch(`${baseUrl}/api/jobs`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body,
+		});
+		assert.equal(response.status, statusCode);
+		assert.equal((await response.json() as { error_code: string }).error_code, errorCode);
+	}
+	assert.equal(publishes, 0);
+});
+
+test("rejects malformed JSON distinctly", async (t) => {
+	const server = createApiServer({ submitJob: async () => delivered });
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	const response = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: "{",
+	});
+
+	assert.equal(response.status, 400);
+	assert.deepEqual(await response.json(), {
+		status: "rejected",
+		error_code: "MALFORMED_JSON",
+	});
+});

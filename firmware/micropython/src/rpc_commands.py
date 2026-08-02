@@ -1,17 +1,27 @@
 from .config import redacted
 from .device_info import memory_info, reset_cause, system_info
-from .job_schema import JobValidationError, validate_job
+from .job_service import JobService  # type: ignore[reportMissingImports]
 from .serial_rpc import RpcError
 
 
 class CommandRouter:
-    def __init__(self, config, ethernet, coordinator, transport, mqtt=None, wifi=None):
+    def __init__(
+        self,
+        config,
+        ethernet,
+        coordinator,
+        transport,
+        mqtt=None,
+        wifi=None,
+        job_service=None,
+    ):
         self.config = config
         self.ethernet = ethernet
         self.coordinator = coordinator
         self.transport = transport
         self.mqtt = mqtt
         self.wifi = wifi
+        self.job_service = job_service or JobService(config, coordinator)
 
     def dispatch(self, command, params):
         handlers = {
@@ -134,14 +144,11 @@ class CommandRouter:
         allow_cut = params.get("allow_cut", False)
         if not isinstance(allow_cut, bool):
             raise RpcError("INVALID_RPC_REQUEST", "allow_cut must be a boolean")
-        try:
-            validate_job(job, allow_cut=allow_cut)
-        except JobValidationError as exc:
-            raise RpcError(exc.code, str(exc)) from exc
-        if job["device_id"] != self.config["device_id"]:
-            raise RpcError("WRONG_DEVICE", "job device_id does not match this device")
-        self._require_ethernet_link()
-        return self.coordinator.print_job(job, allow_cut=allow_cut)
+        return self.job_service.submit(
+            job,
+            allow_cut=allow_cut,
+            before_delivery=self._require_ethernet_link,
+        )
 
     def system_reboot(self, _params):
         try:

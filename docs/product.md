@@ -72,8 +72,9 @@ device and its permitted senders.
 
 ## Current boundary
 
-The proven implementation includes the local USB semantic-job path, a no-output
-Wi-Fi/MQTT device-control tracer, and the device's direct W5500 printer path.
-MQTT print-job delivery, pairing, remote delivery, sender authorization,
-scheduling, cloud services, and the final recipient experience remain product
-work.
+The implemented private MVP path includes local USB semantic jobs, a bounded
+`POST /api/jobs` application ingress, correlated MQTT v1 job delivery, the
+no-output Wi-Fi/MQTT tracer, and the device's direct W5500 printer path. The
+networked job path is host-/simulator-tested, not physically printed. MCP,
+pairing, public delivery, sender authorization, scheduling, cloud services, and
+the final recipient experience remain product work.

@@ -6,9 +6,11 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
+    "start": "node --import tsx src/server.ts",
     "mqtt:probe": "node --import tsx src/main.ts"
   },
   "dependencies": {
+    "@paperbridge/protocol": "workspace:*",
     "mqtt": "^5.14.1"
   },
   "devDependencies": {

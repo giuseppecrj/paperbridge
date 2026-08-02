@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "kind": "job_result",
+  "job_id": "job-partial-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "failed",
+  "error_code": "PRINTER_CONNECTION_RESET",
+  "bytes_sent": 2
+}

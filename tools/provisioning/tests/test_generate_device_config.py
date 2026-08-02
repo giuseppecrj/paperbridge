@@ -70,7 +70,20 @@ def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch
     assert payload["mqtt"]["username"] == "paperbridge-dev-001"
     assert payload["mqtt"]["password"] == "mqtt-password"
     assert payload["mqtt"]["client_id"] == "paperbridge-dev-001"
+    assert payload["mqtt"]["allow_cut"] is False
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
+
+
+def test_remote_cut_policy_requires_an_explicit_boolean(monkeypatch):
+    monkeypatch.delenv("PAPERBRIDGE_MQTT_ALLOW_CUT", raising=False)
+    assert gen.boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False) is False
+
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_ALLOW_CUT", "true")
+    assert gen.boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False) is True
+
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_ALLOW_CUT", "1")
+    with pytest.raises(SystemExit, match="must be true or false"):
+        gen.boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False)
 
 
 def test_generate_from_environment_fails_without_printing_secret_values(tmp_path, monkeypatch):

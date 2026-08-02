@@ -27,8 +27,12 @@ def validate_config(config):
     for key in ("device_id", "environment", "serial", "ethernet", "wifi", "printer", "queue"):
         if key not in config:
             raise ConfigurationError(f"missing configuration field: {key}")
-    if not isinstance(config["device_id"], str) or not 1 <= len(config["device_id"]) <= 64:
+    device_id = config["device_id"]
+    if not isinstance(device_id, str) or not 1 <= len(device_id) <= 64:
         raise ConfigurationError("device_id must be 1..64 characters")
+    topic_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+    if not all(character in topic_characters for character in device_id):
+        raise ConfigurationError("device_id must be a safe MQTT topic segment")
 
     max_line = config["serial"].get("max_line_bytes")
     if not isinstance(max_line, int) or not 256 <= max_line <= 16384:
@@ -89,8 +93,11 @@ def validate_config(config):
         if not isinstance(retry_interval, int) or not 100 <= retry_interval <= 60000:
             raise ConfigurationError("mqtt.retry_interval_ms must be 100..60000")
         max_message_bytes = mqtt.get("max_message_bytes")
-        if not isinstance(max_message_bytes, int) or not 128 <= max_message_bytes <= 4096:
-            raise ConfigurationError("mqtt.max_message_bytes must be 128..4096")
+        if max_message_bytes != 1024:
+            raise ConfigurationError("mqtt.max_message_bytes must be 1024")
+        allow_cut = mqtt.setdefault("allow_cut", False)
+        if not isinstance(allow_cut, bool):
+            raise ConfigurationError("mqtt.allow_cut must be a boolean")
         if mqtt["enabled"] and not wifi["enabled"]:
             raise ConfigurationError("mqtt requires wifi.enabled=true")
     return config

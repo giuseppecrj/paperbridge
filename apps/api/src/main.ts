@@ -1,21 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { positiveInteger, required } from "./env.js";
 import { probe } from "./mqtt-tracer.js";
-
-function required(name: string): string {
-	const value = process.env[name];
-	if (!value) throw new Error(`${name} is required`);
-	return value;
-}
-
-function positiveInteger(name: string, fallback: number): number {
-	const value = process.env[name];
-	if (value === undefined) return fallback;
-	const parsed = Number(value);
-	if (!Number.isSafeInteger(parsed) || parsed <= 0)
-		throw new Error(`${name} must be a positive integer`);
-	return parsed;
-}
 
 const result = await probe({
 	host: required("PAPERBRIDGE_MQTT_HOST"),
@@ -28,4 +14,4 @@ const result = await probe({
 		`paperbridge-probe-${randomUUID()}`,
 	timeoutMs: positiveInteger("PAPERBRIDGE_MQTT_TIMEOUT_MS", 5000),
 });
-console.log(JSON.stringify(result));
+process.stdout.write(`${JSON.stringify(result)}\n`);

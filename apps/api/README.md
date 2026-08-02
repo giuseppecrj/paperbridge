@@ -1,17 +1,31 @@
-# MQTT tracer
+# Private REST/MQTT service
 
-This Node.js TypeScript package is the Phase 2 no-output MQTT tracer, not an API
-service yet. `bun` manages the workspace; the probe runs with Node.js and uses
-standard MQTT 3.1.1.
+This portable Node.js TypeScript package implements the private, single-device
+Phase 2 `POST /api/jobs` path and retains the no-output MQTT probe. It uses
+Node's built-in HTTP server and standard MQTT 3.1.1; Bun is workspace tooling
+only.
+
+Start authenticated Mosquitto, set the non-secret `.env` values, then run:
 
 ```sh
-just mqtt-probe
+just api
 ```
 
-The recipe loads non-secret host, username, and device identity from ignored
-`.env` and resolves `PAPERBRIDGE_MQTT_PASSWORD` through the checked-in Fnox
-project mapping. It publishes one QoS 1, non-retained `mqtt_probe` and waits for
-the matching `mqtt_probe_status`.
-It neither submits a print job nor contacts a printer.
+The server defaults to `127.0.0.1:3000`. It accepts a raw `print-job.v1` JSON
+body no larger than 1,024 bytes, validates the configured `device_id`, publishes
+one QoS 1 non-retained message, and waits for the correlated `job-result.v1`.
+A successful response ends at `delivered_to_printer`, never `printed`.
 
-Run the authenticated broker from [`tools/mosquitto`](../../tools/mosquitto).
+```sh
+curl -sS \
+  -H 'content-type: application/json' \
+  --data-binary @packages/protocol/fixtures/print-job-v1/valid-text-feed.json \
+  http://127.0.0.1:3000/api/jobs
+```
+
+Timeout returns `unknown` and never republishes automatically. The endpoint is a
+private MVP with no public authentication; keep it on localhost or behind the
+approved Tailscale boundary. MQTT/TLS, durable delivery, multi-device routing,
+and MCP are not implemented.
+
+The separate no-output tracer remains available as `just mqtt-probe`.

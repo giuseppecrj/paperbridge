@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "kind": "job_result",
+  "job_id": "job-invalid-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "rejected",
+  "error_code": "INVALID_PRINT_JOB"
+}

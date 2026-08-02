@@ -4,9 +4,14 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
+JOB_RESULT_ERROR_CODES = __import__(
+    "src.constants", None, None, ("JOB_RESULT_ERROR_CODES",)
+).JOB_RESULT_ERROR_CODES
+
 SCHEMAS = Path("packages/protocol/schemas")
 EXAMPLES = Path("packages/protocol/examples")
 JOB_FIXTURES = Path("packages/protocol/fixtures/print-job-v1")
+RESULT_FIXTURES = Path("packages/protocol/fixtures/job-result-v1")
 
 
 def load(path):
@@ -15,6 +20,10 @@ def load(path):
 
 def job_validator():
     return Draft202012Validator(load(SCHEMAS / "print-job.v1.schema.json"))
+
+
+def result_validator():
+    return Draft202012Validator(load(SCHEMAS / "job-result.v1.schema.json"))
 
 
 def test_serial_ping_matches_schema():
@@ -51,6 +60,7 @@ def test_print_job_schema_accepts_shared_valid_fixtures(name):
         "invalid-copies.json",
         "invalid-expires-at.json",
         "invalid-empty-text.json",
+        "invalid-fractional-feed.json",
     ],
 )
 def test_print_job_schema_rejects_shared_invalid_fixtures(name):
@@ -69,6 +79,33 @@ def test_print_job_schema_rejects_boolean_feed_lines():
     payload["content"]["blocks"] = [{"type": "feed", "lines": True}]
     with pytest.raises(ValidationError):
         job_validator().validate(payload)
+
+
+def test_print_job_transport_boundary_fixtures_remain_schema_valid():
+    at_limit = JOB_FIXTURES / "valid-at-mqtt-limit.json"
+    over_limit = JOB_FIXTURES / "schema-valid-over-mqtt-limit.json"
+    assert len(at_limit.read_bytes()) == 1024
+    assert len(over_limit.read_bytes()) == 1025
+    job_validator().validate(load(at_limit))
+    job_validator().validate(load(over_limit))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "delivered.json",
+        "rejected-validation.json",
+        "transport-failure.json",
+        "partial-write.json",
+    ],
+)
+def test_job_result_schema_accepts_terminal_fixtures(name):
+    result_validator().validate(load(RESULT_FIXTURES / name))
+
+
+def test_job_result_schema_and_firmware_share_stable_error_codes():
+    schema = load(SCHEMAS / "job-result.v1.schema.json")
+    assert set(schema["properties"]["error_code"]["enum"]) == JOB_RESULT_ERROR_CODES
 
 
 def test_print_job_schema_rejects_styling_and_options_fields():

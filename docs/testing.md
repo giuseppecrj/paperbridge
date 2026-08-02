@@ -15,15 +15,20 @@ rejection, exact ESC/POS bytes, semantic `job.submit` request replay with a real
 printer-simulator socket capture, printer transport failures, Ethernet API
 behavior, flash/deploy safety, port ambiguity, bounded FIFO behavior, status
 transitions, simulator capture hashing, station-mode Wi-Fi connection/retry
-behavior, and the bounded no-output MQTT tracer. The Bun workspace checks Node
-TypeScript with `tsc` and runs its tracer contract
-tests. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
-also run the Node probe through local Mosquitto and a CPython test client using
-the firmware `MqttTracer`; otherwise they are reported as skipped.
+behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
+protocol package, HTTP body/device validation, MQTT result correlation, timeout
+without retry, QoS duplicate replay, device cut policy, and partial-write result
+reporting. The Bun workspace checks both TypeScript packages with `tsc` and Node's
+test runner. When `mosquitto` and `mosquitto_passwd` are installed, integration
+tests also run the Node probe and full REST job path through real local
+Mosquitto; otherwise those broker tests are reported as skipped.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.
-Connection refusal is represented by targeting a stopped server.
+Connection refusal is represented by targeting a stopped server. The REST/MQTT
+integration test starts this real TCP seam, runs the CPython-hosted firmware MQTT
+adapter and shared coordinator, posts the authoritative v1 fixture to the Node
+service, and verifies the exact captured ESC/POS bytes plus correlated result.
 
 No automated test claims hardware success. This includes the local semantic-job
 simulator capture: `delivered_to_printer` is not a physical paper observation.
@@ -38,7 +43,8 @@ Wi-Fi/MQTT. Evidence IDs and observations are recorded in `hardware.md`; the
 72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
-operates the printer. `just secrets-check` is a separate local setup check that
+operates the purchased printer. Real-broker and real-socket simulator tests are
+host evidence only. `just secrets-check` is a separate local setup check that
 resolves project 1Password references without printing their values; it is not a
 test-suite prerequisite. The Wi-Fi/MQTT tracer tests send no semantic job or
 printer bytes. They do not establish purchased-device Wi-Fi/W5500 coexistence

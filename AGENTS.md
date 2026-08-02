@@ -11,7 +11,7 @@ The currently proven local path is:
 
 ```text
 Mac host CLI -- USB-C NDJSON RPC ------------------> Waveshare ESP32-S3-ETH
-Mac/Mosquitto -- home Wi-Fi MQTT probe ----------->          |
+Mac REST/API -- home Wi-Fi MQTT jobs/probes ------>          |
 ESP32-S3-ETH -- direct W5500 / TCP ESC/POS -----------------> Rongta RP326
 ```
 
@@ -21,14 +21,16 @@ write is `delivered_to_printer`; it is not proof that paper emerged.
 The complete USB print path, controlled power-cycle acceptance, isolated
 Ethernet and device recovery, observable cover-open/paper-out behavior, and a
 no-output Wi-Fi/MQTT tracer have been demonstrated on the purchased hardware.
-Treat that as bring-up evidence, not a production-reliability claim: the 72-hour
-soak remains a separate gate. Never infer hardware success from host tests or
-stale documentation.
+The private REST/MQTT v1 job path is host-/simulator-tested only. Treat these as
+bring-up evidence, not a production-reliability claim: the 72-hour soak remains
+a separate gate. Never infer hardware success from host tests or stale
+documentation.
 
-Not implemented: backend/API service, MCP, web app, MQTT print-job delivery,
-MQTT/TLS, OTA, production provisioning, image printing, or an ESP-IDF firmware
-port. Do not build these without an approved issue. `apps/api` currently contains
-only the Node.js MQTT probe; `firmware/esp-idf/` remains a future placeholder.
+Not implemented: MCP, web app, public API/authentication, MQTT/TLS, durable job
+delivery, OTA, production provisioning, image printing, or an ESP-IDF firmware
+port. Do not build these without an approved issue. `apps/api` contains the
+private single-device REST/MQTT v1 service and no MCP; `firmware/esp-idf/`
+remains a future placeholder.
 
 ## Sources of truth
 
@@ -69,23 +71,28 @@ stale claim.
 - `rpc_commands.py` — application command routing and hardware-order guards.
 - `ethernet.py` — the single MicroPython/W5500 version and pin seam.
 - `wifi.py` — station-mode control-plane connection and locked status snapshot.
-- `mqtt_adapter.py` — bounded no-output MQTT probe over Wi-Fi.
+- `mqtt_adapter.py` — bounded MQTT probe and semantic-job ingress over Wi-Fi.
+- `job_service.py` and `job_ledger.py` — shared semantic submission and bounded
+  one-boot MQTT terminal-result replay.
 - `escpos.py` — semantic/test content to ESC/POS bytes.
 - `print_coordinator.py` — render-then-deliver orchestration.
 - `printer_transport.py` — one TCP connection per payload with deterministic
   close and honest delivery results.
-- `packages/protocol/` — versioned schemas, examples, and binary fixtures.
-- `apps/api/` — portable Node.js MQTT probe; not an API or MCP service yet.
+- `packages/protocol/` — authoritative schemas, fixtures, and TypeScript
+  validators/topic contracts.
+- `apps/api/` — portable private REST/MQTT v1 service plus no-output probe; no MCP.
 - `tools/mosquitto/` — authenticated local-broker development configuration.
 - `tools/provisioning/` — local device-configuration generation.
 - `tools/printer-simulator/` — TCP capture and transport-failure testing.
 - `tools/firmware/` — flash, verify, and force-copy deployment utilities.
 
-Local USB `job.submit` implements semantic `print-job.v1`. The MQTT jobs topic
-accepts only a no-output tracer message and cannot reach the print coordinator.
-Bring-up commands such as `printer.print_test` are not print jobs. Queue, ledger,
-health, watchdog, and device-event artifacts must not be described as live
-capabilities until they have a real caller and observable behavior.
+Local USB `job.submit` and private REST/MQTT ingress implement semantic
+`print-job.v1` through one shared job service/coordinator. MQTT probe and print
+job topics remain distinct. The result ledger is bounded RAM replay for one
+boot, not a durable queue. Bring-up commands such as `printer.print_test` are not
+print jobs. Queue, health, watchdog, and device-event artifacts must not be
+described as live capabilities until they have a real caller and observable
+behavior.
 
 Keep these identities distinct:
 

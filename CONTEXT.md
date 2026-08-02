@@ -56,6 +56,17 @@ A versioned request describing printable meaning as bounded receipt blocks rathe
 than printer-specific bytes.
 _Avoid_: Payload, raw job, RPC request
 
+**Job Result**:
+A versioned terminal device report correlated to a semantic print job by
+`job_id`. It may report delivered to printer, rejected, or failed; it never
+claims paper emerged.
+_Avoid_: Ack, event, printed receipt
+
+**Unknown Delivery Result**:
+The application stopped waiting before a correlated job result arrived. It is
+not job expiry, printer failure, or permission to submit the job again.
+_Avoid_: Failed, expired, retryable
+
 **Block**:
 A bounded content unit within a semantic print job, such as text, feed, rule, or
 cut.

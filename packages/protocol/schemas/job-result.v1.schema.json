@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperbridge.dev/schemas/job-result.v1.schema.json",
+  "title": "Paperbridge correlated job result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "job_id", "device_id", "status"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "kind": { "const": "job_result" },
+    "job_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "device_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "status": {
+      "enum": ["delivered_to_printer", "rejected", "failed"]
+    },
+    "error_code": {
+      "enum": [
+        "INVALID_PRINT_JOB",
+        "WRONG_DEVICE",
+        "UNAUTHORIZED_CUT",
+        "JOB_TOO_LARGE",
+        "ETHERNET_LINK_DOWN",
+        "PRINTER_CONNECT_TIMEOUT",
+        "PRINTER_CONNECTION_REFUSED",
+        "PRINTER_WRITE_TIMEOUT",
+        "PRINTER_CONNECTION_RESET",
+        "ESC_POS_RENDER_FAILED",
+        "INTERNAL_ERROR"
+      ]
+    },
+    "bytes_sent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 32768
+    }
+  },
+  "oneOf": [
+    {
+      "properties": { "status": { "const": "delivered_to_printer" } },
+      "required": ["bytes_sent"],
+      "not": { "required": ["error_code"] }
+    },
+    {
+      "properties": { "status": { "const": "rejected" } },
+      "required": ["error_code"],
+      "not": { "required": ["bytes_sent"] }
+    },
+    {
+      "properties": { "status": { "const": "failed" } },
+      "required": ["error_code"]
+    }
+  ]
+}

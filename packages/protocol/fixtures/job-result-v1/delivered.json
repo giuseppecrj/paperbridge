@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "kind": "job_result",
+  "job_id": "job-hello-001",
+  "device_id": "paperbridge-dev-001",
+  "status": "delivered_to_printer",
+  "bytes_sent": 28
+}
