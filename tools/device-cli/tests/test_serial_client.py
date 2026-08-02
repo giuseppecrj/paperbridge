@@ -7,11 +7,13 @@ from paperbridge_cli.serial_client import DeviceError, SerialClient
 class FakeSerial:
     def __init__(self, *_args, fail=False, **_kwargs):
         self.lines = []
+        self.requests = []
         self.fail = fail
         self.closed = False
 
     def write(self, payload):
         request = json.loads(payload)
+        self.requests.append(request)
         self.lines.extend(
             [
                 b"MicroPython boot noise\n",
@@ -58,3 +60,21 @@ def test_surfaces_structured_device_error():
     ):
         client.request("system.ping")
     assert error.value.code == "TEST_ERROR"
+
+
+def test_allows_transport_request_id_to_differ_from_job_id():
+    fake = FakeSerial()
+    with SerialClient("fake", serial_factory=lambda *_args, **_kwargs: fake) as client:
+        assert client.request(
+            "job.submit",
+            {"job": {"job_id": "job-1"}},
+            request_id="request-1",
+        ) == {"status": "ok"}
+    assert fake.requests == [
+        {
+            "type": "request",
+            "request_id": "request-1",
+            "command": "job.submit",
+            "params": {"job": {"job_id": "job-1"}},
+        }
+    ]

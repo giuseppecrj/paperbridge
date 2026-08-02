@@ -4,8 +4,10 @@
 
 The host CLI speaks newline-delimited JSON over USB serial. Firmware dispatches
 commands to one shared configuration, W5500 adapter, ESC/POS renderer, and TCP
-transport. Rendering is separate from delivery. The transport serializes one
-payload per socket and closes deterministically.
+transport. `job.submit` validates semantic v1 work at this boundary; diagnostic
+print, feed, and cut commands remain separate. Rendering is separate from
+delivery. The transport serializes one payload per socket and closes
+deterministically.
 
 ```text
 paperbridge CLI -> serial RPC -> command router -> print coordinator
@@ -19,10 +21,10 @@ socket. It does not mean paper, head, or cutter success.
 ## Future contract boundary
 
 Future HTTPS/MQTT ingress must validate the same `print-job.v1` schema and reuse
-the renderer and delivery boundary. A persistent queue, job ledger, externally
-observable lifecycle, and job-submission RPC are not live and will be designed
-with durable `job_id` deduplication. A browser or mobile client will never
-connect directly to a device over the public internet. Future topics are
+the renderer and delivery boundary. Local USB `job.submit` is live, but a
+persistent queue, job ledger, externally observable lifecycle, and durable
+`job_id` deduplication are not. A browser or mobile client will never connect
+directly to a device over the public internet. Future topics are
 `v1/devices/{device_id}/{jobs,commands,status,events,acks}`; they remain contract
 ideas only, with no cloud system implemented.
 

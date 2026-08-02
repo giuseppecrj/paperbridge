@@ -9,18 +9,21 @@ just test
 ```
 
 Tests cover request parsing/correlation, malformed and oversized JSON, stable
-unsupported-command errors, strict cut confirmation, configuration validation,
-shared schema/device/renderer fixtures, raw/control rejection, exact ESC/POS
-bytes, printer transport failures, Ethernet API behavior, flash/deploy safety,
-port ambiguity, bounded FIFO behavior, status transitions, and simulator capture
-hashing.
+unsupported-command errors, strict diagnostic and semantic-cut authorization,
+configuration validation, shared schema/device/renderer fixtures, raw/control
+rejection, exact ESC/POS bytes, semantic `job.submit` request replay with a real
+printer-simulator socket capture, printer transport failures, Ethernet API
+behavior, flash/deploy safety, port ambiguity, bounded FIFO behavior, status
+transitions, and simulator capture hashing.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.
 Connection refusal is represented by targeting a stopped server.
 
-No automated test claims hardware success. Manual bring-up physically verified
-USB RPC, direct Ethernet, printer reachability, text, feed, and explicit cut on
+No automated test claims hardware success. This includes the local semantic-job
+simulator capture: `delivered_to_printer` is not a physical paper observation.
+Manual bring-up physically verified USB RPC, direct Ethernet, printer
+reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,
 printer-only and ESP32-only recovery, cover-open buffering, and paper-out
 buffering passed on 2026-08-02. Evidence IDs and observations are recorded in

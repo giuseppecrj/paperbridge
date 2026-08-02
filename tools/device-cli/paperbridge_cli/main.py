@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 
 from .output import emit
@@ -11,6 +12,7 @@ def _parser():
     parser.add_argument("--port", help="USB serial device (or PAPERBRIDGE_PORT)")
     parser.add_argument("--timeout", type=float, default=3.0)
     parser.add_argument("--json", action="store_true", dest="json_output")
+    parser.add_argument("--request-id", help="Serial RPC request ID (generated when omitted)")
     groups = parser.add_subparsers(dest="group", required=True)
 
     ports = groups.add_parser("ports").add_subparsers(dest="action", required=True)
@@ -39,6 +41,11 @@ def _parser():
     cut_test = printer.add_parser("cut-test")
     cut_test.add_argument("--confirm", action="store_true", required=True)
 
+    job = groups.add_parser("job").add_subparsers(dest="action", required=True)
+    submit = job.add_parser("submit")
+    submit.add_argument("job_file")
+    submit.add_argument("--allow-cut", action="store_true")
+
     serial_group = groups.add_parser("serial").add_subparsers(dest="action", required=True)
     serial_group.add_parser("monitor")
     return parser
@@ -64,6 +71,13 @@ def _rpc(args):
     }
     if (args.group, args.action) == ("printer", "print-test"):
         return "printer.print_test", {"text": args.text}
+    if (args.group, args.action) == ("job", "submit"):
+        try:
+            with open(args.job_file) as job_file:
+                job = json.load(job_file)
+        except (OSError, ValueError) as exc:
+            raise DeviceError("INVALID_JOB_FILE", f"unable to read job file: {exc}") from exc
+        return "job.submit", {"job": job, "allow_cut": args.allow_cut}
     return commands[(args.group, args.action)]
 
 
@@ -85,7 +99,7 @@ def main(argv=None):
                 client.monitor()
                 return 0
             command, params = _rpc(args)
-            emit(client.request(command, params), args.json_output)
+            emit(client.request(command, params, request_id=args.request_id), args.json_output)
             return 0
     except KeyboardInterrupt:
         return 130

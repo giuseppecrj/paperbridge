@@ -24,6 +24,9 @@ production provisioning is implemented.
   direct-link negotiation, and printer probe are physically verified.
 - Printer endpoint `192.168.1.87:9100`, ASCII text, feed, and explicit partial
   cut bytes `1d 56 01` are physically verified on the purchased RP326.
+- Local semantic `print-job.v1` USB submission is implemented and
+  host-/simulator-tested; it has not been physically verified as structured-job
+  output.
 - Controlled post-deploy power-cycle smoke and operator-confirmed acceptance
   passed on 2026-08-02; evidence IDs are recorded in `docs/hardware.md`.
 - Board photos confirm `ESP32-S3-ETH` silkscreen with no explicit PCB revision;
@@ -121,11 +124,15 @@ PORT="$PAPERBRIDGE_PORT" just printer-probe
 PORT="$PAPERBRIDGE_PORT" TEXT='Hello from my Mac' just print-test
 mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" printer feed-test
 PORT="$PAPERBRIDGE_PORT" just cut-test  # explicit confirmation; run last
+mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" \
+  job submit packages/protocol/fixtures/print-job-v1/valid-text-feed.json
 ```
 
 Do not run the cut test until plain text and feed tests succeed. The included
 partial-cut sequence is verified only on the purchased RP326 and still requires
-explicit confirmation every time.
+explicit confirmation every time. `job submit` returns `delivered_to_printer`,
+not proof that paper emerged. A semantic cut job additionally requires
+`--allow-cut`.
 
 ### Opt-in hardware smoke and acceptance
 

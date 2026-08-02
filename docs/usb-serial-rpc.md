@@ -19,11 +19,15 @@ Live commands are:
   `ethernet.configure_static`
 - `printer.endpoint`, `printer.probe`, `printer.print_test`,
   `printer.feed_test`, and `printer.cut_test`
+- `job.submit` with `params.job` containing a semantic `print-job.v1` and an
+  optional literal `allow_cut: true` for cut blocks
 
 `printer.cut_test` requires literal JSON boolean `confirm: true`; it never runs
-at boot or in unit tests. `system.reboot` schedules reset after returning its
-response. Queue, config reload, fixture aliases, and semantic print-job
-submission are not live RPC commands.
+at boot or in unit tests. `job.submit` checks the configured `device_id` before
+printer delivery and returns the semantic `job_id`; its serial `request_id`
+continues to provide bounded response replay. `system.reboot` schedules reset
+after returning its response. Queue, config reload, fixture aliases, and durable
+job-id deduplication are not live RPC commands.
 
 Application RPC and MicroPython deployment are intentionally separate:
 `mpremote` manages files/REPL; `paperbridge` manages device behavior.

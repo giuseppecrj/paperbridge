@@ -1,5 +1,6 @@
 from .config import redacted
 from .device_info import memory_info, reset_cause, system_info
+from .job_schema import JobValidationError, validate_job
 from .serial_rpc import RpcError
 
 
@@ -26,6 +27,7 @@ class CommandRouter:
             "printer.print_test": self.printer_print_test,
             "printer.feed_test": self.printer_feed_test,
             "printer.cut_test": self.printer_cut_test,
+            "job.submit": self.job_submit,
             "system.reboot": self.system_reboot,
         }
         handler = handlers.get(command)
@@ -96,6 +98,20 @@ class CommandRouter:
             raise RpcError("INVALID_RPC_REQUEST", "cut test requires confirm=true")
         self._require_ethernet_link()
         return self.coordinator.cut_test()
+
+    def job_submit(self, params):
+        job = params.get("job")
+        allow_cut = params.get("allow_cut", False)
+        if not isinstance(allow_cut, bool):
+            raise RpcError("INVALID_RPC_REQUEST", "allow_cut must be a boolean")
+        try:
+            validate_job(job, allow_cut=allow_cut)
+        except JobValidationError as exc:
+            raise RpcError(exc.code, str(exc)) from exc
+        if job["device_id"] != self.config["device_id"]:
+            raise RpcError("WRONG_DEVICE", "job device_id does not match this device")
+        self._require_ethernet_link()
+        return self.coordinator.print_job(job, allow_cut=allow_cut)
 
     def system_reboot(self, _params):
         try:

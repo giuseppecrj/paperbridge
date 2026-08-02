@@ -11,7 +11,12 @@ but validation and rendering both require explicit caller authorization. Raw
 ESC/POS, styling, copies, expiry, bitmap, and QR blocks are not v1 semantics and
 fail rather than being ignored.
 
-The status vocabulary is currently internal scaffolding; no semantic print-job
-RPC or durable lifecycle is live. A future job result may end at
-`delivered_to_printer`, which means bytes reached the printer-facing socket.
-`printed` remains absent until reliable physical status confirmation exists.
+Local USB RPC implements `job.submit`. It validates a submitted v1 job against
+the configured `device_id`, renders it through the shared coordinator, and
+returns its `job_id` with `delivered_to_printer` when all bytes reached the
+printer-facing socket. `allow_cut: true` is required for a cut block. Serial
+`request_id` remains transport correlation/replay only; it is distinct from
+`job_id`. There is no durable lifecycle, queue, or job-id deduplication.
+
+This path is host- and simulator-tested, not physical structured-job evidence.
+`printed` remains absent until reliable printer status confirmation exists.

@@ -21,7 +21,7 @@ class PrintCoordinator:
             tracker.transition("delivered_to_printer")
             return result
         except RenderError as exc:
-            raise RpcError("ESC_POS_RENDER_FAILED", str(exc)) from exc
+            raise RpcError(exc.code, str(exc)) from exc
         except TransportError as exc:
             raise RpcError(exc.code, exc.message) from exc
 
@@ -33,3 +33,8 @@ class PrintCoordinator:
 
     def cut_test(self):
         return self._send(self.renderer.render_cut_test)
+
+    def print_job(self, job, allow_cut=False):
+        result = self._send(lambda: self.renderer.render(job, allow_cut=allow_cut))
+        result["job_id"] = job["job_id"]
+        return result

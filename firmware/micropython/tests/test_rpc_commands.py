@@ -1,6 +1,17 @@
+import json
+from pathlib import Path
+
 import pytest
+from src.escpos import EscPosRenderer
+from src.print_coordinator import PrintCoordinator
 from src.rpc_commands import CommandRouter
 from src.serial_rpc import RpcError
+
+FIXTURES = Path("packages/protocol/fixtures/print-job-v1")
+
+
+def load(name):
+    return json.loads((FIXTURES / name).read_text())
 
 
 class FakeEthernet:
@@ -15,11 +26,22 @@ class FakeEthernet:
 
 
 class FakeTransport:
+    def __init__(self):
+        self.payloads = []
+
     def endpoint(self):
         return "192.168.1.87:9100"
 
     def probe(self):
         return {"reachable": True}
+
+    def send(self, payload):
+        self.payloads.append(payload)
+        return {
+            "status": "delivered_to_printer",
+            "bytes_sent": len(payload),
+            "printer_endpoint": self.endpoint(),
+        }
 
 
 class FakeCoordinator:
@@ -33,8 +55,8 @@ class FakeCoordinator:
         return {"cut": True}
 
 
-def router():
-    config = {
+def config():
+    return {
         "device_id": "test",
         "environment": "test",
         "serial": {"max_line_bytes": 4096},
@@ -42,7 +64,21 @@ def router():
         "printer": {},
         "queue": {},
     }
-    return CommandRouter(config, FakeEthernet(), FakeCoordinator(), FakeTransport())
+
+
+def router():
+    return CommandRouter(config(), FakeEthernet(), FakeCoordinator(), FakeTransport())
+
+
+def print_job_router(transport):
+    settings = config()
+    settings["device_id"] = "paperbridge-dev-001"
+    return CommandRouter(
+        settings,
+        FakeEthernet(),
+        PrintCoordinator(EscPosRenderer(), transport),
+        transport,
+    )
 
 
 def test_ping_and_info():
@@ -77,3 +113,63 @@ def test_unused_bringup_aliases_are_not_wired():
         with pytest.raises(RpcError) as error:
             router().dispatch(command, {})
         assert error.value.code == "UNSUPPORTED_RPC_COMMAND"
+
+
+def test_submit_job_routes_fixture_to_shared_renderer_and_transport():
+    transport = FakeTransport()
+    instance = print_job_router(transport)
+
+    result = instance.dispatch("job.submit", {"job": load("valid-text-feed.json")})
+
+    assert result == {
+        "status": "delivered_to_printer",
+        "bytes_sent": 28,
+        "printer_endpoint": "192.168.1.87:9100",
+        "job_id": "job-hello-001",
+    }
+    assert transport.payloads == [b"\x1b@Hello from Paperbridge\n\n\n\n"]
+
+
+@pytest.mark.parametrize(
+    ("job", "params", "code"),
+    [
+        (load("invalid-control-text.json"), {}, "INVALID_PRINT_JOB"),
+        (load("valid-cut.json"), {}, "UNAUTHORIZED_CUT"),
+        (load("valid-text-feed.json"), {"allow_cut": 1}, "INVALID_RPC_REQUEST"),
+        ({**load("valid-text-feed.json"), "schema_version": "2"}, {}, "INVALID_PRINT_JOB"),
+        ({**load("valid-text-feed.json"), "device_id": "other-device"}, {}, "WRONG_DEVICE"),
+        (
+            {
+                **load("valid-text-feed.json"),
+                "content": {
+                    "kind": "receipt",
+                    "blocks": [{"type": "text", "text": "x" * 2048}] * 100,
+                },
+            },
+            {},
+            "JOB_TOO_LARGE",
+        ),
+    ],
+)
+def test_submit_job_rejects_before_printer_delivery(job, params, code):
+    transport = FakeTransport()
+    instance = print_job_router(transport)
+
+    with pytest.raises(RpcError) as error:
+        instance.dispatch("job.submit", {"job": job, **params})
+
+    assert error.value.code == code
+    assert transport.payloads == []
+
+
+def test_submit_job_allows_an_explicitly_authorized_cut():
+    transport = FakeTransport()
+    instance = print_job_router(transport)
+
+    assert (
+        instance.dispatch("job.submit", {"job": load("valid-cut.json"), "allow_cut": True})[
+            "job_id"
+        ]
+        == "job-cut-001"
+    )
+    assert transport.payloads == [b"\x1b@Cut me\n\x1dV\x01"]

@@ -7,7 +7,9 @@ RP326_PARTIAL_CUT = b"\x1dV\x01"
 
 
 class RenderError(ValueError):
-    pass
+    def __init__(self, message, code="ESC_POS_RENDER_FAILED"):
+        super().__init__(message)
+        self.code = code
 
 
 def encode_text(text):
@@ -34,7 +36,7 @@ class EscPosRenderer:
 
     def _bounded(self, payload):
         if len(payload) > self.max_bytes:
-            raise RenderError("rendered job exceeds byte limit")
+            raise RenderError("rendered job exceeds byte limit", "JOB_TOO_LARGE")
         return payload
 
     def render_text_test(self, text):

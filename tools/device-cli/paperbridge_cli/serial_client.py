@@ -54,8 +54,8 @@ class SerialClient:
             raise DeviceError("SERIAL_NOT_OPEN", "Serial client is not open")
         return self.serial
 
-    def request(self, command, params=None):
-        request_id = "req-" + uuid.uuid4().hex
+    def request(self, command, params=None, request_id=None):
+        request_id = request_id or "req-" + uuid.uuid4().hex
         request = {
             "type": "request",
             "request_id": request_id,

@@ -1,5 +1,7 @@
 class JobValidationError(ValueError):
-    pass
+    def __init__(self, message, code="INVALID_PRINT_JOB"):
+        super().__init__(message)
+        self.code = code
 
 
 _PRINTABLE_ASCII_MIN = 32
@@ -72,7 +74,7 @@ def validate_job(job, allow_cut=False):
             _printable_ascii(character, "rule.character")
         elif block_type == "cut":
             if not allow_cut:
-                raise JobValidationError("cut requires explicit allow_cut")
+                raise JobValidationError("cut requires explicit allow_cut", "UNAUTHORIZED_CUT")
             _reject_unknown_keys(block, {"type", "mode"}, "cut")
             if block.get("mode") != "partial":
                 raise JobValidationError("cut.mode must be partial")
