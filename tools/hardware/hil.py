@@ -1,6 +1,6 @@
-"""Opt-in hardware-in-the-loop smoke and acceptance harness.
+"""Opt-in hardware-in-the-loop smoke, acceptance, and soak harness.
 
-Never called by ordinary unit tests. Smoke never prints/feeds/cuts/reboots.
+Never called by ordinary unit tests. Smoke and soak never print/feed/cut/reboot.
 Acceptance requires an interactive operator (or an injected prompt seam).
 """
 
@@ -26,6 +26,12 @@ SMOKE_COMMANDS = (
     "ethernet.link_status",
     "printer.probe",
 )
+SOAK_COMMANDS = (
+    "system.ping",
+    "system.info",
+    "ethernet.link_status",
+    "printer.probe",
+)
 OUTPUT_COMMANDS = frozenset(
     {
         "printer.print_test",
@@ -37,6 +43,9 @@ OUTPUT_COMMANDS = frozenset(
 CUT_AUTHORIZATION_TOKEN = "CUT"  # exact interactive token; no noninteractive bypass
 LINK_ATTEMPTS = 20
 LINK_RETRY_SECONDS = 0.5
+SOAK_DURATION_SECONDS = 72 * 60 * 60
+SOAK_INTERVAL_SECONDS = 60
+SOAK_CHECKPOINT_SECONDS = 60 * 60
 
 
 class NonInteractiveError(RuntimeError):
@@ -160,14 +169,17 @@ class HardwareInTheLoop:
             entry["error"] = str(error)
         evidence["commands"].append(entry)
 
-    def _write_evidence(self, evidence):
-        evidence["finished_at"] = _iso(self.clock.time())
+    def _save_evidence(self, evidence):
         if self.evidence_dir is None:
             return None
         self.evidence_dir.mkdir(parents=True, exist_ok=True)
         path = self.evidence_dir / f"{evidence['test_id']}.json"
         path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
         return path
+
+    def _write_evidence(self, evidence):
+        evidence["finished_at"] = _iso(self.clock.time())
+        return self._save_evidence(evidence)
 
     def _request(self, client, evidence, command, params=None):
         params = params or {}
@@ -244,6 +256,100 @@ class HardwareInTheLoop:
             evidence["error"] = str(exc)
             raise
         finally:
+            self._write_evidence(evidence)
+
+    def soak(
+        self,
+        duration_seconds: float = SOAK_DURATION_SECONDS,
+        interval_seconds: float = SOAK_INTERVAL_SECONDS,
+    ):
+        if duration_seconds <= 0:
+            raise ValueError("soak duration must be greater than zero")
+        if interval_seconds <= 0:
+            raise ValueError("soak interval must be greater than zero")
+
+        evidence = self._new_evidence("soak")
+        evidence["duration_seconds"] = duration_seconds
+        evidence["interval_seconds"] = interval_seconds
+        evidence["samples"] = []
+        evidence["summary"] = None
+        checkpoint_every = max(1, round(SOAK_CHECKPOINT_SECONDS / interval_seconds))
+        try:
+            deadline = self.clock.time() + duration_seconds
+            with self._client_context() as client:
+                self._run_smoke_commands(client, evidence)
+                while True:
+                    observed_at = self.clock.time()
+                    if observed_at >= deadline:
+                        break
+
+                    results = {}
+                    for command in SOAK_COMMANDS:
+                        result = self._request(client, evidence, command, {})
+                        if command == "ethernet.link_status":
+                            if not isinstance(result, dict) or not result.get("link_up"):
+                                raise RuntimeError(
+                                    f"ethernet.link_status expected link_up=true, got {result!r}"
+                                )
+                        else:
+                            self._validate_smoke_step(command, result, [])
+                        results[command] = result
+
+                    info = results["system.info"]
+                    memory = info.get("memory")
+                    heap_free = memory.get("heap_free_bytes") if isinstance(memory, dict) else None
+                    if not isinstance(heap_free, int):
+                        raise RuntimeError(
+                            "system.info expected integer memory.heap_free_bytes during soak, "
+                            f"got {info!r}"
+                        )
+                    if "reset_cause" not in info:
+                        raise RuntimeError(
+                            f"system.info expected reset_cause during soak, got {info!r}"
+                        )
+
+                    link = results["ethernet.link_status"]
+                    probe = results["printer.probe"]
+                    evidence["samples"].append(
+                        {
+                            "sequence": len(evidence["samples"]) + 1,
+                            "observed_at": _iso(observed_at),
+                            "heap_allocated_bytes": memory.get("heap_allocated_bytes"),
+                            "heap_free_bytes": heap_free,
+                            "reset_cause": info["reset_cause"],
+                            "link_up": link["link_up"],
+                            "raw_status": link.get("raw_status"),
+                            "printer_reachable": probe["reachable"],
+                            "printer_endpoint": probe.get("printer_endpoint"),
+                        }
+                    )
+                    if len(evidence["samples"]) % checkpoint_every == 0:
+                        self._save_evidence(evidence)
+
+                    remaining = deadline - self.clock.time()
+                    if remaining > 0:
+                        self.clock.sleep(min(interval_seconds, remaining))
+
+                evidence["outcome"] = "passed"
+                return evidence
+        except KeyboardInterrupt:
+            evidence["outcome"] = "aborted"
+            evidence["error"] = "operator interrupted soak"
+            raise
+        except Exception as exc:
+            evidence["outcome"] = "failed"
+            evidence["error"] = str(exc)
+            raise
+        finally:
+            heaps = [sample["heap_free_bytes"] for sample in evidence["samples"]]
+            evidence["summary"] = {
+                "sample_count": len(heaps),
+                "first_heap_free_bytes": heaps[0] if heaps else None,
+                "last_heap_free_bytes": heaps[-1] if heaps else None,
+                "minimum_heap_free_bytes": min(heaps) if heaps else None,
+                "maximum_heap_free_bytes": max(heaps) if heaps else None,
+                "heap_change_bytes": heaps[-1] - heaps[0] if heaps else None,
+            }
             self._write_evidence(evidence)
 
     def _require_interactive(self):
@@ -348,6 +454,24 @@ def run_smoke(
     ).smoke()
 
 
+def run_soak(
+    port,
+    duration_seconds: float = SOAK_DURATION_SECONDS,
+    interval_seconds: float = SOAK_INTERVAL_SECONDS,
+    client=None,
+    clock=None,
+    evidence_dir=None,
+    test_id=None,
+):
+    return HardwareInTheLoop(
+        port=port,
+        client=client,
+        clock=clock,
+        evidence_dir=evidence_dir,
+        test_id=test_id,
+    ).soak(duration_seconds=duration_seconds, interval_seconds=interval_seconds)
+
+
 def run_acceptance(
     port,
     client=None,
@@ -392,19 +516,38 @@ def require_cli_port(port):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or argv[0] not in {"smoke", "acceptance"}:
+    if not argv or argv[0] not in {"smoke", "acceptance", "soak"}:
         print(
-            "usage: uv run python tools/hardware/hil.py smoke|acceptance --port PORT",
+            "usage: uv run python tools/hardware/hil.py smoke|acceptance|soak --port PORT "
+            "[--duration-seconds N --interval-seconds N]",
             file=sys.stderr,
         )
         return 2
     mode = argv[0]
     port = None
+    duration_seconds = SOAK_DURATION_SECONDS
+    interval_seconds = SOAK_INTERVAL_SECONDS
     args = argv[1:]
     i = 0
     while i < len(args):
         if args[i] == "--port" and i + 1 < len(args):
             port = args[i + 1]
+            i += 2
+            continue
+        if mode == "soak" and args[i] == "--duration-seconds" and i + 1 < len(args):
+            try:
+                duration_seconds = float(args[i + 1])
+            except ValueError:
+                print(f"invalid duration: {args[i + 1]!r}", file=sys.stderr)
+                return 2
+            i += 2
+            continue
+        if mode == "soak" and args[i] == "--interval-seconds" and i + 1 < len(args):
+            try:
+                interval_seconds = float(args[i + 1])
+            except ValueError:
+                print(f"invalid interval: {args[i + 1]!r}", file=sys.stderr)
+                return 2
             i += 2
             continue
         print(f"unknown argument: {args[i]}", file=sys.stderr)
@@ -414,9 +557,15 @@ def main(argv=None):
         port = require_cli_port(port)
         if mode == "smoke":
             evidence = run_smoke(port=port, evidence_dir=evidence_dir)
-            print(json.dumps({"ok": True, "test_id": evidence["test_id"]}, indent=2))
-            return 0
-        evidence = run_acceptance(port=port, evidence_dir=evidence_dir)
+        elif mode == "soak":
+            evidence = run_soak(
+                port=port,
+                duration_seconds=duration_seconds,
+                interval_seconds=interval_seconds,
+                evidence_dir=evidence_dir,
+            )
+        else:
+            evidence = run_acceptance(port=port, evidence_dir=evidence_dir)
         print(json.dumps({"ok": True, "test_id": evidence["test_id"]}, indent=2))
         return 0
     except (AcceptanceAborted, NonInteractiveError, DeviceError, RuntimeError, ValueError) as exc:

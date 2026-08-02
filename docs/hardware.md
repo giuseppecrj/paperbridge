@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD013 -->
+
 # Hardware
 
 ## Controller
@@ -8,8 +10,10 @@
 - Officially documented memory: 16 MB W25Q128 flash and 8 MB octal PSRAM.
 - Officially documented Ethernet: W5500 10/100 through SPI.
 - Officially documented USB-C: power, firmware download, and debugging.
-- **Purchased-board silkscreen/revision:** pending physical inspection.
-- **Schematic match on purchased unit:** pending physical inspection.
+- **Purchased-board silkscreen:** `Waveshare ESP32-S3-ETH`, confirmed from
+  top/bottom photos on 2026-08-02.
+- **Purchased-board revision:** no explicit PCB revision marking is visible; the
+  red `C3` sticker is not treated as revision evidence.
 - **Observed over USB on 2026-08-01:** ESP32-S3 QFN56 revision v0.2, embedded
   8 MB PSRAM, 16 MB flash, and USB-Serial/JTAG mode (`esptool flash-id`).
 - **Current firmware:** official MicroPython 1.28.0
@@ -30,9 +34,11 @@ Official W5500 signal map for this product page:
 | PHY address | normally 0 |
 
 The mapping is documented by Waveshare and was exercised successfully by the
-purchased board's W5500 link. The board silkscreen revision and schematic match
-still need recording. Firmware keeps version-sensitive `network.LAN`
-construction in `firmware/micropython/src/ethernet.py`.
+purchased board's W5500 link. Photos confirm the product silkscreen and layout,
+but expose no explicit PCB revision for a revision-specific schematic match.
+Firmware keeps version-sensitive `network.LAN` construction in
+`firmware/micropython/src/ethernet.py`. The purchased setup exposes one green
+Ethernet indicator.
 
 ## Printer
 
@@ -43,8 +49,10 @@ behavior were physically exercised. The printer uses its own 24 V adapter;
 neither device powers the other.
 
 The purchased printer accepted TCP connections at `192.168.1.87:9100` on
-2026-08-01. That is an observed local endpoint, not a universal default. Its
-firmware version and full self-test details still need recording.
+2026-08-01. That is an observed local endpoint, not a universal default. The
+2026-08-02 self-test reported firmware `GD207_V1.14` dated `26-01-28`, EPSON
+ESC/POS mode, DHCP disabled, 10/100 Ethernet, 48 Font-A or 64 Font-B/C columns,
+light density, and default code page CP437.
 
 ASCII text, line feed, and explicit partial cut were physically observed. The
 working cutter bytes are `1d 56 01`; automatic or unconfirmed cutting remains
@@ -54,7 +62,7 @@ forbidden.
 
 | Fact | Observed value | Date |
 | --- | --- | --- |
-| Board revision/silkscreen | pending | — |
+| Board revision/silkscreen | `ESP32-S3-ETH`; no explicit PCB revision visible | 2026-08-02 |
 | Detected chip | ESP32-S3 QFN56 revision v0.2 | 2026-08-01 |
 | Detected flash | 16 MB | 2026-08-01 |
 | Detected PSRAM | embedded 8 MB | 2026-08-01 |
@@ -63,9 +71,18 @@ forbidden.
 | USB application RPC | `system.ping` and `system.info` succeeded | 2026-08-01 |
 | Device static IPv4 | `192.168.1.50/24`, repeated configuration succeeded | 2026-08-01 |
 | Printer IP/port | `192.168.1.87:9100` | 2026-08-01 |
-| Printer firmware | pending | — |
+| Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |
 | Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
 | Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
 | Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |
+| Ethernet cable disconnected | link-down failure recorded; `hil-smoke-507b76745250` | 2026-08-02 |
+| Ethernet hot reconnect | link/probe recovered; `hil-smoke-882e486ddcc8` | 2026-08-02 |
+| Printer-only power loss | link-down failure recorded; `hil-smoke-7b5e2b805f40` | 2026-08-02 |
+| Printer-only recovery | link/probe recovered; `hil-smoke-9b72f507ee59` | 2026-08-02 |
+| ESP32-only recovery | RPC/link/probe recovered; `hil-smoke-23d9e6335df7` | 2026-08-02 |
+| Cover open | bytes delivered; no output until cover closed, then buffered text printed | 2026-08-02 |
+| Paper out | bytes delivered; no output until paper reloaded, then buffered text printed | 2026-08-02 |
+| Post-inspection restore | RPC/link/probe recovered; `hil-smoke-17213f1fe6ac` | 2026-08-02 |
+| Short soak trial | 27 samples; no reset/link/probe failure; bounded heap GC; `hil-soak-a4a7bba65d04` | 2026-08-02 |

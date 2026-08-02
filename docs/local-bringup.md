@@ -2,10 +2,10 @@
 
 Follow the development order; do not skip forward because later code exists.
 The complete path through explicit partial cut was physically verified on
-2026-08-01. Controlled post-deploy power-cycle smoke and acceptance passed on
-2026-08-02. Reconnect, fault-recovery, and soak gates remain, so repeat this
-sequence rather than treating the observations as a production reliability
-claim.
+2026-08-01. Controlled power-cycle acceptance, isolated reconnect/recovery, and
+observable cover-open/paper-out behavior passed on 2026-08-02. The 72-hour soak
+remains, so repeat this sequence rather than treating the observations as a
+production reliability claim.
 
 1. `mise install && just bootstrap && just test`.
 2. Connect a known data cable and run `just ports`.
@@ -14,8 +14,8 @@ claim.
 4. Create ignored `firmware/micropython/config.json` from the example and deploy.
 5. Run `device ping`, `device info`, memory, and reset-cause RPCs.
 6. Power the RP326 independently, print its self-test, and record endpoint facts.
-7. Connect ESP32 Ethernet to printer, inspect LEDs, run `ethernet init`,
-   `ethernet link-status`, then `ethernet configure-static`.
+7. Connect ESP32 Ethernet to printer, inspect the single green indicator, run
+   `ethernet init`, `ethernet link-status`, then `ethernet configure-static`.
 8. Run `printer probe`; a TCP connect proves endpoint reachability only.
 9. Run text-only print, then feed, then explicit cut last.
 10. Power-cycle and disconnect/reconnect each device and repeat.
@@ -35,5 +35,13 @@ Expected: smoke, then interactive text → feed → exact `CUT` token → cut, w
 operator confirmation at each physical step. Evidence lands in
 `captures/hardware/`.
 
-If direct link has no LEDs, use a crossover cable or a small switch/router before
-changing firmware. See `network-topology.md` and `troubleshooting.md`.
+```sh
+caffeinate -dimsu -- env PORT=/dev/cu.usbmodem101 just test-hardware-soak
+```
+
+Expected: 72 hours of ping/info/link/probe sampling without paper output. See
+`testing.md` before starting it.
+
+If the direct link indicator stays dark, use a crossover cable or a small
+switch/router before changing firmware. See `network-topology.md` and
+`troubleshooting.md`.

@@ -23,3 +23,14 @@ def test_port_falls_back_to_paperbridge_port():
     # explicit PORT still wins via env_var_or_default("PORT", fallback)
     assert 'env_var_or_default("PORT"' in JUSTFILE
     assert "PAPERBRIDGE_PORT" in JUSTFILE.split("PORT :=")[1].split("\n")[0]
+
+
+def test_soak_recipe_is_explicit_bounded_and_no_output():
+    block = JUSTFILE.split("test-hardware-soak:")[1].split("\n\n")[0]
+    assert "{{PORT}}" in block
+    assert "soak" in block
+    assert "--duration-seconds" in block
+    assert "--interval-seconds" in block
+    assert "print" not in block
+    assert "feed" not in block
+    assert "cut" not in block

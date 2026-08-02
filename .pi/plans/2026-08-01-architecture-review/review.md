@@ -3,21 +3,21 @@
 # Code Review — Paperbridge Architecture
 
 **Reviewed:** Integrated Wave 1 and Wave 2 working tree (`cfeec74` plus uncommitted fixes)  
-**Evidence:** 135 host tests, Ruff, formatting, wheel build, controlled HIL smoke and acceptance  
-**Verdict:** **WAVES 1–2 COMPLETE; reconnect/recovery/soak gates remain**
+**Evidence:** 138 host tests, Ruff, formatting, wheel build, controlled HIL smoke, acceptance, recovery, and short soak  
+**Verdict:** **WAVES 1–2 COMPLETE; only the 72-hour soak gate remains**
 
 ## Execution status — 2026-08-02
 
 | Wave | Stream | Status |
 | --- | --- | --- |
-| 1A | Firmware runtime integrity | Integrated, host-verified, uncommitted |
-| 1B | Infrastructure safety | Integrated, host-verified, uncommitted |
-| 1C | Domain/protocol alignment | Integrated, host-verified, uncommitted |
-| 2D | Opt-in HIL harness | Complete; controlled smoke and acceptance passed |
-| 2E | Documentation synchronization | Completed for integrated behavior |
+| 1A | Firmware runtime integrity | Committed and pushed in `b957e60` |
+| 1B | Infrastructure safety | Committed and pushed in `b957e60` |
+| 1C | Domain/protocol alignment | Committed and pushed in `b957e60` |
+| 2D | Opt-in HIL harness | Smoke/acceptance/recovery and short soak passed; 72-hour run pending |
+| 2E | Documentation synchronization | Updated through isolated recovery evidence |
 | 3 | Structured print-job delivery | Not started; separately approved feature |
 
-Wave 2 deployed the integrated firmware, then completed a clean printer/device power cycle. The first controlled smoke exposed a one-shot link-negotiation race; a bounded retry and regression test were added. The rerun passed as `hil-smoke-4a18d01b6f2b`, followed by operator-confirmed text/feed/cut acceptance `hil-acceptance-16ee54e70f65`. Reconnect, fault-recovery, and soak gates remain outside Wave 2.
+Wave 2 deployed the integrated firmware, then completed a clean printer/device power cycle. The first controlled smoke exposed a one-shot link-negotiation race; a bounded retry and regression test were added. The rerun passed as `hil-smoke-4a18d01b6f2b`, followed by operator-confirmed text/feed/cut acceptance `hil-acceptance-16ee54e70f65`. Ethernet hot reconnect, printer-only and ESP32-only recovery, cover-open buffering, and paper-out buffering subsequently passed. Only the 72-hour no-output soak remains before a production-reliability claim.
 
 Resolved in Wave 1: package-relative imports and direct `RpcError` handling, `ipconfig()` status reads, DNS reporting, unused live RPC wiring, printer transport error tests, flash/erase safety, repository-anchored tooling paths, port validation, application-RPC deploy readiness, generated metadata cleanup, and one aligned `print-job.v1` contract with explicit cut authorization.
 
@@ -172,8 +172,8 @@ These streams should not edit each other’s file sets.
 
 ### Wave 2 — after Wave 1 integration
 
-**D. HIL test harness — completed**  
-`test-hardware-smoke` performs ping/info/init/static twice/bounded link wait/probe without paper output. `test-hardware-acceptance` adds interactive text/feed/exact cutter authorization and records local evidence. Neither runs from ordinary host tests. Controlled smoke and acceptance passed on 2026-08-02.
+**D. HIL test harness — completed; soak execution pending**  
+`test-hardware-smoke` performs ping/info/init/static twice/bounded link wait/probe without paper output. `test-hardware-acceptance` adds interactive text/feed/exact cutter authorization. `test-hardware-soak` initializes once, then records ping, heap/reset, link, and probe samples without output commands. None runs from ordinary host tests. Controlled smoke, acceptance, and isolated recovery passed on 2026-08-02.
 
 **E. Documentation synchronization — completed**  
 README and hardware, printer, network, protocol, RPC, runtime, testing, and source-register docs now distinguish implemented, host-tested, physically verified, and still-pending gates.
@@ -184,7 +184,5 @@ Wire semantic print-job RPC/CLI, physically test one job, then design persistenc
 
 ## 8. Top next actions
 
-1. Review and commit the uncommitted Waves 1–2 baseline only when explicitly approved.
-2. Record board silkscreen and printer firmware details.
-3. Run reconnect, fault-recovery, and 72-hour soak gates before production claims.
-4. Start semantic print-job delivery only when explicitly approved.
+1. Run and review the 72-hour soak before production claims.
+2. Start semantic print-job delivery only when explicitly approved.

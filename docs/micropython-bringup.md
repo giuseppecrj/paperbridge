@@ -25,9 +25,9 @@ static IPv4 configuration, direct link, and printer probe were also physically
 verified on 2026-08-01. The adapter uses the MicroPython 1.28 `ipconfig()` API
 behind one version seam and preserves the four-field RPC address response.
 
-Controlled post-deploy power-cycle smoke and paper-path acceptance passed on
-2026-08-02. Ethernet reconnect, fault recovery, and the 72-hour soak remain
-separate acceptance gates.
+Controlled power-cycle acceptance, Ethernet hot reconnect, printer-only and
+ESP32-only recovery, and observable cover-open/paper-out behavior passed on
+2026-08-02. The 72-hour soak remains a separate acceptance gate.
 
 ## Flash
 

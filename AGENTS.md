@@ -17,11 +17,11 @@ Mac host CLI -- USB-C NDJSON RPC --> Waveshare ESP32-S3-ETH
 The Mac does not need a direct network route to the printer. A successful socket
 write is `delivered_to_printer`; it is not proof that paper emerged.
 
-The complete local path and a controlled post-deploy power-cycle acceptance pass
-have been demonstrated on the purchased hardware. Treat that as bring-up
-evidence, not a production-reliability claim: reconnect, fault, and 72-hour soak
-testing remain separate gates. Never infer hardware success from host tests or
-stale documentation.
+The complete local path, controlled power-cycle acceptance, isolated Ethernet
+and device recovery, and observable cover-open/paper-out behavior have been
+demonstrated on the purchased hardware. Treat that as bring-up evidence, not a
+production-reliability claim: the 72-hour soak remains a separate gate. Never
+infer hardware success from host tests or stale documentation.
 
 Not implemented: backend, web app, MQTT, Wi-Fi, OTA, production provisioning,
 image printing, or an ESP-IDF firmware port. Do not build these without an

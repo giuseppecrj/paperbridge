@@ -26,8 +26,11 @@ production provisioning is implemented.
   cut bytes `1d 56 01` are physically verified on the purchased RP326.
 - Controlled post-deploy power-cycle smoke and operator-confirmed acceptance
   passed on 2026-08-02; evidence IDs are recorded in `docs/hardware.md`.
-- Board silkscreen revision, printer firmware, Ethernet reconnect/fault recovery,
-  and the 72-hour soak remain pending.
+- Board photos confirm `ESP32-S3-ETH` silkscreen with no explicit PCB revision;
+  the RP326 self-test reports firmware `GD207_V1.14`.
+- Ethernet hot reconnect, printer-only and ESP32-only recovery, cover-open, and
+  paper-out behavior passed on 2026-08-02. A 27-sample no-output soak trial also
+  passed; only the full 72-hour soak remains.
 
 ## Mac setup
 
@@ -161,14 +164,10 @@ just printer-simulator
 The ESP32 can target the simulator only when it can route to the Mac on a shared
 test network. The direct ESP32-to-printer mode does not depend on the simulator.
 
-## Remaining physical checks
+## Remaining physical check
 
-1. Record the purchased board silkscreen/revision and compare the schematic.
-2. Record the RP326 firmware version and full self-test details.
-3. Repeat acceptance after Ethernet disconnect/reconnect.
-4. Exercise timeout, refusal, reset, paper-out, and cover-open recovery where the
-   printer exposes observable behavior.
-5. Run a 72-hour soak test before treating MicroPython as production-capable.
+Run the 72-hour no-output soak and review its reset, reachability, and heap
+summary before treating MicroPython as production-capable. See `docs/testing.md`.
 
 ## ESP-IDF migration gates
 

@@ -172,6 +172,5 @@ Do not add CI, cloud tooling, a general task framework, or HIL tests in this str
 
 ## 8. Top next actions
 
-1. Preserve controlled HIL evidence IDs in `docs/hardware.md` — completed.
-2. Run reconnect, fault-recovery, and soak gates before production claims.
-3. Review and commit only when explicitly requested.
+1. Preserve controlled HIL and recovery evidence IDs in `docs/hardware.md` — completed.
+2. Run the 72-hour soak before production claims.

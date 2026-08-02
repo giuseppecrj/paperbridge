@@ -21,9 +21,10 @@ Connection refusal is represented by targeting a stopped server.
 
 No automated test claims hardware success. Manual bring-up physically verified
 USB RPC, direct Ethernet, printer reachability, text, feed, and explicit cut on
-2026-08-01. Controlled post-deploy power-cycle smoke and operator-confirmed HIL
-acceptance passed on 2026-08-02. Those observations and evidence IDs are recorded
-in `hardware.md`; reconnect, fault-recovery, and 72-hour soak gates remain.
+2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,
+printer-only and ESP32-only recovery, cover-open buffering, and paper-out
+buffering passed on 2026-08-02. Evidence IDs and observations are recorded in
+`hardware.md`; only the 72-hour soak gate remains.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
 operates the printer.
@@ -55,3 +56,26 @@ on physical text, feed, operator yes on physical feed, exact token `CUT` before
 no/abort stops before the cutter. No noninteractive cutter bypass. Device
 results still use honest `delivered_to_printer` language; physical output is an
 operator observation in the evidence file.
+
+### Reliability soak (no paper output)
+
+The default is 72 hours with one sample per minute:
+
+```sh
+caffeinate -dimsu -- env PORT=/dev/cu.usbmodem101 just test-hardware-soak
+```
+
+For a short harness trial, override the duration without changing production
+defaults:
+
+```sh
+PORT=/dev/cu.usbmodem101 SOAK_DURATION_SECONDS=300 just test-hardware-soak
+```
+
+The soak initializes Ethernet once, then samples ping, device heap/reset state,
+link status, and printer reachability. It never prints, feeds, cuts, reboots,
+erases, or flashes. Running evidence is checkpointed hourly under ignored
+`captures/hardware/`; the final summary records sample count and heap range. Any
+failed RPC, link-down result, or unreachable probe fails the gate. A 30-second,
+27-sample cache-saturation trial passed as `hil-soak-a4a7bba65d04`; heap showed
+bounded garbage-collection recovery rather than monotonic exhaustion.

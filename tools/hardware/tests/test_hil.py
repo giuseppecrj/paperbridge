@@ -6,6 +6,7 @@ from hardware.hil import (
     CUT_AUTHORIZATION_TOKEN,
     OUTPUT_COMMANDS,
     SMOKE_COMMANDS,
+    SOAK_COMMANDS,
     AcceptanceAborted,
     HardwareInTheLoop,
     NonInteractiveError,
@@ -13,6 +14,7 @@ from hardware.hil import (
     require_cli_port,
     run_acceptance,
     run_smoke,
+    run_soak,
 )
 
 
@@ -29,6 +31,19 @@ class FakeClock:
 
     def sleep(self, seconds):
         self.sleeps.append(seconds)
+
+
+class ManualClock:
+    def __init__(self, start=0.0):
+        self.now = start
+        self.sleeps = []
+
+    def time(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
 
 
 STATIC_STATUS = {
@@ -62,6 +77,8 @@ class RecordingClient:
                 "firmware_version": "0.1.0",
                 "device_id": "paperbridge-dev-001",
                 "implementation": "micropython",
+                "memory": {"heap_allocated_bytes": 50_000, "heap_free_bytes": 8_000_000},
+                "reset_cause": 1,
             }
         if command == "ethernet.initialize":
             return {"initialized": True, "active": True, "link_up": False}
@@ -158,6 +175,60 @@ def test_smoke_has_no_output_commands():
     run_smoke(port="/dev/cu.test", client=client, evidence_dir=None)
     issued = {command for command, _params in client.calls}
     assert issued.isdisjoint(OUTPUT_COMMANDS)
+
+
+def test_soak_initializes_once_then_polls_without_output(tmp_path):
+    client = RecordingClient()
+    clock = ManualClock(start=1_700_000_000.0)
+
+    evidence = run_soak(
+        port="/dev/cu.test",
+        duration_seconds=2,
+        interval_seconds=1,
+        client=client,
+        clock=clock,
+        evidence_dir=tmp_path,
+        test_id="hil-soak-test",
+    )
+
+    assert [command for command, _params in client.calls[: len(SMOKE_COMMANDS)]] == list(
+        SMOKE_COMMANDS
+    )
+    assert [command for command, _params in client.calls[len(SMOKE_COMMANDS) :]] == list(
+        SOAK_COMMANDS
+    ) * 2
+    assert {command for command, _params in client.calls}.isdisjoint(OUTPUT_COMMANDS)
+    assert clock.sleeps == [1, 1]
+    assert evidence["outcome"] == "passed"
+    assert evidence["summary"] == {
+        "sample_count": 2,
+        "first_heap_free_bytes": 8_000_000,
+        "last_heap_free_bytes": 8_000_000,
+        "minimum_heap_free_bytes": 8_000_000,
+        "maximum_heap_free_bytes": 8_000_000,
+        "heap_change_bytes": 0,
+    }
+    assert json.loads((tmp_path / "hil-soak-test.json").read_text())["outcome"] == "passed"
+
+
+def test_interrupted_soak_writes_aborted_evidence(tmp_path):
+    client = RecordingClient(errors={"system.ping": KeyboardInterrupt()})
+
+    with pytest.raises(KeyboardInterrupt):
+        run_soak(
+            port="/dev/cu.test",
+            duration_seconds=60,
+            interval_seconds=1,
+            client=client,
+            clock=ManualClock(start=1_700_000_000.0),
+            evidence_dir=tmp_path,
+            test_id="hil-soak-interrupted",
+        )
+
+    evidence = json.loads((tmp_path / "hil-soak-interrupted.json").read_text())
+    assert evidence["outcome"] == "aborted"
+    assert evidence["error"] == "operator interrupted soak"
+    assert evidence["summary"]["sample_count"] == 0
 
 
 def test_smoke_rejects_bad_initialize():

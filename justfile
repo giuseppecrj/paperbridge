@@ -4,6 +4,9 @@ PORT := env_var_or_default("PORT", env_var_or_default("PAPERBRIDGE_PORT", ""))
 FIRMWARE := env_var_or_default("FIRMWARE", "")
 CONFIRM := env_var_or_default("CONFIRM", "")
 TEXT := env_var_or_default("TEXT", "Hello from my Mac")
+SOAK_DURATION_SECONDS := env_var_or_default("SOAK_DURATION_SECONDS", "259200")
+SOAK_INTERVAL_SECONDS := env_var_or_default("SOAK_INTERVAL_SECONDS", "60")
+
 # Verified ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin (docs/micropython-bringup.md)
 MICROPYTHON_SHA256 := "67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a62ff5dd"
 
@@ -31,6 +34,14 @@ test-hardware-smoke:
 test-hardware-acceptance:
     test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
     uv run python tools/hardware/hil.py acceptance --port "{{PORT}}"
+
+# Opt-in no-output reliability soak; defaults to 72 hours with one sample per minute.
+test-hardware-soak:
+    test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
+    uv run python tools/hardware/hil.py soak \
+        --port "{{PORT}}" \
+        --duration-seconds "{{SOAK_DURATION_SECONDS}}" \
+        --interval-seconds "{{SOAK_INTERVAL_SECONDS}}"
 
 ports:
     uv run paperbridge ports list
