@@ -205,8 +205,13 @@ def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(
         return {"suspended": False}
 
     def ethernet_link_status(_params):
-        connected = state["phase"] != "ethernet_down"
-        return {"link_up": connected, "raw_status": 5 if connected else 1}
+        if state["phase"] == "ethernet_down":
+            return {"link_up": False, "raw_status": 4}
+        if state["phase"] == "wifi_up":
+            # MicroPython v1.28 can report ETH_STARTED after Wi-Fi gets an IP
+            # although the direct W5500/printer path remains reachable.
+            return {"link_up": False, "raw_status": 1}
+        return {"link_up": True, "raw_status": 5}
 
     def printer_probe(_params):
         if state["phase"] == "ethernet_down":
