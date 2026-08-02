@@ -35,6 +35,7 @@ class CommandRouter:
             "wifi.reconnect": self.wifi_reconnect,
             "mqtt.status": self.mqtt_status,
             "ethernet.initialize": self.ethernet_initialize,
+            "ethernet.reconnect": self.ethernet_reconnect,
             "ethernet.status": self.ethernet_status,
             "ethernet.link_status": self.ethernet_link_status,
             "ethernet.configure_static": self.ethernet_configure_static,
@@ -96,6 +97,15 @@ class CommandRouter:
             return self.ethernet.initialize()
         except Exception as exc:
             raise RpcError("ETHERNET_INITIALIZATION_FAILED", str(exc)) from exc
+
+    def ethernet_reconnect(self, params):
+        confirm = params.get("confirm")
+        if not isinstance(confirm, bool) or not confirm:
+            raise RpcError("INVALID_RPC_REQUEST", "Ethernet reconnect requires confirm=true")
+        try:
+            return self.ethernet.reconnect()
+        except Exception as exc:
+            raise RpcError("ETHERNET_RECONNECT_FAILED", str(exc)) from exc
 
     def ethernet_status(self, _params):
         return self.ethernet.status()

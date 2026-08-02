@@ -21,17 +21,20 @@ Live commands are:
   by the network polling thread, not the USB handler
 - `mqtt.status`, which reports the optional tracer's connection state and last
   error without contacting the printer
-- `ethernet.initialize`, `ethernet.status`, `ethernet.link_status`, and
-  `ethernet.configure_static`
+- `ethernet.initialize`, guarded `ethernet.reconnect`, `ethernet.status`,
+  `ethernet.link_status`, and `ethernet.configure_static`
 - `printer.endpoint`, `printer.probe`, `printer.print_test`,
   `printer.feed_test`, and `printer.cut_test`
 - `job.submit` with `params.job` containing a semantic `print-job.v1` and an
   optional literal `allow_cut: true` for cut blocks
 
-`printer.cut_test`, `wifi.disconnect`, and `wifi.reconnect` require literal
-JSON boolean `confirm: true`. Wi-Fi-control replies acknowledge the requested
-intent; the network poller changes the live interface asynchronously, so the
-recovery HIL waits for its bounded status transition. Wi-Fi controls never
+`printer.cut_test`, `wifi.disconnect`, `wifi.reconnect`, and
+`ethernet.reconnect` require literal JSON boolean `confirm: true`. Ethernet
+reconnect synchronously stops and restarts the existing MicroPython LAN singleton
+and reapplies static configuration; callers must still verify link status or TCP
+reachability. Wi-Fi-control replies acknowledge the requested intent; the
+network poller changes the live interface asynchronously, so the recovery HIL
+waits for its bounded status transition. Wi-Fi controls never
 contact the printer; they are used by the explicit no-output recovery HIL only.
 `job.submit` checks the
 configured `device_id` before printer delivery and returns the semantic `job_id`;

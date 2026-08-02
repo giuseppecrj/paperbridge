@@ -160,6 +160,8 @@ PORT="$PAPERBRIDGE_PORT" just device-info
 mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet init
 mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet configure-static
 PORT="$PAPERBRIDGE_PORT" just ethernet-status
+# If a soft reset leaves ETH_STARTED without link, explicitly cycle the LAN:
+mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet reconnect --confirm
 
 PORT="$PAPERBRIDGE_PORT" just printer-probe
 PORT="$PAPERBRIDGE_PORT" TEXT='Hello from my Mac' just print-test

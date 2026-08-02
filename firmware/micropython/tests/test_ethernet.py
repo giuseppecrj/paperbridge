@@ -7,6 +7,9 @@ class FakeLAN:
         self.fail_on_set = fail_on_set
         self.set_calls = 0
         self.ipconfig_calls = []
+        self.active_calls = []
+        self.raw_status = 5
+        self.enabled = True
 
     def ifconfig(self, value=None):
         raise AssertionError("status and configure must not use deprecated ifconfig")
@@ -23,10 +26,14 @@ class FakeLAN:
             self.current = (*self.current[:2], settings["gw4"], self.current[3])
 
     def status(self):
-        return 5
+        return self.raw_status
 
-    def active(self):
-        return True
+    def active(self, enabled=None):
+        if enabled is None:
+            return self.enabled
+        self.active_calls.append(enabled)
+        self.enabled = enabled
+        self.raw_status = 5 if enabled else 2
 
 
 class FakeNetwork:
@@ -66,6 +73,25 @@ def make_adapter(current, fail_on_set=False, dns=None, fail_dns=False):
     value.lan = lan
     value.network = FakeNetwork(dns=dns if dns is not None else current[3], fail_dns=fail_dns)
     return value, lan
+
+
+def test_reconnect_restarts_the_existing_lan_and_reapplies_static_configuration():
+    sleeps = []
+    value, lan = make_adapter(("192.168.1.50", "255.255.255.0", "0.0.0.0", "0.0.0.0"))
+    value.sleep_ms = sleeps.append
+    lan.raw_status = 1
+
+    result = value.reconnect()
+
+    assert lan.active_calls == [False, True]
+    assert sleeps == [100]
+    assert result["link_up"] is True
+    assert result["ifconfig"] == (
+        "192.168.1.50",
+        "255.255.255.0",
+        "0.0.0.0",
+        "0.0.0.0",
+    )
 
 
 def test_configure_static_uses_ipconfig_instead_of_deprecated_ifconfig_setter():

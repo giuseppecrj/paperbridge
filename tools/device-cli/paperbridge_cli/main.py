@@ -34,6 +34,8 @@ def _parser():
 
     ethernet = groups.add_parser("ethernet").add_subparsers(dest="action", required=True)
     ethernet.add_parser("init")
+    reconnect = ethernet.add_parser("reconnect")
+    reconnect.add_argument("--confirm", action="store_true", required=True)
     ethernet.add_parser("status")
     ethernet.add_parser("link-status")
     ethernet.add_parser("configure-static")
@@ -66,6 +68,10 @@ def _rpc(args):
         ("wifi", "status"): ("wifi.status", {}),
         ("mqtt", "status"): ("mqtt.status", {}),
         ("ethernet", "init"): ("ethernet.initialize", {}),
+        ("ethernet", "reconnect"): (
+            "ethernet.reconnect",
+            {"confirm": getattr(args, "confirm", False)},
+        ),
         ("ethernet", "status"): ("ethernet.status", {}),
         ("ethernet", "link-status"): ("ethernet.link_status", {}),
         ("ethernet", "configure-static"): ("ethernet.configure_static", {}),

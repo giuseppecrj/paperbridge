@@ -15,8 +15,15 @@ def load(name):
 
 
 class FakeEthernet:
+    def __init__(self):
+        self.reconnect_calls = 0
+
     def initialize(self):
         return {"initialized": True}
+
+    def reconnect(self):
+        self.reconnect_calls += 1
+        return {"initialized": True, "link_up": True}
 
     def status(self):
         return {"link_up": True, "raw_status": 1}
@@ -109,6 +116,20 @@ def test_ping_and_info():
     instance = router()
     assert instance.dispatch("system.ping", {}) == {"status": "ok"}
     assert instance.dispatch("system.info", {})["device_id"] == "test"
+
+
+def test_ethernet_reconnect_requires_explicit_boolean_confirmation():
+    instance = router()
+
+    with pytest.raises(RpcError) as error:
+        instance.dispatch("ethernet.reconnect", {"confirm": 1})
+
+    assert error.value.code == "INVALID_RPC_REQUEST"
+    assert instance.dispatch("ethernet.reconnect", {"confirm": True}) == {
+        "initialized": True,
+        "link_up": True,
+    }
+    assert instance.ethernet.reconnect_calls == 1
 
 
 def test_cut_requires_explicit_boolean_confirmation():

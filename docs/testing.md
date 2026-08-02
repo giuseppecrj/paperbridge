@@ -42,8 +42,11 @@ direct printer TCP reachability, and direct W5500 failure and recovery preserved
 Wi-Fi/MQTT. The private REST/MQTT path was physically verified on 2026-08-02:
 `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
 `delivered_to_printer` after 34 bytes, and the operator observed the expected
-receipt. Evidence IDs and observations are recorded in `hardware.md`; the
-72-hour soak and longer Wi-Fi/W5500 coexistence testing remain.
+receipt. A later soft reset left W5500 at `ETH_STARTED`; guarded
+`ethernet reconnect --confirm` restored `raw_status: 5` and printer reachability
+without a cable reseat. Evidence IDs and observations are recorded in
+`hardware.md`; the 72-hour soak and longer Wi-Fi/W5500 coexistence testing
+remain.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
 operates the purchased printer. Real-broker and real-socket simulator tests are

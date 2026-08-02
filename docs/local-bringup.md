@@ -20,7 +20,10 @@ production reliability claim.
    run `just mqtt-probe`.
 8. Power the RP326 independently, print its self-test, and record endpoint facts.
 9. Connect ESP32 Ethernet to printer, inspect the single green indicator, run
-   `ethernet init`, `ethernet link-status`, then `ethernet configure-static`.
+   `ethernet init`, `ethernet link-status`, then `ethernet configure-static`. If
+   a soft reset leaves the active singleton at `ETH_STARTED` without link, run
+   guarded `ethernet reconnect --confirm` before requiring a physical cable
+   reseat.
 10. Run `printer probe`; a TCP connect proves endpoint reachability only.
 11. Run text-only print, then feed, then explicit cut last.
 12. Power-cycle and disconnect/reconnect each device and repeat.

@@ -8,10 +8,20 @@ class W5500LAN:
     SPI1/GPIO wiring physically verified on the purchased board.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, sleep_ms=None):
         self.config = config
         self.lan = None
         self.network = None
+        self.sleep_ms = sleep_ms or self._default_sleep_ms
+
+    @staticmethod
+    def _default_sleep_ms(milliseconds):
+        time = __import__("time")
+        sleep_ms = getattr(time, "sleep_ms", None)
+        if sleep_ms is not None:
+            sleep_ms(milliseconds)
+        else:
+            time.sleep(milliseconds / 1000)
 
     def initialize(self):
         try:
@@ -32,6 +42,17 @@ class W5500LAN:
             return self.status()
         except Exception as exc:
             raise EthernetError(f"W5500 initialization failed: {exc}") from exc
+
+    def reconnect(self):
+        if self.lan is None or self.network is None:
+            raise EthernetError("Ethernet is not initialized")
+        try:
+            self.lan.active(False)
+            self.sleep_ms(100)
+            self.lan.active(True)
+            return self.configure_static()
+        except Exception as exc:
+            raise EthernetError(f"W5500 reconnect failed: {exc}") from exc
 
     def configure_static(self):
         if self.lan is None or self.network is None:
