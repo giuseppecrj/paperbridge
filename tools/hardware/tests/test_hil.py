@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+import hardware.hil as hil
 from hardware.hil import (
     CUT_AUTHORIZATION_TOKEN,
     NETWORK_RECOVERY_INTERVAL_SECONDS,
@@ -123,6 +124,27 @@ def _answers(*values):
     return prompt
 
 
+def test_default_mqtt_probe_preserves_json_stdout(monkeypatch):
+    received = {}
+
+    class CompletedProcess:
+        returncode = 0
+        stdout = (
+            '@paperbridge/api mqtt:probe: {"kind":"mqtt_probe_status","status":"ok"}\n'
+            "@paperbridge/api mqtt:probe: Exited with code 0\n"
+        )
+
+    def run(*args, **kwargs):
+        received["args"] = args
+        received["kwargs"] = kwargs
+        return CompletedProcess()
+
+    monkeypatch.setattr(hil.subprocess, "run", run)
+
+    assert hil._default_mqtt_probe() == {"kind": "mqtt_probe_status", "status": "ok"}
+    assert received["args"] == (["bun", "run", "mqtt:probe"],)
+
+
 def test_network_recovery_requires_topology_confirmation_before_rpc(tmp_path):
     client = RecordingClient()
 
@@ -158,7 +180,7 @@ def test_network_recovery_proves_both_interfaces_fail_and_recover_independently(
         return {
             "enabled": True,
             "connected": connected,
-            "address": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"]
+            "ifconfig": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"]
             if connected
             else None,
             "last_error": None if connected else "WIFI_DISCONNECTED",
@@ -260,7 +282,7 @@ def test_network_recovery_requires_observed_wifi_disconnect(tmp_path):
             "wifi.status": {
                 "enabled": True,
                 "connected": True,
-                "address": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
+                "ifconfig": ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
             },
             "mqtt.status": {"enabled": True, "connected": True, "last_error": None},
         }
@@ -305,7 +327,7 @@ def test_network_recovery_requires_mqtt_failure_during_wifi_outage(tmp_path):
         return {
             "enabled": True,
             "connected": not state["wifi_down"],
-            "address": None
+            "ifconfig": None
             if state["wifi_down"]
             else ["192.168.1.110", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
         }
@@ -355,7 +377,7 @@ def test_network_recovery_rejects_reused_successful_probe_id(tmp_path):
         return {
             "enabled": True,
             "connected": connected,
-            "address": ["192.168.1.110"] if connected else None,
+            "ifconfig": ["192.168.1.110"] if connected else None,
         }
 
     def mqtt_probe():

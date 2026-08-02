@@ -108,7 +108,7 @@ def _default_mqtt_probe():
     except ValueError as exc:
         raise RuntimeError("PAPERBRIDGE_MQTT_TIMEOUT_MS must be an integer") from exc
     process = subprocess.run(
-        ["bun", "run", "--silent", "mqtt:probe"],
+        ["bun", "run", "mqtt:probe"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -118,8 +118,11 @@ def _default_mqtt_probe():
     if process.returncode != 0:
         raise RuntimeError(f"MQTT probe exited with status {process.returncode}")
     for line in reversed(process.stdout.splitlines()):
+        _prefix, separator, payload = line.partition("{")
+        if not separator:
+            continue
         try:
-            result = json.loads(line)
+            result = json.loads(separator + payload)
         except ValueError:
             continue
         if isinstance(result, dict):
@@ -426,9 +429,9 @@ class HardwareInTheLoop:
                 probe = self._request(client, evidence, "printer.probe", {})
                 self._validate_smoke_step("printer.probe", probe, [])
 
-                wifi_address = wifi.get("address")
+                wifi_address = wifi.get("ifconfig")
                 if not isinstance(wifi_address, (list, tuple)) or not wifi_address:
-                    raise RuntimeError(f"wifi.status expected connected address, got {wifi!r}")
+                    raise RuntimeError(f"wifi.status expected connected ifconfig, got {wifi!r}")
                 evidence["topology"] = {
                     "broker_endpoint": self.broker_endpoint,
                     "device_id": baseline["device_id"],
