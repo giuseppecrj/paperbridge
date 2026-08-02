@@ -7,7 +7,7 @@ Shared semantic jobs used by host JSON Schema tests and on-device
 
 - **Schema-valid** (`valid-*.json`): pass JSON Schema. Device validator and
   renderer accept them under default policy (except cut — see below). This
-  includes styled text, fixed-policy QR, and the 811-byte rich receipt.
+  includes styled text, bounded-policy QR, and the 811-byte rich receipt.
 - **Schema-invalid** (`invalid-*.json`): fail JSON Schema and `validate_job`.
   Must not render.
 - **Policy / authorization** (`cut-requires-opt-in.json`, and cut blocks in
@@ -22,4 +22,6 @@ Shared semantic jobs used by host JSON Schema tests and on-device
 `created_at` is bounded opaque metadata for v1 (string length only), not a
 parsed timestamp contract. `expected-rich-receipt.bin` is the exact host-tested
 ESC/POS output for the representative rich fixture; style and QR appearance
-remain unverified on purchased hardware.
+remain unverified on purchased hardware. The rich fixture intentionally omits
+cut; add `{ "type": "cut", "mode": "partial" }` as its final block only when
+the target device has remote cutting opted in.

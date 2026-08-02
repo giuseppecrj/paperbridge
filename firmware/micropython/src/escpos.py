@@ -7,7 +7,7 @@ RP326_PARTIAL_CUT = b"\x1dV\x01"
 STYLE_FIELDS = ("align", "bold", "underline", "width_multiplier", "height_multiplier")
 STYLE_RESET = b"\x1ba\x00\x1bE\x00\x1b-\x00\x1d!\x00"
 QR_MODEL_2 = b"\x1d(k\x04\x00\x31\x41\x32\x00"
-QR_MODULE_SIZE_3 = b"\x1d(k\x03\x00\x31\x43\x03"
+QR_MODULE_SIZE_PREFIX = b"\x1d(k\x03\x00\x31\x43"
 QR_ERROR_CORRECTION_M = b"\x1d(k\x03\x00\x31\x45\x31"
 QR_PRINT = b"\x1d(k\x03\x00\x31\x51\x30"
 
@@ -81,13 +81,19 @@ class EscPosRenderer:
             + bytes((size,))
         )
 
-    def _append_qr(self, payload, data):
+    def _append_qr(self, payload, data, module_size=3):
         encoded = encode_text(data)
         if len(encoded) > 256:
             raise RenderError("qr.data must be 1..256 printable ASCII bytes")
+        if (
+            isinstance(module_size, bool)
+            or not isinstance(module_size, int)
+            or not 1 <= module_size <= 8
+        ):
+            raise RenderError("qr.module_size must be 1..8")
         self._append(payload, b"\x1ba\x01")
         self._append(payload, QR_MODEL_2)
-        self._append(payload, QR_MODULE_SIZE_3)
+        self._append(payload, QR_MODULE_SIZE_PREFIX + bytes((module_size,)))
         self._append(payload, QR_ERROR_CORRECTION_M)
         length = len(encoded) + 3
         store = b"\x1d(k" + bytes((length & 0xFF, length >> 8, 0x31, 0x50, 0x30))
@@ -124,7 +130,7 @@ class EscPosRenderer:
                     self._append(payload, encoded)
                     self._append(payload, b"\n")
             elif block_type == "qr":
-                self._append_qr(payload, block["data"])
+                self._append_qr(payload, block["data"], block.get("module_size", 3))
             elif block_type == "feed":
                 lines = block["lines"]
                 # bool is int subclass; reject so True never becomes one feed line

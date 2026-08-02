@@ -84,8 +84,15 @@ def validate_job(job, allow_cut=False):
                 ):
                     raise JobValidationError(f"text.{field} must be 1..2")
         elif block_type == "qr":
-            _reject_unknown_keys(block, {"type", "data"}, "qr")
+            _reject_unknown_keys(block, {"type", "data", "module_size"}, "qr")
             _printable_ascii(block.get("data"), "qr.data", 256)
+            module_size = block.get("module_size", 3)
+            if (
+                isinstance(module_size, bool)
+                or not isinstance(module_size, int)
+                or not 1 <= module_size <= 8
+            ):
+                raise JobValidationError("qr.module_size must be 1..8")
         elif block_type == "feed":
             _reject_unknown_keys(block, {"type", "lines"}, "feed")
             lines = block.get("lines")

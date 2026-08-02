@@ -91,6 +91,37 @@ def test_render_qr_uses_fixed_epson_commands_and_centering():
     )
 
 
+def test_render_qr_uses_bounded_module_size():
+    payload = EscPosRenderer().render(
+        {
+            "content": {
+                "blocks": [
+                    {
+                        "type": "qr",
+                        "data": "https://example.com/paperbridge",
+                        "module_size": 5,
+                    }
+                ]
+            }
+        }
+    )
+    assert b"\x1d(k\x03\x00\x31\x43\x05" in payload
+
+
+@pytest.mark.parametrize("module_size", [0, 9, True])
+def test_render_rejects_invalid_qr_module_size(module_size):
+    with pytest.raises(RenderError, match="qr.module_size must be 1..8"):
+        EscPosRenderer().render(
+            {
+                "content": {
+                    "blocks": [
+                        {"type": "qr", "data": "https://example.com", "module_size": module_size}
+                    ]
+                }
+            }
+        )
+
+
 def test_render_rejects_qr_output_before_growing_past_limit():
     with pytest.raises(RenderError, match="rendered job exceeds byte limit"):
         EscPosRenderer(max_bytes=32).render(load("valid-qr.json"))

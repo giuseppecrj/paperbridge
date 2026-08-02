@@ -122,8 +122,9 @@ mqtt-probe:
     FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run mqtt:probe
 
 # Private single-device REST/MQTT service; defaults to 127.0.0.1:3000.
+[continue]
 api:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run --filter @paperbridge/api start
+    status=0; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run --filter @paperbridge/api start || status=$?; if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then exit "$status"; fi
 
 clean:
     rm -rf .pytest_cache .ruff_cache .venv captures

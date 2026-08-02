@@ -53,7 +53,9 @@ REST or MCP requests by `job_id`. A bounded timeout is `unknown`; it does not
 expire, fail, or republish the job. The service supports one configured device
 only.
 Remote cut permission is device configuration (`mqtt.allow_cut`, default false),
-never a client field.
+never a client field. When a development device is explicitly provisioned with
+`PAPERBRIDGE_MQTT_ALLOW_CUT=true`, REST/MCP/MQTT jobs may request a final
+`{ "type": "cut", "mode": "partial" }` block; otherwise the device rejects it.
 
 ## Order and non-goals
 

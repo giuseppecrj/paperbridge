@@ -25,9 +25,15 @@ export type PrintJobTextBlock = {
 	height_multiplier?: 1 | 2;
 };
 
+export type PrintJobQrBlock = {
+	type: "qr";
+	data: string;
+	module_size?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+};
+
 export type PrintJobBlock =
 	| PrintJobTextBlock
-	| { type: "qr"; data: string }
+	| PrintJobQrBlock
 	| { type: "feed"; lines: number }
 	| { type: "rule"; character: string }
 	| { type: "cut"; mode: "partial" };

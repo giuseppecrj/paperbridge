@@ -46,7 +46,8 @@
       "required": ["type", "data"],
       "properties": {
         "type": { "const": "qr" },
-        "data": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[ -~]+$" }
+        "data": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[ -~]+$" },
+        "module_size": { "type": "integer", "minimum": 1, "maximum": 8, "default": 3 }
       }
     },
     "feed": {

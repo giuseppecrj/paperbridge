@@ -26,6 +26,7 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 		"valid-rule.json",
 		"valid-styled-text.json",
 		"valid-qr.json",
+		"valid-qr-sized.json",
 		"valid-rich-receipt.json",
 		"valid-cut.json",
 	]) {
@@ -49,6 +50,35 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 	]) {
 		assert.throws(() => parsePrintJob(jsonFixture("print-job-v1", name)));
 	}
+});
+
+test("accepts a bounded QR module size", () => {
+	const job = parsePrintJob({
+		schema_version: "1",
+		job_id: "job-qr-size-001",
+		device_id: "paperbridge-dev-001",
+		created_at: "2026-08-02T00:00:00Z",
+		content: {
+			kind: "receipt",
+			blocks: [{ type: "qr", data: "https://example.com", module_size: 8 }],
+		},
+	});
+	assert.equal(job.content.blocks[0].type, "qr");
+	if (job.content.blocks[0].type === "qr") {
+		assert.equal(job.content.blocks[0].module_size, 8);
+	}
+	assert.throws(() =>
+		parsePrintJob({
+			schema_version: "1",
+			job_id: "job-qr-size-invalid",
+			device_id: "paperbridge-dev-001",
+			created_at: "2026-08-02T00:00:00Z",
+			content: {
+				kind: "receipt",
+				blocks: [{ type: "qr", data: "https://example.com", module_size: 9 }],
+			},
+		}),
+	);
 });
 
 test("keeps the representative rich receipt below the MQTT limit", () => {

@@ -41,6 +41,7 @@ def test_generate_from_non_repo_cwd(tmp_path, monkeypatch):
 
 
 def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch):
+    monkeypatch.delenv("PAPERBRIDGE_MQTT_ALLOW_CUT", raising=False)
     values = {
         "PAPERBRIDGE_DEVICE_ID": "paperbridge-dev-001",
         "PAPERBRIDGE_PRINTER_HOST": "192.168.4.87",

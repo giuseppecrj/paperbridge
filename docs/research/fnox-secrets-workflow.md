@@ -37,7 +37,8 @@ also remain ordinary configuration, not secrets.
 
 `just` is the operator interface. Recipes that need secrets invoke Fnox; direct
 `paperbridge` CLI commands remain available for parameterized USB diagnostics.
-MCP is not implemented yet and must not be documented as a live command.
+MCP is live product ingress at `/mcp`, not an operator diagnostic or substitute
+for the USB CLI.
 
 ## Why project-local configuration
 

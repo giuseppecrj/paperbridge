@@ -25,5 +25,33 @@ uv run python tools/provisioning/generate_device_config.py \
   --output firmware/micropython/config.json
 ```
 
+### Remote cut opt-in
+
+`cut` is part of the `print-job.v1` schema and MCP/REST content shape. Put it
+last in the receipt content:
+
+```json
+{ "type": "cut", "mode": "partial" }
+```
+
+Remote cuts are disabled by default. To opt in a development device, set the
+non-secret flag in ignored `.env`:
+
+```sh
+PAPERBRIDGE_MQTT_ALLOW_CUT=true
+```
+
+Then regenerate and deploy the device configuration:
+
+```sh
+just secrets-check
+just configure-device
+PORT=/dev/cu.usbmodem101 just deploy
+```
+
+The flag is device policy, not a caller-supplied authorization field. Leave it
+`false` when remote senders must not be able to activate the cutter. Local USB
+jobs use the separate explicit `--allow-cut` authorization.
+
 Production device identity and credential provisioning are intentionally not
 implemented.

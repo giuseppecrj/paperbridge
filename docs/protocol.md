@@ -10,11 +10,18 @@ V1 is a pre-release semantic receipt contract that evolves compatibly in place.
 Existing text, feed, 48-column rule, and partial-cut jobs remain valid and retain
 their exact rendered bytes. Text may add bounded alignment, bold, single
 underline, and 1–2× width/height multipliers. A QR block accepts printable
-ASCII up to 256 bytes and renders with fixed model 2, module size 3, error
-correction M, and centered alignment. Cut is schema-valid, but execution policy
-and rendering
-must authorize it. Raw ESC/POS, copies, expiry, bitmap, color, and arbitrary
-layout remain unsupported and fail rather than being ignored.
+ASCII up to 256 bytes and renders with fixed model 2, bounded module size 1..8
+(default 3), error correction M, and centered alignment. Set the optional `module_size` to any
+integer from 1 to 8; it defaults to 3. Cut is schema-valid and must be the final
+block when present:
+
+```json
+{ "type": "cut", "mode": "partial" }
+```
+
+Execution still requires the configured device policy to authorize it. Raw
+ESC/POS, copies, expiry, bitmap, color, and arbitrary layout remain unsupported
+and fail rather than being ignored.
 
 The renderer uses Epson-compatible `ESC a`, `ESC E`, `ESC -`, `GS !`, and `GS ( k`
 sequences. It resets neutral style after styled text and QR blocks, and bounds
@@ -47,8 +54,12 @@ non-integral `feed.lines`.
 After validation, the service publishes the compact raw job to
 `v1/devices/{device_id}/print-jobs`. Firmware checks the exact topic, payload
 limit, schema, configured device, and private cut policy before calling the same
-semantic coordinator used by USB. REST/MCP/MQTT callers cannot provide
-`allow_cut`; `mqtt.allow_cut` defaults to false on the device.
+semantic coordinator used by USB. REST/MCP/MQTT callers express a cut in the
+job content; they do not provide a separate `allow_cut` command. To enable
+remote cuts for a provisioned development device, set
+`PAPERBRIDGE_MQTT_ALLOW_CUT=true` in ignored `.env`, then run
+`just configure-device` and deploy. The setting defaults to false, so a cut
+block returns an explicit rejection until the device is opted in.
 
 Firmware publishes a non-retained QoS 1 result to
 `v1/devices/{device_id}/job-results`. The closed

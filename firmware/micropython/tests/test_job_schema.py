@@ -27,6 +27,13 @@ def test_accepts_bounded_text_job():
     assert validate_job(job({"type": "text", "text": "Hello"}))["job_id"] == "job-1"
 
 
+def test_accepts_bounded_qr_module_size():
+    assert (
+        validate_job(job({"type": "qr", "data": "https://example.com", "module_size": 8}))["job_id"]
+        == "job-1"
+    )
+
+
 @pytest.mark.parametrize(
     "name",
     [
@@ -34,6 +41,7 @@ def test_accepts_bounded_text_job():
         "valid-rule.json",
         "valid-styled-text.json",
         "valid-qr.json",
+        "valid-qr-sized.json",
         "valid-rich-receipt.json",
     ],
 )
@@ -85,6 +93,9 @@ def test_cut_requires_opt_in_fixture_is_policy_not_schema_invalid():
         {"type": "text", "text": "hello\x1b@"},
         {"type": "feed", "lines": 100},
         {"type": "feed", "lines": True},
+        {"type": "qr", "data": "https://example.com", "module_size": 0},
+        {"type": "qr", "data": "https://example.com", "module_size": 9},
+        {"type": "qr", "data": "https://example.com", "module_size": True},
         {"type": "cut", "mode": "partial"},
         {"type": "text", "text": "Styled", "align": "justify"},
         {"type": "text", "text": "Styled", "align": []},

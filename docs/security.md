@@ -24,7 +24,10 @@ The ESP32 uses station-mode Wi-Fi to reach an authenticated local Mosquitto
 listener; its direct W5500 printer subnet has no gateway or DNS. Semantic MQTT
 jobs are non-retained QoS 1 and bounded to 1,024 bytes. Duplicate suppression is
 bounded to one boot, not durable replay protection. Remote cut is device policy
-and defaults off; REST and MCP callers cannot grant it.
+and defaults off. A provisioned development device may opt in with
+`PAPERBRIDGE_MQTT_ALLOW_CUT=true`; REST and MCP callers then request a cut by
+including the schema's final `{ "type": "cut", "mode": "partial" }` block, not
+by supplying an authorization flag.
 
 The service binds to `127.0.0.1` by default and has no public authentication.
 The plain Node MCP mount additionally rejects non-loopback Host and Origin
