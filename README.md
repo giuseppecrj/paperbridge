@@ -13,8 +13,9 @@ The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
 paper emerged. The private single-device REST/MQTT v1 and MCP paths are
 implemented, simulator-tested, and physically verified on the purchased
-device/printer. MCP uses the same application path. Bounded PNG/JPEG image
-preparation and raster delivery are host-/simulator-tested only; no website,
+device/printer. MCP uses the same application path. A bounded 128×24 PNG raster,
+three feed lines, and an explicit partial cut were physically observed through
+REST/MQTT on 2026-08-05; broader PNG/JPEG image quality remains unverified. No website,
 public backend, OTA, or production provisioning is implemented.
 
 ## Status

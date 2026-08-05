@@ -39,7 +39,8 @@ export function prepareRaster(image: DecodedImage): PreparedRaster {
 			const value = grayscale[index] ?? 0;
 			const printed = value < 128 ? 0 : 255;
 			const error = value - printed;
-			if (printed === 0) data[y * rowBytes + Math.floor(x / 8)] |= 0x80 >> (x % 8);
+			if (printed === 0)
+				data[y * rowBytes + Math.floor(x / 8)] |= 0x80 >> (x % 8);
 			if (x + 1 < width) grayscale[index + 1] += (error * 7) / 16;
 			if (y + 1 < height) {
 				if (x > 0) grayscale[index + width - 1] += (error * 3) / 16;

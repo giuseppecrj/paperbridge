@@ -7,7 +7,9 @@ test("packs a deterministic multi-row Floyd-Steinberg raster", () => {
 	const raster = prepareRaster({
 		width: 8,
 		height: 2,
-		pixels: Uint8Array.from([0, 255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0, 255, 0, 255, 0]),
+		pixels: Uint8Array.from([
+			0, 255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0, 255, 0, 255, 0,
+		]),
 	});
 	assert.deepEqual([...raster.data], [0xaa, 0x55]);
 });

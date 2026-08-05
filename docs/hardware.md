@@ -71,9 +71,10 @@ have not been separately verified.
 ## Image physical-spike candidates
 
 Host/simulator tests bound a prepared raster to 128×24 pixels (384 bytes), with
-one-bit `GS v 0` output. The final image spike must record RP326 appearance,
-legibility, paper advance, and heap behavior at this bound. These are candidate
-limits, not purchased-printer acceptance evidence.
+one-bit `GS v 0` output. On 2026-08-05, a REST/MQTT job rendered a visible
+128×24 black PNG raster, fed three lines, and made an operator-confirmed partial
+cut on the purchased RP326. The final image spike must still record general PNG/
+JPEG appearance, legibility, paper advance, and heap behavior at this bound.
 
 ## Purchased-unit observations
 
@@ -99,6 +100,7 @@ limits, not purchased-printer acceptance evidence.
 | REST/MQTT semantic v1 job | `job-hw-acceptance-20260802T203016Z` returned HTTP 200 and delivered 34 bytes; expected receipt physically observed | 2026-08-02 |
 | Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
 | QR size and cut | USB job `job-qr-size5-cut-manual-20260802` delivered 93 bytes; operator confirmed its `module_size: 5` QR and following partial cut | 2026-08-02 |
+| PNG raster, feed, and cut | REST/MQTT `job-visible-image-cut-ad8d4247-544b-4129-8519-d9aaeca41733` delivered 400 bytes; visible 128×24 black raster, three feed lines, and partial cut operator-confirmed | 2026-08-05 |
 | Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
 | Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |
 | Ethernet cable disconnected | link-down failure recorded; `hil-smoke-507b76745250` | 2026-08-02 |

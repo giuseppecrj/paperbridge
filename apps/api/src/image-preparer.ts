@@ -69,10 +69,9 @@ function rasterBlock(image: DecodedImage): PrintJobRasterBlock {
 	};
 }
 
-export async function preparePrintJob<T extends { content: { blocks: unknown[] } }>(
-	job: T,
-	decoder: ImageDecoder,
-): Promise<T> {
+export async function preparePrintJob<
+	T extends { content: { blocks: unknown[] } },
+>(job: T, decoder: ImageDecoder): Promise<T> {
 	const blocks = await Promise.all(
 		job.content.blocks.map(async (block) => {
 			if (!isImageSourceBlock(block)) return block;

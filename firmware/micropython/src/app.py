@@ -56,19 +56,16 @@ def _poll_network(adapter):
             time.sleep(0.025)
 
 
-def _start_network_poller(adapter, thread_module=None):
-    try:
-        thread = thread_module or __import__("_thread")
-        thread.start_new_thread(_poll_network, (adapter,))
-    except Exception as exc:
-        adapter.record_error(f"NETWORK_THREAD_START_FAILED: {exc}")
-        return False
-    return True
+def _start_serial_server(server, thread_module=None):
+    thread = thread_module or __import__("_thread")
+    thread.start_new_thread(server.run_forever, ())
 
 
 def run():
     server, wifi, mqtt = build_app()
     adapter = mqtt or wifi
-    if adapter is not None:
-        _start_network_poller(adapter)
-    server.run_forever()
+    if adapter is None:
+        server.run_forever()
+        return
+    _start_serial_server(server)
+    _poll_network(adapter)

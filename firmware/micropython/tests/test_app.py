@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.app import build_app
 
-app = __import__("src.app", None, None, ("_start_network_poller",))
+app = __import__("src.app", None, None, ("_start_serial_server",))
 
 
 def test_build_app_composes_one_mqtt_tracer_when_enabled(tmp_path):
@@ -43,15 +43,7 @@ def test_build_app_composes_wifi_without_mqtt_when_only_wifi_is_enabled(tmp_path
     assert mqtt is None
 
 
-class FakeMqtt:
-    def __init__(self):
-        self.last_error = None
-
-    def record_error(self, message):
-        self.last_error = message
-
-
-def test_network_poller_uses_a_background_thread_without_replacing_serial_loop():
+def test_serial_server_uses_a_background_thread_when_networking_is_enabled():
     class FakeThread:
         def __init__(self):
             self.target = None
@@ -61,20 +53,13 @@ def test_network_poller_uses_a_background_thread_without_replacing_serial_loop()
             self.target = target
             self.args = args
 
-    mqtt = FakeMqtt()
+    class FakeServer:
+        def run_forever(self):
+            pass
+
+    server = FakeServer()
     thread = FakeThread()
 
-    assert app._start_network_poller(mqtt, thread_module=thread) is True
-    assert thread.args is not None
-    assert thread.args[0] is mqtt
-
-
-def test_network_thread_start_failure_remains_observable_over_serial():
-    class FailingThread:
-        def start_new_thread(self, _target, _args):
-            raise RuntimeError("threads unavailable")
-
-    mqtt = FakeMqtt()
-
-    assert app._start_network_poller(mqtt, thread_module=FailingThread()) is False
-    assert mqtt.last_error == "NETWORK_THREAD_START_FAILED: threads unavailable"
+    app._start_serial_server(server, thread_module=thread)
+    assert thread.target == server.run_forever
+    assert thread.args == ()
