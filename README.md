@@ -13,9 +13,10 @@ The Mac never needs a direct network connection to the printer. A successful
 socket write is reported as `delivered_to_printer`; it is **not** proof that
 paper emerged. The private single-device REST/MQTT v1 and MCP paths are
 implemented, simulator-tested, and physically verified on the purchased
-device/printer. MCP uses the same application path. A bounded 128×24 PNG raster,
-three feed lines, and an explicit partial cut were physically observed through
-REST/MQTT on 2026-08-05; broader PNG/JPEG image quality remains unverified. No website,
+device/printer. MCP uses the same application path. Image preparation is host-/
+simulator-tested to 576×576, and `test.png` was physically observed at that
+bound through REST/MQTT on 2026-08-05. A smaller PNG feed/cut job was also
+observed. JPEG and broader image-quality acceptance remain unverified. No website,
 public backend, OTA, or production provisioning is implemented.
 
 ## Status
@@ -238,7 +239,8 @@ curl -sS -H 'content-type: application/json' \
   http://127.0.0.1:3000/api/jobs
 ```
 
-The raw HTTP/MQTT job body is limited to 1,024 bytes before parsing. A timeout is
+Source REST jobs are limited to 2,101,248 bytes; prepared MQTT jobs are limited
+to 65,536 bytes. A timeout is
 reported as `unknown` and does not republish the job. Once the device is
 connected, inspect both control-plane layers over USB and run the no-output host
 probe:

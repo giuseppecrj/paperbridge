@@ -1,3 +1,4 @@
+import base64
 import importlib.util
 import json
 import os
@@ -127,7 +128,7 @@ def test_node_probe_round_trips_through_the_firmware_mqtt_tracer(tmp_path):
                     "password": password,
                     "keepalive_seconds": 30,
                     "retry_interval_ms": 10,
-                    "max_message_bytes": 1024,
+                    "max_message_bytes": 65_536,
                     "topic_prefix": "v1/devices",
                 },
             },
@@ -222,7 +223,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
     simulator_ready = threading.Event()
     simulator_thread = threading.Thread(
         target=simulator.serve,
-        args=(simulator_args, 3, simulator_ready),
+        args=(simulator_args, 4, simulator_ready),
         daemon=True,
     )
     simulator_thread.start()
@@ -247,7 +248,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
                 "password": password,
                 "keepalive_seconds": 30,
                 "retry_interval_ms": 10,
-                "max_message_bytes": 1024,
+                "max_message_bytes": 65_536,
                 "topic_prefix": "v1/devices",
                 "allow_cut": True,
             },
@@ -277,7 +278,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
                 "PAPERBRIDGE_MQTT_USERNAME": username,
                 "PAPERBRIDGE_MQTT_PASSWORD": password,
                 "PAPERBRIDGE_MQTT_CLIENT_ID": "paperbridge-api-test",
-                "PAPERBRIDGE_JOB_RESULT_TIMEOUT_MS": "1000",
+                "PAPERBRIDGE_JOB_RESULT_TIMEOUT_MS": "15000",
             },
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -285,26 +286,27 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
         )
         wait_for_api(api_port, api)
 
-        job = Path("packages/protocol/fixtures/print-job-v1/valid-text-feed.json").read_bytes()
-
-        def submit_job():
+        def submit_job(payload):
             request = Request(
                 f"http://127.0.0.1:{api_port}/api/jobs",
-                data=job,
+                data=payload,
                 headers={"content-type": "application/json"},
                 method="POST",
             )
-            with urlopen(request, timeout=3) as response:
+            with urlopen(request, timeout=17) as response:
                 return response.status, json.loads(response.read())
 
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            submitted = executor.submit(submit_job)
-            deadline = time.monotonic() + 3
-            while not submitted.done() and time.monotonic() < deadline:
-                tracer.poll()
-                time.sleep(0.01)
-            status, result = submitted.result(timeout=0.1)
+        def submit_and_poll(payload):
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                submitted = executor.submit(submit_job, payload)
+                deadline = time.monotonic() + 17
+                while not submitted.done() and time.monotonic() < deadline:
+                    tracer.poll()
+                    time.sleep(0.01)
+                return submitted.result(timeout=0.1)
 
+        job = Path("packages/protocol/fixtures/print-job-v1/valid-text-feed.json").read_bytes()
+        status, result = submit_and_poll(job)
         assert status == 200
         assert result == {
             "schema_version": "1",
@@ -314,6 +316,32 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
             "status": "delivered_to_printer",
             "bytes_sent": 28,
         }
+
+        maximum_raster = bytes(41_472)
+        maximum_job = json.dumps(
+            {
+                "schema_version": "1",
+                "job_id": "job-raster-maximum",
+                "device_id": username,
+                "created_at": "2026-08-05T00:00:00Z",
+                "content": {
+                    "kind": "receipt",
+                    "blocks": [
+                        {
+                            "type": "raster",
+                            "width": 576,
+                            "height": 576,
+                            "data_base64": base64.b64encode(maximum_raster).decode(),
+                        }
+                    ],
+                },
+            },
+            separators=(",", ":"),
+        ).encode()
+        status, result = submit_and_poll(maximum_job)
+        assert status == 200
+        assert result["status"] == "delivered_to_printer"
+        assert result["bytes_sent"] == 41_482
 
         rich_job = json.loads(
             Path("packages/protocol/fixtures/print-job-v1/valid-rich-receipt.json").read_text()
@@ -403,6 +431,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
             b"\x1b@Hello from Paperbridge\n\n\n\n",
             Path("packages/protocol/fixtures/expected-rich-receipt.bin").read_bytes(),
             Path("packages/protocol/fixtures/expected-image-rich-receipt.bin").read_bytes(),
+            b"\x1b@\x1dv0\x00\x48\x00\x40\x02" + maximum_raster,
         }
     finally:
         if api is not None:

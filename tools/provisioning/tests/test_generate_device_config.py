@@ -72,6 +72,7 @@ def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch
     assert payload["mqtt"]["password"] == "mqtt-password"
     assert payload["mqtt"]["client_id"] == "paperbridge-dev-001"
     assert payload["mqtt"]["allow_cut"] is False
+    assert payload["mqtt"]["max_message_bytes"] == 65_536
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
 
 

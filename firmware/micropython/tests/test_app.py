@@ -18,7 +18,7 @@ def test_build_app_composes_one_mqtt_tracer_when_enabled(tmp_path):
         reader=io.StringIO(), writer=io.StringIO(), config_path=str(config_path)
     )
 
-    assert server.max_line_bytes == 4096
+    assert server.max_line_bytes == 65_536
     assert wifi is not None
     assert tracer is not None
     assert tracer.jobs_topic == b"v1/devices/paperbridge-dev-001/jobs"

@@ -11,7 +11,7 @@ import type {
 	PrintJobRasterBlock,
 } from "@paperbridge/protocol";
 
-export const MAX_IMAGE_SOURCE_BASE64_BYTES = 512;
+export const MAX_IMAGE_SOURCE_BASE64_CHARACTERS = 2 * 1024 * 1024;
 
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const JPEG_SOI = Buffer.from("ffd8ff", "hex");
@@ -41,7 +41,7 @@ function sourceBytes(block: PrintJobImageBlock): Uint8Array {
 		(block.mime_type !== "image/png" && block.mime_type !== "image/jpeg") ||
 		typeof block.data_base64 !== "string" ||
 		block.data_base64.length === 0 ||
-		block.data_base64.length > MAX_IMAGE_SOURCE_BASE64_BYTES ||
+		block.data_base64.length > MAX_IMAGE_SOURCE_BASE64_CHARACTERS ||
 		block.data_base64.length % 4 !== 0 ||
 		!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
 			block.data_base64,

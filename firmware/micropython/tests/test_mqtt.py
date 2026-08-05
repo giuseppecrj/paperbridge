@@ -98,7 +98,7 @@ def config():
             "password": "not-a-real-secret",
             "keepalive_seconds": 30,
             "retry_interval_ms": 1000,
-            "max_message_bytes": 1024,
+            "max_message_bytes": 65_536,
             "topic_prefix": "v1/devices",
             "allow_cut": False,
         },

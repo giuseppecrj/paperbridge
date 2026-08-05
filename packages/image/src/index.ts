@@ -1,6 +1,6 @@
-export const MAX_RASTER_WIDTH = 128;
-export const MAX_RASTER_HEIGHT = 24;
-export const MAX_RASTER_BYTES = 384;
+export const MAX_RASTER_WIDTH = 576;
+export const MAX_RASTER_HEIGHT = 576;
+export const MAX_RASTER_BYTES = 41_472;
 
 export type DecodedImage = {
 	width: number;

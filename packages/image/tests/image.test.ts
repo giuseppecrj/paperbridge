@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MAX_RASTER_BYTES, prepareRaster } from "../src/index.js";
+import { prepareRaster } from "../src/index.js";
 
 test("packs a deterministic multi-row Floyd-Steinberg raster", () => {
 	const raster = prepareRaster({
@@ -14,11 +14,11 @@ test("packs a deterministic multi-row Floyd-Steinberg raster", () => {
 	assert.deepEqual([...raster.data], [0xaa, 0x55]);
 });
 
-test("accepts the maximum proposed raster allocation", () => {
+test("accepts one full-width 576 by 576 raster", () => {
 	const raster = prepareRaster({
-		width: 128,
-		height: 24,
-		pixels: new Uint8Array(128 * 24),
+		width: 576,
+		height: 576,
+		pixels: new Uint8Array(576 * 576),
 	});
-	assert.equal(raster.data.length, MAX_RASTER_BYTES);
+	assert.equal(raster.data.length, 41_472);
 });

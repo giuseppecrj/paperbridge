@@ -5,10 +5,12 @@ import {
 	type ServerResponse,
 } from "node:http";
 
-import { MQTT_JOB_MAX_BYTES, type JobResult } from "@paperbridge/protocol";
+import type { JobResult } from "@paperbridge/protocol";
 
 import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 import type { McpEndpoint } from "./mcp-server.js";
+
+export const API_JOB_MAX_BYTES = 2 * 1024 * 1024 + 4096;
 
 export interface ApiServerOptions {
 	submitJob(value: unknown, options?: JobSubmissionOptions): Promise<JobResult>;
@@ -57,7 +59,7 @@ function resultStatus(result: JobResult): number {
 }
 
 export function createApiServer(options: ApiServerOptions): Server {
-	const maximum = options.maxBodyBytes ?? MQTT_JOB_MAX_BYTES;
+	const maximum = options.maxBodyBytes ?? API_JOB_MAX_BYTES;
 	return createServer(async (request, response) => {
 		try {
 			const path = (request.url ?? "/").split("?", 1)[0];

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import test from "node:test";
 
-import type { JobResult } from "@paperbridge/protocol";
+import { MQTT_JOB_MAX_BYTES, type JobResult } from "@paperbridge/protocol";
 
-import { createApiServer } from "../src/api-server.js";
+import { API_JOB_MAX_BYTES, createApiServer } from "../src/api-server.js";
 import { JobSubmissionService, SubmissionError } from "../src/job-service.js";
 
 async function listen(server: Server): Promise<string> {
@@ -56,7 +57,26 @@ test("POST /api/jobs returns the correlated terminal result", async (t) => {
 	assert.deepEqual(submitted, job);
 });
 
-test("rejects an oversized body before parsing or submission", async (t) => {
+test("accepts a source body larger than the prepared MQTT limit", async (t) => {
+	let submitted = false;
+	const server = createApiServer({
+		submitJob: async () => {
+			submitted = true;
+			return delivered;
+		},
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+	const response = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ source: "x".repeat(MQTT_JOB_MAX_BYTES) }),
+	});
+	assert.equal(response.status, 200);
+	assert.equal(submitted, true);
+});
+
+test("rejects a body over the source-image limit before submission", async (t) => {
 	let submissions = 0;
 	const server = createApiServer({
 		submitJob: async () => {
@@ -66,14 +86,29 @@ test("rejects an oversized body before parsing or submission", async (t) => {
 	});
 	t.after(() => server.close());
 	const baseUrl = await listen(server);
+	const response = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: "x".repeat(API_JOB_MAX_BYTES + 1),
+	});
+	assert.equal(response.status, 413);
+	assert.equal(submissions, 0);
+});
 
-	const overLimit = readFileSync(
-		new URL(
-			"../../../packages/protocol/fixtures/print-job-v1/schema-valid-over-mqtt-limit.json",
-			import.meta.url,
-		),
-	);
-	assert.equal(overLimit.byteLength, 1025);
+test("rejects a configured oversized body before parsing or submission", async (t) => {
+	let submissions = 0;
+	const server = createApiServer({
+		maxBodyBytes: 1_024,
+		submitJob: async () => {
+			submissions += 1;
+			return delivered;
+		},
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	const overLimit = Buffer.from(`{"value":"${"x".repeat(1_013)}"}`);
+	assert.equal(overLimit.byteLength, 1_025);
 	const response = await fetch(`${baseUrl}/api/jobs`, {
 		method: "POST",
 		headers: { "content-type": "application/json" },

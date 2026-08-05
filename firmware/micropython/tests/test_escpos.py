@@ -1,4 +1,7 @@
+import base64
+import gc
 import json
+import tracemalloc
 from pathlib import Path
 
 import pytest
@@ -9,6 +12,7 @@ from src.escpos import (
     RenderError,
     encode_text,
 )
+from src.job_schema import MAX_RASTER_BYTES, validate_job
 
 FIXTURES = Path("packages/protocol/fixtures/print-job-v1")
 
@@ -131,6 +135,37 @@ def test_render_raster_uses_exact_gs_v_0_bytes():
         }
     )
     assert payload == b"\x1b@\x1dv0\x00\x01\x00\x01\x00\xaa"
+
+
+def test_render_maximum_raster_fits_output_and_host_allocation_bounds():
+    data = bytes(MAX_RASTER_BYTES)
+    job = {
+        "schema_version": "1",
+        "job_id": "job-raster-maximum",
+        "device_id": "paperbridge-dev-001",
+        "created_at": "2026-08-05T00:00:00Z",
+        "content": {
+            "kind": "receipt",
+            "blocks": [
+                {
+                    "type": "raster",
+                    "width": 576,
+                    "height": 576,
+                    "data_base64": base64.b64encode(data).decode(),
+                }
+            ],
+        },
+    }
+    gc.collect()
+    tracemalloc.start()
+    try:
+        payload = EscPosRenderer().render(validate_job(job))
+        _, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert payload == b"\x1b@\x1dv0\x00\x48\x00\x40\x02" + data
+    assert peak_bytes <= MAX_RASTER_BYTES * 3
 
 
 @pytest.mark.parametrize(

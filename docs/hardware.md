@@ -68,13 +68,22 @@ partial cut were physically observed on this purchased RP326 on 2026-08-02.
 Alignment, emphasis, underline, other QR sizes, and QR scan/decode readability
 have not been separately verified.
 
-## Image physical-spike candidates
+## Image physical verification
 
-Host/simulator tests bound a prepared raster to 128×24 pixels (384 bytes), with
-one-bit `GS v 0` output. On 2026-08-05, a REST/MQTT job rendered a visible
-128×24 black PNG raster, fed three lines, and made an operator-confirmed partial
-cut on the purchased RP326. The final image spike must still record general PNG/
-JPEG appearance, legibility, paper advance, and heap behavior at this bound.
+Host/simulator tests bound a prepared raster to 576×576 pixels (41,472 bytes),
+with one-bit `GS v 0` output. On 2026-08-05, `test.png` was prepared as a full
+576×576 raster and physically observed on the purchased RP326. The initial host
+wait honestly returned `unknown`; resubmitting the same `job_id` returned
+`duplicate` without a second printer connection, and the operator confirmed the
+photo output. A final unique submission,
+`job-test-png-final-bb1107e8-3093-47c1-b9f7-bc3b84161e20`, then returned HTTP
+200 with `delivered_to_printer` after 41,487 bytes in 5.498 seconds, proving the
+15-second waiter preserves the large result. Free heap was 8,197,424 bytes
+before the spike and 7,864,784 bytes after the final job; the device did not
+reset and MQTT reported no error. Operator proof photo `IMG_9236.DNG` visibly
+shows the full-width ACRNM image output; the external DNG was inspected but is
+not stored in the repository. JPEG appearance and broader image-quality
+acceptance remain open.
 
 ## Purchased-unit observations
 
@@ -101,6 +110,7 @@ JPEG appearance, legibility, paper advance, and heap behavior at this bound.
 | Verified cutter command | partial cut `1d 56 01` | 2026-08-01 |
 | QR size and cut | USB job `job-qr-size5-cut-manual-20260802` delivered 93 bytes; operator confirmed its `module_size: 5` QR and following partial cut | 2026-08-02 |
 | PNG raster, feed, and cut | REST/MQTT `job-visible-image-cut-ad8d4247-544b-4129-8519-d9aaeca41733` delivered 400 bytes; visible 128×24 black raster, three feed lines, and partial cut operator-confirmed | 2026-08-05 |
+| Full-width PNG photo | REST/MQTT `job-test-png-420513fe-be90-4c49-a183-94b821df63bb` prepared `test.png` as 576×576 / 41,472 raster bytes; initial result was honestly `unknown`, same-ID retry returned `duplicate`, operator confirmed photo output. Final signal check `job-test-png-final-bb1107e8-3093-47c1-b9f7-bc3b84161e20` returned HTTP 200 / `delivered_to_printer`, 41,487 bytes in 5.498 seconds; free heap ended at 7,864,784 | 2026-08-05 |
 | Controlled HIL smoke | passed; `hil-smoke-4a18d01b6f2b` | 2026-08-02 |
 | Controlled HIL acceptance | text/feed/cut observed; `hil-acceptance-16ee54e70f65` | 2026-08-02 |
 | Ethernet cable disconnected | link-down failure recorded; `hil-smoke-507b76745250` | 2026-08-02 |

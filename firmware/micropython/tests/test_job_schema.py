@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 
@@ -37,6 +38,16 @@ def test_accepts_bounded_qr_module_size():
 def test_accepts_consistent_prepared_raster():
     assert (
         validate_job(job({"type": "raster", "width": 8, "height": 1, "data_base64": "qg=="}))[
+            "job_id"
+        ]
+        == "job-1"
+    )
+
+
+def test_accepts_maximum_576_by_576_prepared_raster():
+    raster = base64.b64encode(bytes(41_472)).decode()
+    assert (
+        validate_job(job({"type": "raster", "width": 576, "height": 576, "data_base64": raster}))[
             "job_id"
         ]
         == "job-1"

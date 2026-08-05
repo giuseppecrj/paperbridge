@@ -19,7 +19,7 @@ behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
 protocol package, HTTP body/device validation, MCP discovery/tool calls and
 Host/Origin guards, MQTT result correlation, timeout/cancellation without retry,
 QoS duplicate suppression, device cut policy, and partial-write result reporting.
-The Bun workspace checks both TypeScript packages with `tsc` and Node's test
+The Bun workspace checks all three TypeScript packages with `tsc` and Node's test
 runner. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
 also run the Node probe and full REST and MCP job paths through real local
 Mosquitto; otherwise those broker tests are reported as skipped.
@@ -34,11 +34,14 @@ correlated results.
 
 No automated test claims hardware success. This includes the local REST and MCP
 semantic-job simulator captures: `delivered_to_printer` is not a physical paper
-observation. Rich v1 style, QR, and PNG/JPEG-to-raster captures are host/simulator evidence
-except for one 2026-08-05 REST/MQTT physical observation: a visible 128×24 black
-PNG raster, three feed lines, and a partial cut. General image appearance,
-JPEG output, QR scan/decode readability, and other styling remain hardware
-acceptance work. Manual bring-up physically
+observation. On 2026-08-05, an operator separately confirmed both a 128×24 black
+PNG raster with feed/cut and `test.png` rendered at the 576×576 maximum. The
+first large-photo host wait returned `unknown`; same-ID duplicate suppression
+and the operator observation were recorded without relabeling that result as
+delivery. After raising the result wait from 5 to 15 seconds, a final unique job
+returned HTTP 200 / `delivered_to_printer` after 41,487 bytes in 5.498 seconds.
+JPEG output, broader image quality, QR scan/decode readability, and other styling
+remain hardware acceptance work. Manual bring-up physically
 verified USB RPC, direct Ethernet, printer
 reachability, text, feed, and explicit cut on
 2026-08-01. Controlled power-cycle acceptance, Ethernet hot reconnect,

@@ -5,7 +5,8 @@ import type { ImageDecoder } from "./image-preparer.js";
 
 export const sharpImageDecoder: ImageDecoder = {
 	async decode(bytes, _mimeType, maximum): Promise<DecodedImage> {
-		const { data, info } = await sharp(bytes, { limitInputPixels: 65_536 })
+		const { data, info } = await sharp(bytes, { limitInputPixels: 4_000_000 })
+			.autoOrient()
 			.resize({
 				width: maximum.width,
 				height: maximum.height,

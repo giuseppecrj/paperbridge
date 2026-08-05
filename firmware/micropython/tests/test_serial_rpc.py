@@ -1,7 +1,9 @@
+import base64
 import io
 import json
 
 import pytest
+from src.constants import DEFAULT_MAX_LINE_BYTES
 from src.serial_rpc import RpcError, SerialRpcServer, parse_request
 
 
@@ -30,6 +32,35 @@ def test_rejects_malformed_requests(line):
 def test_rejects_oversized_line():
     with pytest.raises(RpcError, match="maximum"):
         parse_request(request(params={"text": "x" * 100}), max_line_bytes=32)
+
+
+def test_default_line_bound_accepts_maximum_prepared_raster_job():
+    line = request(
+        command="job.submit",
+        params={
+            "job": {
+                "schema_version": "1",
+                "job_id": "job-raster-maximum",
+                "device_id": "paperbridge-dev-001",
+                "created_at": "2026-08-05T00:00:00Z",
+                "content": {
+                    "kind": "receipt",
+                    "blocks": [
+                        {
+                            "type": "raster",
+                            "width": 576,
+                            "height": 576,
+                            "data_base64": base64.b64encode(bytes(41_472)).decode(),
+                        }
+                    ],
+                },
+            },
+            "allow_cut": False,
+        },
+    )
+
+    assert 4096 < len(line.encode()) <= DEFAULT_MAX_LINE_BYTES
+    assert parse_request(line)["params"]["job"]["job_id"] == "job-raster-maximum"
 
 
 def test_server_returns_stable_unsupported_command_error():

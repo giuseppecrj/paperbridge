@@ -35,8 +35,8 @@ def validate_config(config):
         raise ConfigurationError("device_id must be a safe MQTT topic segment")
 
     max_line = config["serial"].get("max_line_bytes")
-    if not isinstance(max_line, int) or not 256 <= max_line <= 16384:
-        raise ConfigurationError("serial.max_line_bytes must be 256..16384")
+    if not isinstance(max_line, int) or not 256 <= max_line <= 65_536:
+        raise ConfigurationError("serial.max_line_bytes must be 256..65536")
 
     ethernet = config["ethernet"]
     _ipv4(ethernet.get("address"), "ethernet.address")
@@ -93,8 +93,12 @@ def validate_config(config):
         if not isinstance(retry_interval, int) or not 100 <= retry_interval <= 60000:
             raise ConfigurationError("mqtt.retry_interval_ms must be 100..60000")
         max_message_bytes = mqtt.get("max_message_bytes")
-        if max_message_bytes != 1024:
-            raise ConfigurationError("mqtt.max_message_bytes must be 1024")
+        if (
+            not isinstance(max_message_bytes, int)
+            or isinstance(max_message_bytes, bool)
+            or not 1024 <= max_message_bytes <= 65_536
+        ):
+            raise ConfigurationError("mqtt.max_message_bytes must be 1024..65536")
         allow_cut = mqtt.setdefault("allow_cut", False)
         if not isinstance(allow_cut, bool):
             raise ConfigurationError("mqtt.allow_cut must be a boolean")

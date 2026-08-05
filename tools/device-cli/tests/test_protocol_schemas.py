@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 
@@ -88,13 +89,17 @@ def test_print_job_schema_rejects_boolean_feed_lines():
         job_validator().validate(payload)
 
 
-def test_print_job_transport_boundary_fixtures_remain_schema_valid():
-    at_limit = JOB_FIXTURES / "valid-at-mqtt-limit.json"
-    over_limit = JOB_FIXTURES / "schema-valid-over-mqtt-limit.json"
-    assert len(at_limit.read_bytes()) == 1024
-    assert len(over_limit.read_bytes()) == 1025
-    job_validator().validate(load(at_limit))
-    job_validator().validate(load(over_limit))
+def test_print_job_schema_accepts_maximum_raster_dimensions():
+    payload = load(JOB_FIXTURES / "valid-text-feed.json")
+    payload["content"]["blocks"] = [
+        {
+            "type": "raster",
+            "width": 576,
+            "height": 576,
+            "data_base64": base64.b64encode(bytes(41_472)).decode(),
+        }
+    ]
+    job_validator().validate(payload)
 
 
 @pytest.mark.parametrize(

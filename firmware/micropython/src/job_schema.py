@@ -1,8 +1,8 @@
 import binascii
 
-MAX_RASTER_WIDTH = 128
-MAX_RASTER_HEIGHT = 24
-MAX_RASTER_BYTES = 384
+MAX_RASTER_WIDTH = 576
+MAX_RASTER_HEIGHT = 576
+MAX_RASTER_BYTES = 41_472
 _BASE64_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 
@@ -46,8 +46,12 @@ def decode_raster(block):
         or not 1 <= width <= MAX_RASTER_WIDTH
         or not 1 <= height <= MAX_RASTER_HEIGHT
     ):
-        raise ValueError("raster dimensions must be 1..128 by 1..24")
-    if not isinstance(data_base64, str) or not 4 <= len(data_base64) <= 512 or len(data_base64) % 4:
+        raise ValueError("raster dimensions must be 1..576 by 1..576")
+    if (
+        not isinstance(data_base64, str)
+        or not 4 <= len(data_base64) <= 55_296
+        or len(data_base64) % 4
+    ):
         raise ValueError("raster.data_base64 must be canonical base64")
     padding = data_base64.find("=")
     content = data_base64 if padding < 0 else data_base64[:padding]

@@ -14,6 +14,14 @@ def test_example_configuration_is_valid():
     config = validate_config(example())
     assert config["printer"]["port"] == 9100
     assert config["mqtt"]["allow_cut"] is False
+    assert config["mqtt"]["max_message_bytes"] == 65_536
+
+
+def test_legacy_mqtt_message_bound_remains_boot_compatible():
+    config = example()
+    config["mqtt"]["max_message_bytes"] = 1024
+
+    assert validate_config(config)["mqtt"]["max_message_bytes"] == 1024
 
 
 def test_network_passwords_are_redacted_from_configuration_output():
@@ -48,7 +56,7 @@ def test_enabled_mqtt_requires_enabled_wifi():
         (("serial", "max_line_bytes"), 1_000_000),
         (("wifi", "ssid"), ""),
         (("mqtt", "allow_cut"), 1),
-        (("mqtt", "max_message_bytes"), 2048),
+        (("mqtt", "max_message_bytes"), 65_537),
     ],
 )
 def test_invalid_configuration_is_rejected(path, value):

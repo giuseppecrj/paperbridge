@@ -14,8 +14,10 @@ For the networked development path, copy `.env.example` to ignored `.env`, set
 this machine's non-secret addresses, then run `just configure-device`. The recipe
 resolves Wi-Fi and MQTT passwords from project `fnox.toml`/1Password and writes
 ignored `firmware/micropython/config.json` without putting passwords in command
-arguments. For Ethernet-only use, copy `config.example.json` manually and leave
-Wi-Fi/MQTT disabled.
+arguments. Regenerate and deploy this file when enabling maximum image jobs:
+older configurations remain boot-compatible, but their smaller serial/MQTT
+bounds reject large prepared rasters. For Ethernet-only use, copy
+`config.example.json` manually and leave Wi-Fi/MQTT disabled.
 
 Deploy with `PORT=/dev/cu.usbmodem... just deploy`. Deployment refuses to
 proceed without local config and waits for RPC readiness after reset.

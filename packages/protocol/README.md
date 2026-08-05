@@ -6,7 +6,7 @@ raw ESC/POS.
 
 The TypeScript interface in `src/index.ts` loads the authoritative JSON Schemas
 with Ajv; it does not reimplement semantic validation manually. It also defines
-the 1,024-byte MQTT job transport limit and dedicated `print-jobs` / `job-results`
+the 65,536-byte MQTT job transport limit and dedicated `print-jobs` / `job-results`
 topic shape.
 
 `cut` remains schema-valid content, but MQTT execution is controlled only by the

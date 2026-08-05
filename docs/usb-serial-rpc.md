@@ -2,9 +2,11 @@
 
 Transport is UTF-8 newline-delimited JSON: one request and one response per
 line. Requests require `type=request`, `request_id`, `command`, and object
-`params`; responses echo the ID. The configured maximum request line is 4096
-bytes. Malformed, non-object, oversized, and unsupported requests return stable
-errors and do not reset the device.
+`params`; responses echo the ID. Newly generated configuration permits request
+lines up to 65,536 bytes so one maximum prepared raster plus its RPC envelope
+fits. Existing smaller configured bounds remain valid. Malformed, non-object,
+oversized, and unsupported requests return stable errors and do not reset the
+device.
 
 Responses use `type=response`; logs use `type=log`, so startup noise or logs are
 not mistaken for correlated responses. The host ignores non-response lines and

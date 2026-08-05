@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -151,13 +152,25 @@ test("rejects schema-invalid and wrong-device jobs before publishing", async () 
 	assert.equal(calls, 0);
 });
 
-test("rejects a schema-valid job over the MQTT transport limit", async () => {
+test("rejects schema-valid rasters over the MQTT transport limit", async () => {
 	const service = new JobSubmissionService("paperbridge-dev-001", {
 		submit: async () => delivered,
 	});
+	const raster = {
+		type: "raster",
+		width: 576,
+		height: 576,
+		data_base64: Buffer.alloc(41_472).toString("base64"),
+	};
 
 	await assert.rejects(
-		service.submit(fixture("schema-valid-over-mqtt-limit.json")),
+		service.submit({
+			schema_version: "1",
+			job_id: "job-too-large",
+			device_id: "paperbridge-dev-001",
+			created_at: "2026-08-05T00:00:00Z",
+			content: { kind: "receipt", blocks: [raster, raster] },
+		}),
 		(error: unknown) =>
 			error instanceof SubmissionError &&
 			error.statusCode === 413 &&

@@ -11,7 +11,7 @@ import printJobSchema from "../schemas/print-job.v1.schema.json" with {
 
 export { jobResultSchema, printJobSchema };
 
-export const MQTT_JOB_MAX_BYTES = 1024;
+export const MQTT_JOB_MAX_BYTES = 64 * 1024;
 
 type JsonObject = Record<string, unknown>;
 

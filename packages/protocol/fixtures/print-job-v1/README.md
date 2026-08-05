@@ -17,10 +17,6 @@ Shared semantic jobs used by host JSON Schema tests and on-device
   `valid-cut.json`): schema-valid cut content that still needs explicit device
   policy at execution. Default policy rejects cut; this is authorization, not
   contract invalidity.
-- **Transport boundary** (`valid-at-mqtt-limit.json` and
-  `schema-valid-over-mqtt-limit.json`): both are schema-valid; their raw files
-  are exactly 1,024 and 1,025 bytes so HTTP/MQTT size rejection is tested
-  separately from semantic validation.
 
 `created_at` is bounded opaque metadata for v1 (string length only), not a
 parsed timestamp contract. `expected-rich-receipt.bin` is the exact host-tested

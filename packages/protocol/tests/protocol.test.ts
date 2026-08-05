@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -151,20 +152,37 @@ test("keeps the representative rich receipt below the MQTT limit", () => {
 	assert.doesNotThrow(() => encodePrintJob(rich));
 });
 
-test("keeps schema validity separate from the 1024-byte MQTT limit", () => {
-	const atLimit = fixture("print-job-v1", "valid-at-mqtt-limit.json");
-	const overLimit = fixture(
-		"print-job-v1",
-		"schema-valid-over-mqtt-limit.json",
-	);
-	assert.equal(atLimit.byteLength, MQTT_JOB_MAX_BYTES);
-	assert.equal(overLimit.byteLength, MQTT_JOB_MAX_BYTES + 1);
+test("fits one maximum raster in a bounded MQTT job", () => {
+	assert.equal(MQTT_JOB_MAX_BYTES, 65_536);
+	const raster = {
+		type: "raster",
+		width: 576,
+		height: 576,
+		data_base64: Buffer.alloc(41_472).toString("base64"),
+	};
+	const metadata = {
+		schema_version: "1",
+		job_id: "job-raster-maximum",
+		device_id: "paperbridge-dev-001",
+		created_at: "2026-08-05T00:00:00Z",
+	};
 	assert.doesNotThrow(() =>
-		encodePrintJob(parsePrintJob(JSON.parse(atLimit.toString("utf8")))),
+		encodePrintJob(
+			parsePrintJob({
+				...metadata,
+				content: { kind: "receipt", blocks: [raster] },
+			}),
+		),
 	);
 	assert.throws(
-		() => encodePrintJob(parsePrintJob(JSON.parse(overLimit.toString("utf8")))),
-		/exceeds 1024 bytes/,
+		() =>
+			encodePrintJob(
+				parsePrintJob({
+					...metadata,
+					content: { kind: "receipt", blocks: [raster, raster] },
+				}),
+			),
+		/exceeds 65536 bytes/,
 	);
 });
 
@@ -181,6 +199,20 @@ test("validates every terminal job-result fixture", () => {
 			"job_result",
 		);
 	}
+});
+
+test("accepts delivery results up to the rendered-output bound", () => {
+	assert.equal(
+		parseJobResult({
+			schema_version: "1",
+			kind: "job_result",
+			job_id: "job-raster-maximum",
+			device_id: "paperbridge-dev-001",
+			status: "delivered_to_printer",
+			bytes_sent: 41_482,
+		}).bytes_sent,
+		41_482,
+	);
 });
 
 test("rejects result fields that contradict the terminal status", () => {

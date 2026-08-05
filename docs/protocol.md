@@ -4,7 +4,7 @@
 not printer bytes. Version `"1"` requires bounded `job_id`, `device_id`, opaque
 `created_at` metadata, and 1–100 receipt blocks. Text is printable ASCII only;
 unsupported fields, control bytes, unknown versions/types, and unknown block
-types are rejected. Firmware also bounds the rendered output to 32 KiB.
+types are rejected. Firmware also bounds the rendered output to 64 KiB.
 
 V1 is a pre-release semantic receipt contract that evolves compatibly in place.
 Existing text, feed, 48-column rule, and partial-cut jobs remain valid and retain
@@ -24,22 +24,29 @@ ESC/POS, copies, expiry, bitmap, color, and arbitrary layout remain unsupported
 and fail rather than being ignored.
 
 An API/MCP-only `image` block accepts a PNG or JPEG `data_base64` source of at
-most 512 base64 characters. The Node adapter verifies the declared signature,
-bounds decoded source pixels, resizes within 128×24 pixels, flattens transparency
-to white, converts to grayscale, and uses deterministic Floyd–Steinberg
-monochrome packing. It replaces the source before MQTT with a `raster` block:
-`width` 1..128, `height` 1..24, and canonical `data_base64` whose decoded length
-is exactly `ceil(width / 8) * height` and at most 384 bytes. Direct USB/MQTT
-source-image blocks are rejected; firmware accepts and renders only prepared
-rasters.
+most 2,097,152 base64 characters. The Node adapter verifies the declared
+signature, bounds decoded sources to 4,000,000 pixels, auto-orients, resizes
+within 576×576 pixels, flattens transparency to white, converts to grayscale,
+and uses deterministic Floyd–Steinberg monochrome packing. It replaces the
+source before MQTT with a `raster` block: `width` 1..576, `height` 1..576, and
+canonical `data_base64` whose decoded length is exactly
+`ceil(width / 8) * height` and at most 41,472 bytes. The 576-dot width matches
+the RP326's documented printable width; the equal height lets square images use
+that full width while leaving JSON-envelope headroom under the 65,536-byte MQTT
+limit. It is a one-job policy bound, not the printer's vertical paper limit.
+Direct USB/MQTT source-image blocks are rejected; firmware accepts and renders
+only prepared rasters. Newly generated device configuration raises serial and
+MQTT input bounds for these jobs. Older lower bounds remain boot-compatible but
+must be regenerated and deployed before maximum rasters can use that ingress.
 
 The renderer uses Epson-compatible `ESC a`, `ESC E`, `ESC -`, `GS !`, and `GS ( k`
 sequences. It resets neutral style after styled text and QR blocks, and bounds
-each append against the 32 KiB rendered-output limit. Rasters use Epson `GS v 0`
+each append against the 64 KiB rendered-output limit. Rasters use Epson `GS v 0`
 with one-bit black pixels. A `module_size: 5` QR and following partial cut were
-physically observed on the purchased RP326 on 2026-08-02. Raster appearance,
-other style/size appearance, and QR scan/decode readability remain hardware
-acceptance work.
+physically observed on the purchased RP326 on 2026-08-02. On 2026-08-05, an
+operator observed `test.png` printed as a 576×576 raster through REST/MQTT.
+JPEG appearance, other style/size appearance, and QR scan/decode readability
+remain hardware acceptance work.
 
 ## USB ingress
 
@@ -58,8 +65,9 @@ status confirmation exists.
 ## REST, MCP, and MQTT job ingress
 
 The private single-device service accepts the raw `print-job.v1` object at
-`POST /api/jobs`. HTTP rejects a body larger than 1,024 bytes before JSON
-parsing. The TypeScript protocol package loads the authoritative JSON Schema
+`POST /api/jobs`. HTTP rejects a source job body larger than 2,101,248 bytes
+before JSON parsing. After image preparation, the MQTT job is limited to 65,536
+bytes. The TypeScript protocol package loads the authoritative JSON Schema
 with Ajv; it rejects the same unsupported values as firmware, including
 non-integral `feed.lines`.
 
@@ -98,7 +106,7 @@ cancellation removes only the host waiter and does not label the device outcome.
 The REST and MCP service maps validation/device rejection, body limit, broker
 unavailability, printer failure/partial write, and timeout distinctly. A timeout
 is `unknown`: the service removes only its pending waiter and never republishes
-the job. The complete REST/MCP/MQTT path is host-/simulator-tested with real
+the job. The development result wait defaults to 15 seconds. The complete REST/MCP/MQTT path is host-/simulator-tested with real
 local Mosquitto and the real TCP printer simulator. REST/MQTT was physically
 verified on 2026-08-02: `job-hw-acceptance-20260802T203016Z` returned HTTP 200
 with `delivered_to_printer` after 34 bytes, and an operator observed its expected

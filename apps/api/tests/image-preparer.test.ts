@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+
+import sharp from "sharp";
 
 import {
 	ImagePreparationError,
@@ -66,6 +69,45 @@ test("decodes bounded PNG and JPEG sources with the Node adapter", async () => {
 			{ type: "raster", width: 8, height: 1, data_base64: "qg==" },
 		]);
 	}
+});
+
+test("decodes a bounded megapixel source to the larger raster", async () => {
+	const source = await sharp({
+		create: {
+			width: 1_000,
+			height: 1_000,
+			channels: 3,
+			background: "white",
+		},
+	})
+		.png()
+		.toBuffer();
+	const decoded = await sharpImageDecoder.decode(source, "image/png", {
+		width: 576,
+		height: 576,
+	});
+	assert.deepEqual(
+		{ width: decoded.width, height: decoded.height, pixels: decoded.pixels.length },
+		{ width: 576, height: 576, pixels: 331_776 },
+	);
+});
+
+test("accepts a bounded source larger than its prepared MQTT raster", async () => {
+	const source = Buffer.concat([
+		Buffer.from("89504e470d0a1a0a", "hex"),
+		Buffer.alloc(1_024),
+	]).toString("base64");
+	const prepared = await preparePrintJob(
+		{
+			...job,
+			content: {
+				...job.content,
+				blocks: [{ type: "image", mime_type: "image/png", data_base64: source }],
+			},
+		},
+		decoder,
+	);
+	assert.equal(prepared.content.blocks[0]?.type, "raster");
 });
 
 test("normalizes decoder failures as invalid image sources", async () => {

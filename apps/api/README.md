@@ -13,15 +13,15 @@ just api
 
 The server defaults to `127.0.0.1:3000` and exposes:
 
-- `POST /api/jobs`, accepting a complete raw `print-job.v1` body no larger than
-  1,024 bytes;
+- `POST /api/jobs`, accepting a complete source `print-job.v1` body no larger
+  than 2,101,248 bytes; prepared MQTT jobs remain limited to 65,536 bytes;
 - Streamable HTTP MCP at `/mcp`, with one `paperbridge_print` tool accepting v1
   receipt `content` and generating a fresh `job_id`, configured `device_id`, and
   timestamp; and
 - the separate `just mqtt-probe` no-output diagnostic.
 
 REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
-MQTT message, and wait for the correlated result. Successful delivery ends at
+MQTT message, and wait up to 15 seconds by default for the correlated result. Successful delivery ends at
 `delivered_to_printer`, never `printed`. PNG/JPEG `image` blocks are accepted
 only at REST/MCP: the Node `sharp` adapter validates and prepares a bounded
 monochrome `raster` before MQTT. The device never decodes source images.

@@ -43,8 +43,8 @@ Semantic jobs use distinct topics so they cannot be confused with probes:
 - `v1/devices/{device_id}/print-jobs` accepts raw `print-job.v1`.
 - `v1/devices/{device_id}/job-results` returns closed `job-result.v1`.
 
-All messages are MQTT 3.1.1, QoS 1, and non-retained. Job payloads are limited
-to 1,024 bytes before parsing. Firmware caches a bounded set of completed
+All messages are MQTT 3.1.1, QoS 1, and non-retained. Prepared job payloads are
+limited to 65,536 bytes before parsing. Firmware caches a bounded set of completed
 `job_id` values for one boot, so QoS redelivery returns a deterministic `duplicate`
 result without a second printer delivery. This is not a durable queue.
 
