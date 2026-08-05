@@ -60,6 +60,7 @@ never a client field. When a development device is explicitly provisioned with
 ## Order and non-goals
 
 USB ping/info precedes direct W5500 initialization; printer reachability remains
-separate from paper output. Public authentication, MQTT/TLS, durable queues,
-automatic retries, multi-device routing, raster images, OTA, and production
-provisioning remain out of scope.
+separate from paper output. The host prepares bounded source images before MQTT;
+the device receives only a controlled raster block. Public authentication,
+MQTT/TLS, durable queues, automatic retries, multi-device routing, image URLs,
+arbitrary documents, OTA, and production provisioning remain out of scope.

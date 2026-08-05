@@ -222,7 +222,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
     simulator_ready = threading.Event()
     simulator_thread = threading.Thread(
         target=simulator.serve,
-        args=(simulator_args, 2, simulator_ready),
+        args=(simulator_args, 3, simulator_ready),
         daemon=True,
     )
     simulator_thread.start()
@@ -249,6 +249,7 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
                 "retry_interval_ms": 10,
                 "max_message_bytes": 1024,
                 "topic_prefix": "v1/devices",
+                "allow_cut": True,
             },
         }
         job_service = JobService(
@@ -355,11 +356,53 @@ def test_rest_and_mcp_jobs_round_trip_through_mqtt_firmware_and_printer_simulato
             ),
         }
 
+        image_job = json.loads(
+            Path(
+                "packages/protocol/fixtures/print-job-v1/valid-image-rich-receipt.json"
+            ).read_text()
+        )
+        image_mcp_client = subprocess.Popen(
+            [
+                "node",
+                "--import",
+                "tsx",
+                "tests/support/call-mcp.ts",
+                f"http://127.0.0.1:{api_port}/mcp",
+                json.dumps(image_job["content"]),
+            ],
+            cwd=Path(__file__).resolve().parents[3] / "apps" / "api",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        deadline = time.monotonic() + 3
+        while image_mcp_client.poll() is None and time.monotonic() < deadline:
+            tracer.poll()
+            time.sleep(0.01)
+        if image_mcp_client.poll() is None:
+            image_mcp_client.kill()
+            pytest.fail("Image MCP client timed out")
+        assert image_mcp_client.stderr is not None
+        assert image_mcp_client.returncode == 0, image_mcp_client.stderr.read()
+        assert image_mcp_client.stdout is not None
+        image_response = json.loads(image_mcp_client.stdout.read())
+        assert image_response["result"]["structuredContent"] == {
+            "schema_version": "1",
+            "kind": "job_result",
+            "job_id": image_response["result"]["structuredContent"]["job_id"],
+            "device_id": username,
+            "status": "delivered_to_printer",
+            "bytes_sent": len(
+                Path("packages/protocol/fixtures/expected-image-rich-receipt.bin").read_bytes()
+            ),
+        }
+
         simulator_thread.join(1)
         assert not simulator_thread.is_alive()
         assert {capture.read_bytes() for capture in (tmp_path / "captures").glob("*.bin")} == {
             b"\x1b@Hello from Paperbridge\n\n\n\n",
             Path("packages/protocol/fixtures/expected-rich-receipt.bin").read_bytes(),
+            Path("packages/protocol/fixtures/expected-image-rich-receipt.bin").read_bytes(),
         }
     finally:
         if api is not None:

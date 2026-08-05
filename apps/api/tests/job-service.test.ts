@@ -5,6 +5,7 @@ import test from "node:test";
 import type { JobResult, PrintJob } from "@paperbridge/protocol";
 
 import { JobSubmissionService, SubmissionError } from "../src/job-service.js";
+import type { ImageDecoder } from "../src/image-preparer.js";
 
 function fixture(name: string): unknown {
 	return JSON.parse(
@@ -43,6 +44,81 @@ test("validates and submits one configured device job", async () => {
 	assert.equal(calls.length, 1);
 	assert.equal(calls[0]?.[0].job_id, "job-hello-001");
 	assert.equal(JSON.parse(calls[0]?.[1] ?? "{}").job_id, "job-hello-001");
+});
+
+test("prepares image sources before MQTT publication", async () => {
+	const calls: Array<[PrintJob, string]> = [];
+	const decoder: ImageDecoder = {
+		decode: async () => ({
+			width: 8,
+			height: 1,
+			pixels: Uint8Array.from([0, 255, 0, 255, 0, 255, 0, 255]),
+		}),
+	};
+	const service = new JobSubmissionService(
+		"paperbridge-dev-001",
+		{
+			submit: async (job, payload) => {
+				calls.push([job, payload]);
+				return delivered;
+			},
+		},
+		decoder,
+	);
+
+	await service.submit({
+		schema_version: "1",
+		job_id: "job-image-001",
+		device_id: "paperbridge-dev-001",
+		created_at: "2026-08-03T00:00:00Z",
+		content: {
+			kind: "receipt",
+			blocks: [
+				{
+					type: "image",
+					mime_type: "image/png",
+					data_base64: "iVBORw0KGgo=",
+				},
+			],
+		},
+	});
+
+	assert.deepEqual(calls[0]?.[0].content.blocks, [
+		{ type: "raster", width: 8, height: 1, data_base64: "qg==" },
+	]);
+	assert.deepEqual(JSON.parse(calls[0]?.[1] ?? "{}"), calls[0]?.[0]);
+});
+
+test("rejects an image source before publishing when MIME and bytes disagree", async () => {
+	let calls = 0;
+	const service = new JobSubmissionService("paperbridge-dev-001", {
+		submit: async () => {
+			calls += 1;
+			return delivered;
+		},
+	});
+	await assert.rejects(
+		service.submit({
+			schema_version: "1",
+			job_id: "job-image-invalid-001",
+			device_id: "paperbridge-dev-001",
+			created_at: "2026-08-03T00:00:00Z",
+			content: {
+				kind: "receipt",
+				blocks: [
+					{
+						type: "image",
+						mime_type: "image/jpeg",
+						data_base64: "iVBORw0KGgo=",
+					},
+				],
+			},
+		}),
+		(error: unknown) =>
+			error instanceof SubmissionError &&
+			error.errorCode === "INVALID_PRINT_JOB",
+	);
+	assert.equal(calls, 0);
 });
 
 test("rejects schema-invalid and wrong-device jobs before publishing", async () => {

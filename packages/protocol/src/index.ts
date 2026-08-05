@@ -31,9 +31,24 @@ export type PrintJobQrBlock = {
 	module_size?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 };
 
+export type PrintJobImageBlock = {
+	type: "image";
+	mime_type: "image/png" | "image/jpeg";
+	data_base64: string;
+};
+
+export type PrintJobRasterBlock = {
+	type: "raster";
+	width: number;
+	height: number;
+	data_base64: string;
+};
+
 export type PrintJobBlock =
 	| PrintJobTextBlock
 	| PrintJobQrBlock
+	| PrintJobImageBlock
+	| PrintJobRasterBlock
 	| { type: "feed"; lines: number }
 	| { type: "rule"; character: string }
 	| { type: "cut"; mode: "partial" };
@@ -91,7 +106,18 @@ export function parsePrintJob(value: unknown): PrintJob {
 			validationMessage("Invalid print-job.v1", validatePrintJob.errors),
 		);
 	}
-	return value as PrintJob;
+	const job = value as PrintJob;
+	for (const block of job.content.blocks) {
+		if (block.type !== "raster") continue;
+		const expected = Math.ceil(block.width / 8) * block.height;
+		if (Buffer.from(block.data_base64, "base64").byteLength !== expected) {
+			throw new ProtocolValidationError(
+				"INVALID_PRINT_JOB",
+				"Invalid print-job.v1: raster data length does not match dimensions",
+			);
+		}
+	}
+	return job;
 }
 
 export function parseJobResult(value: unknown): JobResult {

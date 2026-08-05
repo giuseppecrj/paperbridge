@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "bun run --filter @paperbridge/protocol lint && bun run --filter @paperbridge/api lint",
-    "typecheck": "bun run --filter @paperbridge/protocol lint && bun run --filter @paperbridge/api typecheck",
-    "test": "bun run --filter @paperbridge/protocol test && bun run --filter @paperbridge/api test",
+    "lint": "bun run --filter @paperbridge/protocol lint && bun run --filter @paperbridge/image lint && bun run --filter @paperbridge/api lint",
+    "typecheck": "bun run --filter @paperbridge/protocol lint && bun run --filter @paperbridge/image lint && bun run --filter @paperbridge/api typecheck",
+    "test": "bun run --filter @paperbridge/protocol test && bun run --filter @paperbridge/image test && bun run --filter @paperbridge/api test",
     "mqtt:probe": "bun run --filter @paperbridge/api mqtt:probe"
   }
 }

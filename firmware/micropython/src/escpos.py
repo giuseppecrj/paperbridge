@@ -1,4 +1,5 @@
 from .constants import MAX_PRINT_BYTES
+from .job_schema import decode_raster
 
 INITIALIZE = b"\x1b@"
 # Verified on the purchased Rongta RP326 (2026-08-01): GS V 1 partial cut.
@@ -102,6 +103,15 @@ class EscPosRenderer:
         self._append(payload, QR_PRINT)
         self._append(payload, STYLE_RESET)
 
+    def _append_raster(self, payload, block):
+        width, height, data = decode_raster(block)
+        row_bytes = (width + 7) // 8
+        self._append(
+            payload,
+            b"\x1dv0\x00" + bytes((row_bytes & 0xFF, row_bytes >> 8, height & 0xFF, height >> 8)),
+        )
+        self._append(payload, data)
+
     def render_text_test(self, text):
         return self._bounded(INITIALIZE + encode_text(text) + b"\n" * 3)
 
@@ -131,6 +141,11 @@ class EscPosRenderer:
                     self._append(payload, b"\n")
             elif block_type == "qr":
                 self._append_qr(payload, block["data"], block.get("module_size", 3))
+            elif block_type == "raster":
+                try:
+                    self._append_raster(payload, block)
+                except ValueError as exc:
+                    raise RenderError(str(exc)) from exc
             elif block_type == "feed":
                 lines = block["lines"]
                 # bool is int subclass; reject so True never becomes one feed line

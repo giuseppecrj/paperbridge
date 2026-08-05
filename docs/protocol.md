@@ -23,12 +23,23 @@ Execution still requires the configured device policy to authorize it. Raw
 ESC/POS, copies, expiry, bitmap, color, and arbitrary layout remain unsupported
 and fail rather than being ignored.
 
+An API/MCP-only `image` block accepts a PNG or JPEG `data_base64` source of at
+most 512 base64 characters. The Node adapter verifies the declared signature,
+bounds decoded source pixels, resizes within 128×24 pixels, flattens transparency
+to white, converts to grayscale, and uses deterministic Floyd–Steinberg
+monochrome packing. It replaces the source before MQTT with a `raster` block:
+`width` 1..128, `height` 1..24, and canonical `data_base64` whose decoded length
+is exactly `ceil(width / 8) * height` and at most 384 bytes. Direct USB/MQTT
+source-image blocks are rejected; firmware accepts and renders only prepared
+rasters.
+
 The renderer uses Epson-compatible `ESC a`, `ESC E`, `ESC -`, `GS !`, and `GS ( k`
 sequences. It resets neutral style after styled text and QR blocks, and bounds
-each append against the 32 KiB rendered-output limit. A `module_size: 5` QR and
-following partial cut were physically observed on the purchased RP326 on
-2026-08-02. Other style/size appearance and QR scan/decode readability remain
-hardware acceptance work.
+each append against the 32 KiB rendered-output limit. Rasters use Epson `GS v 0`
+with one-bit black pixels. A `module_size: 5` QR and following partial cut were
+physically observed on the purchased RP326 on 2026-08-02. Raster appearance,
+other style/size appearance, and QR scan/decode readability remain hardware
+acceptance work.
 
 ## USB ingress
 

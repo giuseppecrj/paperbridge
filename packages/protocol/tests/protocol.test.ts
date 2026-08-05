@@ -27,6 +27,9 @@ test("loads the authoritative print-job schema and shared fixtures", () => {
 		"valid-styled-text.json",
 		"valid-qr.json",
 		"valid-qr-sized.json",
+		"valid-image-png-source.json",
+		"valid-image-jpeg-source.json",
+		"valid-image-rich-receipt.json",
 		"valid-rich-receipt.json",
 		"valid-cut.json",
 	]) {
@@ -76,6 +79,65 @@ test("accepts a bounded QR module size", () => {
 			content: {
 				kind: "receipt",
 				blocks: [{ type: "qr", data: "https://example.com", module_size: 9 }],
+			},
+		}),
+	);
+});
+
+test("distinguishes image sources from bounded device rasters", () => {
+	const metadata = {
+		schema_version: "1",
+		job_id: "job-image-001",
+		device_id: "paperbridge-dev-001",
+		created_at: "2026-08-03T00:00:00Z",
+	};
+	assert.equal(
+		parsePrintJob({
+			...metadata,
+			content: {
+				kind: "receipt",
+				blocks: [
+					{
+						type: "image",
+						mime_type: "image/png",
+						data_base64: "iVBORw0KGgo=",
+					},
+				],
+			},
+		}).content.blocks[0]?.type,
+		"image",
+	);
+	assert.equal(
+		parsePrintJob({
+			...metadata,
+			content: {
+				kind: "receipt",
+				blocks: [{ type: "raster", width: 8, height: 1, data_base64: "qg==" }],
+			},
+		}).content.blocks[0]?.type,
+		"raster",
+	);
+	assert.throws(() =>
+		parsePrintJob({
+			...metadata,
+			content: {
+				kind: "receipt",
+				blocks: [
+					{
+						type: "image",
+						mime_type: "image/gif",
+						data_base64: "iVBORw0KGgo=",
+					},
+				],
+			},
+		}),
+	);
+	assert.throws(() =>
+		parsePrintJob({
+			...metadata,
+			content: {
+				kind: "receipt",
+				blocks: [{ type: "raster", width: 8, height: 2, data_base64: "AA==" }],
 			},
 		}),
 	);

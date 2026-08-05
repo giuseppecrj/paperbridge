@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "job_id": "job-image-rich-001",
+  "device_id": "paperbridge-dev-001",
+  "created_at": "2026-08-03T00:00:00Z",
+  "content": {
+    "kind": "receipt",
+    "blocks": [
+      { "type": "text", "text": "IMAGE" },
+      { "type": "qr", "data": "https://example.com" },
+      {
+        "type": "image",
+        "mime_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAABCAIAAABsYngUAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWNgYGD4//8/JgkAg5UL9W+qp0MAAAAASUVORK5CYII="
+      },
+      { "type": "feed", "lines": 1 },
+      { "type": "cut", "mode": "partial" }
+    ]
+  }
+}

@@ -68,6 +68,13 @@ partial cut were physically observed on this purchased RP326 on 2026-08-02.
 Alignment, emphasis, underline, other QR sizes, and QR scan/decode readability
 have not been separately verified.
 
+## Image physical-spike candidates
+
+Host/simulator tests bound a prepared raster to 128×24 pixels (384 bytes), with
+one-bit `GS v 0` output. The final image spike must record RP326 appearance,
+legibility, paper advance, and heap behavior at this bound. These are candidate
+limits, not purchased-printer acceptance evidence.
+
 ## Purchased-unit observations
 
 | Fact | Observed value | Date |

@@ -1,3 +1,11 @@
+import binascii
+
+MAX_RASTER_WIDTH = 128
+MAX_RASTER_HEIGHT = 24
+MAX_RASTER_BYTES = 384
+_BASE64_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+
 class JobValidationError(ValueError):
     def __init__(self, message, code="INVALID_PRINT_JOB"):
         super().__init__(message)
@@ -24,6 +32,37 @@ def _printable_ascii(value, field, maximum=2048):
         code = ord(character)
         if code < _PRINTABLE_ASCII_MIN or code > _PRINTABLE_ASCII_MAX:
             raise JobValidationError(f"{field} must contain printable ASCII only")
+
+
+def decode_raster(block):
+    width = block.get("width")
+    height = block.get("height")
+    data_base64 = block.get("data_base64")
+    if (
+        isinstance(width, bool)
+        or isinstance(height, bool)
+        or not isinstance(width, int)
+        or not isinstance(height, int)
+        or not 1 <= width <= MAX_RASTER_WIDTH
+        or not 1 <= height <= MAX_RASTER_HEIGHT
+    ):
+        raise ValueError("raster dimensions must be 1..128 by 1..24")
+    if not isinstance(data_base64, str) or not 4 <= len(data_base64) <= 512 or len(data_base64) % 4:
+        raise ValueError("raster.data_base64 must be canonical base64")
+    padding = data_base64.find("=")
+    content = data_base64 if padding < 0 else data_base64[:padding]
+    if not content or any(character not in _BASE64_CHARACTERS for character in content):
+        raise ValueError("raster.data_base64 must be canonical base64")
+    if padding >= 0 and data_base64[padding:] not in ("=", "=="):
+        raise ValueError("raster.data_base64 must be canonical base64")
+    try:
+        raw = binascii.a2b_base64(data_base64)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("raster.data_base64 must be canonical base64") from exc
+    row_bytes = (width + 7) // 8
+    if len(raw) != row_bytes * height or len(raw) > MAX_RASTER_BYTES:
+        raise ValueError("raster.data_base64 length does not match dimensions")
+    return width, height, raw
 
 
 def _reject_unknown_keys(value, allowed, field):
@@ -93,6 +132,12 @@ def validate_job(job, allow_cut=False):
                 or not 1 <= module_size <= 8
             ):
                 raise JobValidationError("qr.module_size must be 1..8")
+        elif block_type == "raster":
+            _reject_unknown_keys(block, {"type", "width", "height", "data_base64"}, "raster")
+            try:
+                decode_raster(block)
+            except ValueError as exc:
+                raise JobValidationError(str(exc)) from exc
         elif block_type == "feed":
             _reject_unknown_keys(block, {"type", "lines"}, "feed")
             lines = block.get("lines")

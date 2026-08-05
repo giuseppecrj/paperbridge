@@ -6,6 +6,13 @@ import {
 	type PrintJob,
 } from "@paperbridge/protocol";
 
+import {
+	ImagePreparationError,
+	preparePrintJob,
+	type ImageDecoder,
+} from "./image-preparer.js";
+import { sharpImageDecoder } from "./sharp-image-decoder.js";
+
 export interface JobSubmissionOptions {
 	signal?: AbortSignal;
 }
@@ -46,6 +53,7 @@ export class JobSubmissionService {
 	constructor(
 		private readonly deviceId: string,
 		private readonly broker: JobBroker,
+		private readonly imageDecoder: ImageDecoder = sharpImageDecoder,
 	) {}
 
 	async submit(
@@ -54,10 +62,14 @@ export class JobSubmissionService {
 	): Promise<JobResult> {
 		let job: PrintJob;
 		try {
-			job = parsePrintJob(value);
+			job = await preparePrintJob(parsePrintJob(value), this.imageDecoder);
+			job = parsePrintJob(job);
 		} catch (error) {
-			if (error instanceof ProtocolValidationError) {
-				throw new SubmissionError(400, error.code);
+			if (
+				error instanceof ProtocolValidationError ||
+				error instanceof ImagePreparationError
+			) {
+				throw new SubmissionError(400, "INVALID_PRINT_JOB");
 			}
 			throw error;
 		}

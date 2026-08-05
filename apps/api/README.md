@@ -22,7 +22,9 @@ The server defaults to `127.0.0.1:3000` and exposes:
 
 REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
 MQTT message, and wait for the correlated result. Successful delivery ends at
-`delivered_to_printer`, never `printed`.
+`delivered_to_printer`, never `printed`. PNG/JPEG `image` blocks are accepted
+only at REST/MCP: the Node `sharp` adapter validates and prepares a bounded
+monochrome `raster` before MQTT. The device never decodes source images.
 
 ```sh
 curl -sS \

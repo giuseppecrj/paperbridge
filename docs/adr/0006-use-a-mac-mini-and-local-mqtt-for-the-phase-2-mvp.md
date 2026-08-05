@@ -82,9 +82,10 @@ Evolve the pre-release `print-job.v1` contract compatibly in place for expressiv
 
 Existing valid v1 jobs and their rendered bytes remain unchanged. A future
 incompatible contract change may introduce a new version; this phase does not
-add a version dispatcher, second MCP tool, or new MQTT topic. Bounded raster
-images or logos remain a later v1-compatible extension behind a separate
-schema/design and physical-memory spike.
+add a version dispatcher, second MCP tool, or new MQTT topic. V1 also supports
+bounded PNG/JPEG source images at the host boundary; the host prepares a
+controlled monochrome raster before MQTT, and the device renders that raster.
+Physical image-quality and memory acceptance remain separate work.
 
 Phase 2 does not promise arbitrary PDF, HTML, color, or page-sized document
 printing. Raw ESC/POS remains unavailable at MCP, REST, and MQTT trust

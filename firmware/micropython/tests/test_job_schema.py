@@ -34,6 +34,15 @@ def test_accepts_bounded_qr_module_size():
     )
 
 
+def test_accepts_consistent_prepared_raster():
+    assert (
+        validate_job(job({"type": "raster", "width": 8, "height": 1, "data_base64": "qg=="}))[
+            "job_id"
+        ]
+        == "job-1"
+    )
+
+
 @pytest.mark.parametrize(
     "name",
     [
@@ -96,6 +105,9 @@ def test_cut_requires_opt_in_fixture_is_policy_not_schema_invalid():
         {"type": "qr", "data": "https://example.com", "module_size": 0},
         {"type": "qr", "data": "https://example.com", "module_size": 9},
         {"type": "qr", "data": "https://example.com", "module_size": True},
+        {"type": "image", "mime_type": "image/png", "data_base64": "iVBORw0KGgo="},
+        {"type": "raster", "width": 8, "height": 2, "data_base64": "AA=="},
+        {"type": "raster", "width": 8, "height": 1, "data_base64": "invalid"},
         {"type": "cut", "mode": "partial"},
         {"type": "text", "text": "Styled", "align": "justify"},
         {"type": "text", "text": "Styled", "align": []},

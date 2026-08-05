@@ -26,7 +26,7 @@ production-reliability claim: the 72-hour soak remains a separate gate. Never
 infer hardware success from host tests or stale documentation.
 
 Not implemented: web app, public API/authentication, MQTT/TLS, durable job
-delivery, OTA, production provisioning, image printing, or an ESP-IDF firmware
+delivery, OTA, production provisioning, or an ESP-IDF firmware
 port. Do not build these without an approved issue. `apps/api` contains the
 private single-device REST/MCP/MQTT v1 service; `firmware/esp-idf/` remains a
 future placeholder.

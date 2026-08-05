@@ -122,6 +122,29 @@ def test_render_rejects_invalid_qr_module_size(module_size):
         )
 
 
+def test_render_raster_uses_exact_gs_v_0_bytes():
+    payload = EscPosRenderer().render(
+        {
+            "content": {
+                "blocks": [{"type": "raster", "width": 8, "height": 1, "data_base64": "qg=="}]
+            }
+        }
+    )
+    assert payload == b"\x1b@\x1dv0\x00\x01\x00\x01\x00\xaa"
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        {"type": "image", "mime_type": "image/png", "data_base64": "iVBORw0KGgo="},
+        {"type": "raster", "width": 8, "height": 2, "data_base64": "AA=="},
+    ],
+)
+def test_render_rejects_unprepared_or_inconsistent_raster(block):
+    with pytest.raises(RenderError):
+        EscPosRenderer().render({"content": {"blocks": [block]}})
+
+
 def test_render_rejects_qr_output_before_growing_past_limit():
     with pytest.raises(RenderError, match="rendered job exceeds byte limit"):
         EscPosRenderer(max_bytes=32).render(load("valid-qr.json"))
