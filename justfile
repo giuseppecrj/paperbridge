@@ -127,7 +127,7 @@ production-bootstrap:
     tools/exedev/operator.sh bootstrap
 
 production-configure:
-    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host,emqx-spike --no-defaults exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
+    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host,production --no-defaults exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
 
 production-deploy:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"

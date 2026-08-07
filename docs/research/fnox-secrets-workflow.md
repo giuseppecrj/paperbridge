@@ -23,11 +23,15 @@ The current mappings are:
 
 - `PAPERBRIDGE_WIFI_SSID` -> `op://Agent/home-router/name`
 - `PAPERBRIDGE_WIFI_PASSWORD` -> `op://Agent/home-router/password`
-- `PAPERBRIDGE_MQTT_PASSWORD` ->
+- local `PAPERBRIDGE_MQTT_PASSWORD` ->
   `op://Agent/paperbridge-mqtt-password/password`
+- production `PAPERBRIDGE_MQTT_PASSWORD` ->
+  `op://Agent/paperbridge-emqx-token/password`
 
-The `host` profile exposes only the MQTT password. The `device` profile exposes
-that password plus Wi-Fi name/password. Recipes set `FNOX_CONFIG_DIR` to an
+The `host` profile exposes only the local MQTT password. The `device` profile
+exposes that password plus Wi-Fi name/password. The `production` profile
+exposes only the managed-broker MQTT password and is composed with `host` for
+the private production service. Recipes set `FNOX_CONFIG_DIR` to an
 empty location so no global Fnox file is loaded, use `--no-defaults` to select
 only the named project profile, and use `--no-daemon` for direct resolution
 without shared per-user cache state. Non-secret, machine-local settings such
