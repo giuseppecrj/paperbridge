@@ -30,17 +30,17 @@ The bounded spike used:
   `t1b28b1a.ala.us-east-1.emqxsl.com:8883`;
 - device and username `paperbridge-dev-001`;
 - the downloaded PEM CA file supplied by EMQX; and
-- the checked-in `emqx-spike` Fnox profile, which resolves only the EMQX MQTT
+- the checked-in `production` Fnox profile, which resolves only the EMQX MQTT
   password and keeps it separate from local-Mosquitto profiles.
 
 Compose profiles explicitly so Wi-Fi credentials remain device-only:
 
 ```sh
 # Host probe/API process: local host bootstrap plus EMQX password override.
-fnox --no-daemon -P host,emqx-spike --no-defaults exec -- <host-command>
+fnox --no-daemon -P host,production --no-defaults exec -- <host-command>
 
 # Device configuration: Wi-Fi/bootstrap secrets plus EMQX password override.
-fnox --no-daemon -P device,emqx-spike --no-defaults exec -- <device-command>
+fnox --no-daemon -P device,production --no-defaults exec -- <device-command>
 ```
 
 The later profile wins for `PAPERBRIDGE_MQTT_PASSWORD`. Paperbridge recipes also

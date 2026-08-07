@@ -26,7 +26,7 @@ just production-verify
 just production-probe
 ```
 
-`production-configure` uses the `host,emqx-spike` Fnox profiles. It base64
+`production-configure` uses the `host,production` Fnox profiles. It base64
 encodes the EMQX password directly into `/etc/paperbridge/paperbridge.env`; the
 release-local launcher decodes it only for the Node process. It does not put the
 value in a command argument, Git file, service log, or evidence file. The remote
