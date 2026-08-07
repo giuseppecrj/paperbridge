@@ -33,18 +33,19 @@ The bounded spike used:
 - the checked-in `production` Fnox profile, which resolves only the EMQX MQTT
   password and keeps it separate from local-Mosquitto profiles.
 
-Compose profiles explicitly so Wi-Fi credentials remain device-only:
+Select only the overlays needed by each process:
 
 ```sh
-# Host probe/API process: local host bootstrap plus EMQX password override.
-fnox --no-daemon -P host,production --no-defaults exec -- <host-command>
+# Host probe/API process: replace the default local password with EMQX.
+fnox --no-daemon -P production exec -- <host-command>
 
-# Device configuration: Wi-Fi/bootstrap secrets plus EMQX password override.
-fnox --no-daemon -P device,production --no-defaults exec -- <device-command>
+# Device configuration: add Wi-Fi password and replace the MQTT password.
+fnox --no-daemon -P device,production exec -- <device-command>
 ```
 
-The later profile wins for `PAPERBRIDGE_MQTT_PASSWORD`. Paperbridge recipes also
-set `FNOX_CONFIG_DIR=/nonexistent` to exclude unrelated global Fnox state.
+The `production` overlay replaces the default `PAPERBRIDGE_MQTT_PASSWORD`.
+Paperbridge recipes also set `FNOX_CONFIG_DIR=/nonexistent` to exclude unrelated
+global Fnox state.
 
 ## Evidence and remaining gates
 

@@ -74,8 +74,8 @@ just test
 
 ## Development configuration and secrets
 
-Copy the non-secret local settings and replace the example broker address and
-serial port for this machine:
+Copy the non-secret local settings and replace the example broker address,
+Wi-Fi SSID, and serial port for this machine:
 
 ```sh
 cp .env.example .env
@@ -91,10 +91,10 @@ op vault list
 just secrets-check
 ```
 
-Fnox injects secrets only into the recipes that need them. `.env`,
-`fnox.local.toml`, and generated firmware `config.json` are ignored. An optional
-machine-local `OP_SERVICE_ACCOUNT_TOKEN` may live in the OS keychain for
-unattended use; it is never injected into Paperbridge child processes. See
+Fnox uses 1Password desktop CLI integration and injects secrets only into the
+recipes that need them. `.env` and generated firmware `config.json` are ignored.
+Treat `config.json` as disposable derived state: regenerate it from `.env` and
+Fnox instead of editing it manually. See
 [`docs/research/fnox-secrets-workflow.md`](docs/research/fnox-secrets-workflow.md).
 
 ## Discover the ESP32 serial port

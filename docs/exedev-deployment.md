@@ -21,13 +21,15 @@ Run repository checks first. Use an exact reviewed commit SHA, never a branch:
 
 ```sh
 PAPERBRIDGE_SHA=<40-character-sha> just production-bootstrap
+just production-secrets-check
 just production-configure
 just production-verify
 just production-probe
 ```
 
-`production-configure` uses the `host,production` Fnox profiles. It base64
-encodes the EMQX password directly into `/etc/paperbridge/paperbridge.env`; the
+`production-configure` uses the `production` Fnox overlay, which replaces the
+default local MQTT password. It base64 encodes the EMQX password directly into
+`/etc/paperbridge/paperbridge.env`; the
 release-local launcher decodes it only for the Node process. It does not put the
 value in a command argument, Git file, service log, or evidence file. The remote
 file is root-owned mode `0600`.
