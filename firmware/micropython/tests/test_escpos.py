@@ -55,6 +55,24 @@ def test_render_shared_text_feed_fixture():
     assert b"\x1dV" not in payload
 
 
+def test_render_wraps_text_at_word_boundaries():
+    payload = EscPosRenderer().render(
+        {
+            "content": {
+                "blocks": [
+                    {"type": "text", "text": "And crates broke loose from the deck running free."}
+                ]
+            }
+        }
+    )
+    assert payload == b"\x1b@And crates broke loose from the deck running\nfree.\n"
+
+
+def test_render_hard_wraps_a_word_wider_than_the_paper():
+    payload = EscPosRenderer().render({"content": {"blocks": [{"type": "text", "text": "x" * 50}]}})
+    assert payload == b"\x1b@" + (b"x" * 48) + b"\nxx\n"
+
+
 def test_render_shared_rule_fixture_uses_rp326_columns():
     payload = EscPosRenderer().render(load("valid-rule.json"))
     assert payload == b"\x1b@TOTAL\n" + (b"-" * 48) + b"\n\n"

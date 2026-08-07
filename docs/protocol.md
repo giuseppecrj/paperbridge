@@ -7,8 +7,9 @@ unsupported fields, control bytes, unknown versions/types, and unknown block
 types are rejected. Firmware also bounds the rendered output to 64 KiB.
 
 V1 is a pre-release semantic receipt contract that evolves compatibly in place.
-Existing text, feed, 48-column rule, and partial-cut jobs remain valid and retain
-their exact rendered bytes. Text may add bounded alignment, bold, single
+Existing text, feed, 48-column rule, and partial-cut jobs remain valid. Text is
+word-wrapped at the configured printer width before rendering; words longer than
+the width are hard-wrapped. Text may add bounded alignment, bold, single
 underline, and 1–2× width/height multipliers. A QR block accepts printable
 ASCII up to 256 bytes and renders with fixed model 2, bounded module size 1..8
 (default 3), error correction M, and centered alignment. Set the optional `module_size` to any

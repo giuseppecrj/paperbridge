@@ -33,6 +33,25 @@ def encode_text(text):
     return bytes(encoded)
 
 
+def wrap_text(text, columns):
+    encode_text(text)
+    if columns < 1:
+        raise RenderError("text columns must be at least 1")
+    lines = []
+    while len(text) > columns:
+        break_at = text.rfind(" ", 0, columns + 1)
+        if break_at <= 0:
+            break_at = columns
+            lines.append(text[:break_at])
+            text = text[break_at:]
+        else:
+            lines.append(text[:break_at])
+            text = text[break_at + 1 :]
+    if text:
+        lines.append(text)
+    return lines
+
+
 class EscPosRenderer:
     def __init__(
         self,
@@ -82,6 +101,11 @@ class EscPosRenderer:
             + bytes((size,))
         )
 
+    def _append_wrapped_text(self, payload, text, columns):
+        for line in wrap_text(text, columns):
+            self._append(payload, encode_text(line))
+            self._append(payload, b"\n")
+
     def _append_qr(self, payload, data, module_size=3):
         encoded = encode_text(data)
         if len(encoded) > 256:
@@ -113,7 +137,10 @@ class EscPosRenderer:
         self._append(payload, data)
 
     def render_text_test(self, text):
-        return self._bounded(INITIALIZE + encode_text(text) + b"\n" * 3)
+        payload = bytearray(INITIALIZE)
+        self._append_wrapped_text(payload, text, self.text_columns)
+        self._append(payload, b"\n" * 2)
+        return bytes(payload)
 
     def render_feed_test(self, lines=3):
         if not isinstance(lines, int) or not 1 <= lines <= 10:
@@ -130,15 +157,13 @@ class EscPosRenderer:
         for block in blocks:
             block_type = block["type"]
             if block_type == "text":
-                encoded = encode_text(block["text"])
                 if any(field in block for field in STYLE_FIELDS):
                     self._append(payload, self._style_setup(block))
-                    self._append(payload, encoded)
-                    self._append(payload, b"\n")
+                    width = block.get("width_multiplier", 1)
+                    self._append_wrapped_text(payload, block["text"], self.text_columns // width)
                     self._append(payload, STYLE_RESET)
                 else:
-                    self._append(payload, encoded)
-                    self._append(payload, b"\n")
+                    self._append_wrapped_text(payload, block["text"], self.text_columns)
             elif block_type == "qr":
                 self._append_qr(payload, block["data"], block.get("module_size", 3))
             elif block_type == "raster":
