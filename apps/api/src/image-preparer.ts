@@ -21,7 +21,7 @@ export type PreparedRaster = {
 	data: Uint8Array;
 };
 
-export function prepareRaster(image: DecodedImage): PreparedRaster {
+function rasterRowBytes(image: DecodedImage): number {
 	const { width, height, pixels } = image;
 	if (
 		!Number.isInteger(width) ||
@@ -38,6 +38,11 @@ export function prepareRaster(image: DecodedImage): PreparedRaster {
 	if (rowBytes * height > MAX_RASTER_BYTES) {
 		throw new RangeError("prepared raster exceeds byte limit");
 	}
+	return rowBytes;
+}
+
+function dither(image: DecodedImage, rowBytes: number): Uint8Array {
+	const { width, height, pixels } = image;
 	const grayscale = Float64Array.from(pixels);
 	const data = new Uint8Array(rowBytes * height);
 	for (let y = 0; y < height; y += 1) {
@@ -56,7 +61,15 @@ export function prepareRaster(image: DecodedImage): PreparedRaster {
 			}
 		}
 	}
-	return { width, height, data };
+	return data;
+}
+
+export function prepareRaster(image: DecodedImage): PreparedRaster {
+	return {
+		width: image.width,
+		height: image.height,
+		data: dither(image, rasterRowBytes(image)),
+	};
 }
 
 export const MAX_IMAGE_SOURCE_BASE64_CHARACTERS = 2 * 1024 * 1024;

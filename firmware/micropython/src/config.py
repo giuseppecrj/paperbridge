@@ -158,9 +158,9 @@ def validate_config(config):
     return config
 
 
-def load_config(path="config.json"):
+def load_config():
     try:
-        with open(path) as config_file:
+        with open("config.json") as config_file:
             return validate_config(json.load(config_file))
     except (OSError, ValueError) as exc:
         raise ConfigurationError(f"unable to load configuration: {exc}") from exc

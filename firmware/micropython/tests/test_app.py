@@ -24,7 +24,7 @@ def boot_ethernet(monkeypatch):
     return ethernet
 
 
-def test_build_app_keeps_serial_rpc_available_when_ethernet_boot_fails(tmp_path, monkeypatch):
+def test_build_app_keeps_serial_rpc_available_when_ethernet_boot_fails(monkeypatch):
     class FailingEthernet:
         def __init__(self, _config):
             self.calls = []
@@ -38,14 +38,10 @@ def test_build_app_keeps_serial_rpc_available_when_ethernet_boot_fails(tmp_path,
             raise AssertionError("Static configuration must not follow failed initialization")
 
     config = json.loads(Path("firmware/micropython/config.example.json").read_text())
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
     ethernet = FailingEthernet(None)
     monkeypatch.setattr(app, "W5500LAN", lambda _config: ethernet)
 
-    server, wifi, mqtt = build_app(
-        reader=io.StringIO(), writer=io.StringIO(), config_path=str(config_path)
-    )
+    server, wifi, mqtt = build_app(reader=io.StringIO(), writer=io.StringIO(), config=config)
 
     assert server.max_line_bytes == 65_536
     assert wifi is None
@@ -54,17 +50,13 @@ def test_build_app_keeps_serial_rpc_available_when_ethernet_boot_fails(tmp_path,
     assert ethernet.last_error == "W5500 initialization failed: SPI unavailable"
 
 
-def test_build_app_composes_one_mqtt_tracer_when_enabled(tmp_path, monkeypatch):
+def test_build_app_composes_one_mqtt_tracer_when_enabled(monkeypatch):
     config = json.loads(Path("firmware/micropython/config.example.json").read_text())
     config["wifi"]["enabled"] = True
     config["mqtt"]["enabled"] = True
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
     ethernet = boot_ethernet(monkeypatch)
 
-    server, wifi, tracer = build_app(
-        reader=io.StringIO(), writer=io.StringIO(), config_path=str(config_path)
-    )
+    server, wifi, tracer = build_app(reader=io.StringIO(), writer=io.StringIO(), config=config)
 
     assert server.max_line_bytes == 65_536
     assert wifi is not None
@@ -79,16 +71,11 @@ def test_build_app_composes_one_mqtt_tracer_when_enabled(tmp_path, monkeypatch):
     assert ethernet.calls == ["initialize", "configure_static"]
 
 
-def test_build_app_composes_wifi_without_mqtt_when_only_wifi_is_enabled(tmp_path, monkeypatch):
+def test_build_app_composes_wifi_without_mqtt_when_only_wifi_is_enabled(monkeypatch):
     config = json.loads(Path("firmware/micropython/config.example.json").read_text())
     config["wifi"]["enabled"] = True
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
     boot_ethernet(monkeypatch)
-    _server, wifi, mqtt = build_app(
-        reader=io.StringIO(), writer=io.StringIO(), config_path=str(config_path)
-    )
+    _server, wifi, mqtt = build_app(reader=io.StringIO(), writer=io.StringIO(), config=config)
 
     assert wifi is not None
     assert mqtt is None

@@ -1,6 +1,6 @@
 import sys
 
-from .config import load_config
+from .config import load_config, validate_config
 from .escpos import EscPosRenderer
 from .ethernet import W5500LAN, EthernetError
 from .job_service import JobService  # type: ignore[reportMissingImports]
@@ -12,8 +12,8 @@ from .serial_rpc import SerialRpcServer
 from .wifi import WiFiStation  # type: ignore[reportMissingImports]
 
 
-def build_app(reader=None, writer=None, config_path="config.json"):
-    config = load_config(config_path)
+def build_app(reader=None, writer=None, config=None):
+    config = load_config() if config is None else validate_config(config)
     ethernet = W5500LAN(config)
     try:
         ethernet.initialize()
