@@ -35,6 +35,7 @@ verify)
     exec "${ssh[@]}" 'curl --fail --silent --show-error --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:3000/health && curl --fail --silent --show-error --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:3000/ready'
     ;;
 probe)
+    # ponytail: transient sandbox settings duplicate the service; generate shared properties if this profile changes.
     exec "${ssh[@]}" 'sudo systemd-run --wait --pipe --collect --quiet --property=User=paperbridge --property=Group=paperbridge --property=WorkingDirectory=/opt/paperbridge/current/apps/api --property=Environment=HOME=/var/empty --property=EnvironmentFile=/etc/paperbridge/paperbridge.env --property=NoNewPrivileges=yes --property=CapabilityBoundingSet= --property=AmbientCapabilities= --property=PrivateTmp=yes --property=PrivateDevices=yes --property=ProtectHome=true --property=ProtectSystem=strict --property=ProtectKernelTunables=yes --property=ProtectKernelModules=yes --property=ProtectControlGroups=yes --property=ProtectClock=yes --property=RestrictSUIDSGID=yes --property=LockPersonality=yes --property=RestrictAddressFamilies=AF_UNIX\ AF_INET\ AF_INET6 --property=SystemCallArchitectures=native /opt/paperbridge/current/deploy/exedev/run-node.sh src/main.ts'
     ;;
 restart)
