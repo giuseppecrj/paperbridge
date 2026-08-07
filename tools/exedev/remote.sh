@@ -39,7 +39,8 @@ prepare_release() {
     if [[ ! -d "$release" ]]; then
         as_paperbridge git -C "$repository" worktree add --detach "$release" "$target" >&2 || return
     fi
-    as_paperbridge /usr/local/bin/mise trust "$release/mise.toml" >&2 || return
+    as_paperbridge env MISE_DATA_DIR="$release/.mise" \
+        /usr/local/bin/mise trust "$release/mise.toml" >&2 || return
     as_paperbridge env MISE_DATA_DIR="$release/.mise" \
         /usr/local/bin/mise -C "$release" install >&2 || return
     as_paperbridge env MISE_DATA_DIR="$release/.mise" \
