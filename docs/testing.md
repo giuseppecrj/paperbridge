@@ -19,7 +19,7 @@ behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
 protocol package, HTTP body/device validation, MCP discovery/tool calls and
 Host/Origin guards, MQTT result correlation, timeout/cancellation without retry,
 QoS duplicate suppression, device cut policy, and partial-write result reporting.
-The Bun workspace checks all three TypeScript packages with `tsc` and Node's test
+The Bun workspace checks both TypeScript packages with `tsc` and Node's test
 runner. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
 also run the Node probe and full REST and MCP job paths through real local
 Mosquitto; otherwise those broker tests are reported as skipped.

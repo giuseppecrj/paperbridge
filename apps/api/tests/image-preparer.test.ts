@@ -8,6 +8,7 @@ import sharp from "sharp";
 import {
 	ImagePreparationError,
 	preparePrintJob,
+	prepareRaster,
 	type ImageDecoder,
 } from "../src/image-preparer.js";
 import { sharpImageDecoder } from "../src/sharp-image-decoder.js";
@@ -36,6 +37,26 @@ const decoder: ImageDecoder = {
 		pixels: Uint8Array.from([0, 255, 0, 255, 0, 255, 0, 255]),
 	}),
 };
+
+test("packs a deterministic multi-row Floyd-Steinberg raster", () => {
+	const raster = prepareRaster({
+		width: 8,
+		height: 2,
+		pixels: Uint8Array.from([
+			0, 255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0, 255, 0, 255, 0,
+		]),
+	});
+	assert.deepEqual([...raster.data], [0xaa, 0x55]);
+});
+
+test("accepts one full-width 576 by 576 raster", () => {
+	const raster = prepareRaster({
+		width: 576,
+		height: 576,
+		pixels: new Uint8Array(576 * 576),
+	});
+	assert.equal(raster.data.length, 41_472);
+});
 
 test("prepares a source image as a bounded monochrome raster", async () => {
 	const prepared = await preparePrintJob(job, decoder);

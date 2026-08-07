@@ -12,11 +12,9 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
-    "@paperbridge/image": "workspace:*",
     "@paperbridge/protocol": "workspace:*",
     "mqtt": "^5.14.1",
-    "sharp": "0.35.3",
-    "zod": "4.2.0"
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",

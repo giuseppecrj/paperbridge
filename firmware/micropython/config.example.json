@@ -24,7 +24,6 @@
     "write_timeout_ms": 5000
   },
   "queue": {
-    "max_pending": 20,
     "max_completed_ids": 100
   },
   "mqtt": {

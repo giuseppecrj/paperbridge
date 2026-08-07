@@ -10,22 +10,12 @@
       "dependencies": {
         "@modelcontextprotocol/node": "2.0.0",
         "@modelcontextprotocol/server": "2.0.0",
-        "@paperbridge/image": "workspace:*",
         "@paperbridge/protocol": "workspace:*",
         "mqtt": "^5.14.1",
         "sharp": "0.35.3",
-        "zod": "4.2.0",
       },
       "devDependencies": {
         "@modelcontextprotocol/client": "2.0.0",
-        "@types/node": "^24.10.1",
-        "tsx": "^4.19.2",
-        "typescript": "^5.9.3",
-      },
-    },
-    "packages/image": {
-      "name": "@paperbridge/image",
-      "devDependencies": {
         "@types/node": "^24.10.1",
         "tsx": "^4.19.2",
         "typescript": "^5.9.3",
@@ -165,8 +155,6 @@
     "@modelcontextprotocol/server": ["@modelcontextprotocol/server@2.0.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.0.0", "zod": "^4.2.0" } }, "sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw=="],
 
     "@paperbridge/api": ["@paperbridge/api@workspace:apps/api"],
-
-    "@paperbridge/image": ["@paperbridge/image@workspace:packages/image"],
 
     "@paperbridge/protocol": ["@paperbridge/protocol@workspace:packages/protocol"],
 

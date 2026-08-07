@@ -1,7 +1,6 @@
-import type { DecodedImage } from "@paperbridge/image";
 import sharp from "sharp";
 
-import type { ImageDecoder } from "./image-preparer.js";
+import type { DecodedImage, ImageDecoder } from "./image-preparer.js";
 
 export const sharpImageDecoder: ImageDecoder = {
 	async decode(bytes, _mimeType, maximum): Promise<DecodedImage> {

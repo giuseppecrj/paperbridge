@@ -103,7 +103,7 @@ def validate_config(config):
             raise ConfigurationError(f"printer.{field} must be 100..60000")
 
     queue = config["queue"]
-    for field in ("max_pending", "max_completed_ids"):
+    for field in ("max_completed_ids",):
         value = queue.get(field)
         if not isinstance(value, int) or not 1 <= value <= 1000:
             raise ConfigurationError(f"queue.{field} must be 1..1000")
