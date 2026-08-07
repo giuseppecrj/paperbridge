@@ -63,9 +63,12 @@ that versioned path passes its fault-injection and rollout gates.
 
 ## Order and non-goals
 
-USB ping/info precedes direct W5500 initialization; printer reachability remains
-separate from paper output. The host prepares bounded source images before MQTT;
-the device receives only a controlled raster block. Public authentication,
+On boot, the Device initializes and statically configures the direct W5500;
+this does not contact the Printer or produce output. A W5500 initialization
+failure leaves USB diagnostics available. USB ping/info and printer reachability
+diagnostics remain separate from paper output. The host prepares
+bounded source images before MQTT; the device receives only a controlled raster
+block. Public authentication,
 production MQTT/TLS, durable queues, automatic retries, multi-device routing,
 image URLs, arbitrary documents, OTA, and production provisioning remain out of
 scope. The optional EMQX MQTT/TLS path preserves this contract; its bounded

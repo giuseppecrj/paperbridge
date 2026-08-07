@@ -123,7 +123,7 @@ class CommandRouter:
     def printer_endpoint(self, _params):
         return {"printer_endpoint": self.transport.endpoint()}
 
-    def _require_ethernet_link(self):
+    def require_ethernet_link(self):
         if not self.ethernet.status().get("link_up"):
             raise RpcError("ETHERNET_LINK_DOWN", "W5500 physical link is down")
 
@@ -135,18 +135,18 @@ class CommandRouter:
             raise RpcError(code, str(exc)) from exc
 
     def printer_print_test(self, params):
-        self._require_ethernet_link()
+        self.require_ethernet_link()
         return self.coordinator.print_test(params.get("text"))
 
     def printer_feed_test(self, _params):
-        self._require_ethernet_link()
+        self.require_ethernet_link()
         return self.coordinator.feed_test()
 
     def printer_cut_test(self, params):
         confirm = params.get("confirm")
         if not isinstance(confirm, bool) or not confirm:
             raise RpcError("INVALID_RPC_REQUEST", "cut test requires confirm=true")
-        self._require_ethernet_link()
+        self.require_ethernet_link()
         return self.coordinator.cut_test()
 
     def job_submit(self, params):
@@ -157,7 +157,7 @@ class CommandRouter:
         return self.job_service.submit(
             job,
             allow_cut=allow_cut,
-            before_delivery=self._require_ethernet_link,
+            before_delivery=self.require_ethernet_link,
         )
 
     def system_reboot(self, _params):

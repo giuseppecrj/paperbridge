@@ -91,6 +91,18 @@ def make_adapter(
     return value, lan
 
 
+def test_status_exposes_a_boot_initialization_error():
+    value = W5500LAN(config())
+    value.last_error = "W5500 initialization failed: SPI unavailable"
+
+    assert value.status() == {
+        "initialized": False,
+        "active": False,
+        "link_up": False,
+        "last_error": "W5500 initialization failed: SPI unavailable",
+    }
+
+
 def test_reconnect_restarts_the_existing_lan_and_reapplies_static_configuration():
     sleeps = []
     value, lan = make_adapter(("192.168.1.50", "255.255.255.0", "0.0.0.0", "0.0.0.0"))

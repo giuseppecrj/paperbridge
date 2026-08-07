@@ -50,8 +50,10 @@ class FakeJobService:
         self.error = error
         self.calls = []
 
-    def submit(self, job, allow_cut=False):
+    def submit(self, job, allow_cut=False, before_delivery=None):
         self.calls.append((job, allow_cut))
+        if before_delivery is not None:
+            before_delivery()
         if self.error is not None:
             raise self.error
         return self.result
@@ -107,7 +109,7 @@ def config():
     }
 
 
-def connected_tracer(job_service=None, job_ledger=None, settings=None):
+def connected_tracer(job_service=None, job_ledger=None, settings=None, before_delivery=None):
     client = FakeClient()
     wifi = ConnectedWiFi()
     tracer = MqttTracer(
@@ -117,6 +119,7 @@ def connected_tracer(job_service=None, job_ledger=None, settings=None):
         clock_ms=lambda: 123,
         job_service=job_service,
         job_ledger=job_ledger,
+        before_delivery=before_delivery,
     )
     tracer.poll()
     assert client.callback is not None
@@ -346,6 +349,35 @@ def test_mqtt_job_returns_a_correlated_terminal_result():
         1,
         False,
     )
+
+
+def test_mqtt_job_fails_without_printer_delivery_when_ethernet_link_is_down():
+    def link_down():
+        raise RpcError("ETHERNET_LINK_DOWN", "W5500 physical link is down")
+
+    service = FakeJobService()
+    tracer, client = connected_tracer(
+        service,
+        JobLedger(max_completed_ids=2),
+        before_delivery=link_down,
+    )
+    callback = client.callback
+    assert callback is not None
+
+    callback(
+        b"v1/devices/paperbridge-dev-001/print-jobs",
+        (FIXTURES / "valid-text-feed.json").read_bytes(),
+    )
+
+    assert service.calls == [(json.loads((FIXTURES / "valid-text-feed.json").read_text()), False)]
+    assert client.published[-1][1] == {
+        "schema_version": "1",
+        "kind": "job_result",
+        "job_id": "job-hello-001",
+        "device_id": "paperbridge-dev-001",
+        "status": "failed",
+        "error_code": "ETHERNET_LINK_DOWN",
+    }
 
 
 def test_qos_redelivery_reports_duplicate_without_a_second_printer_delivery():

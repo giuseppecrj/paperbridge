@@ -12,6 +12,7 @@ class W5500LAN:
         self.config = config
         self.lan = None
         self.network = None
+        self.last_error = None
         self.sleep_ms = sleep_ms or self._default_sleep_ms
 
     @staticmethod
@@ -39,9 +40,11 @@ class W5500LAN:
             )
             self.network = network
             self.lan.active(True)
+            self.last_error = None
             return self.status()
         except Exception as exc:
-            raise EthernetError(f"W5500 initialization failed: {exc}") from exc
+            self.last_error = f"W5500 initialization failed: {exc}"
+            raise EthernetError(self.last_error) from exc
 
     def reconnect(self):
         if self.lan is None or self.network is None:
@@ -72,10 +75,18 @@ class W5500LAN:
         resolver = settings.get("dns") or resolver
         if resolver:
             network.ipconfig(dns=resolver)
+        self.last_error = None
         return self.status()
 
     def status(self):
         if self.lan is None:
+            if self.last_error is not None:
+                return {
+                    "initialized": False,
+                    "active": False,
+                    "link_up": False,
+                    "last_error": self.last_error,
+                }
             return {"initialized": False, "active": False, "link_up": False}
         raw = self.lan.status()
         connected = getattr(self.network, "ETH_CONNECTED", None)
@@ -96,6 +107,15 @@ class W5500LAN:
             address = (addr4[0], addr4[1], gateway, dns)
         except (OSError, TypeError, ValueError, IndexError, AttributeError):
             address = None
+        if self.last_error is not None:
+            return {
+                "initialized": True,
+                "active": self.lan.active(),
+                "link_up": link_up,
+                "raw_status": raw,
+                "ifconfig": address,
+                "last_error": self.last_error,
+            }
         return {
             "initialized": True,
             "active": self.lan.active(),

@@ -31,6 +31,9 @@
   `d4a6833c-5061-4fb9-98b5-9e95c7c55155` to the printer-facing socket after
   41,752 bytes. The operator separately observed its expected text/layout,
   recognizable ACRNM image, scannable QR, two-line feed, and one partial cut.
+  After the boot-initialization firmware fix was force-copied and the Device
+  reset, W5500 initialization, static IPv4 `192.168.4.50/24`, direct link, and
+  printer probe again succeeded without output on 2026-08-07.
 
 Official W5500 signal map for this product page:
 
@@ -111,6 +114,8 @@ acceptance remain open.
 | Cloud MCP/EMQX physical acceptance | Private MCP through exe.dev delivered `d4a6833c-5061-4fb9-98b5-9e95c7c55155` after 41,752 bytes; operator separately confirmed expected text/layout, recognizable ACRNM image, scannable QR, two-line feed, and one partial cut. The earlier one-off job `909ed0bb-a0b3-4d28-887d-6e66dae6046f` failed `PRINTER_CONNECT_TIMEOUT` without a delivery claim after a Device reboot reset W5500 state; post-fix smoke `hil-smoke-31b1e1c31c79` passed before the final job. | 2026-08-07 |
 | Dual-interface recovery | Guarded Wi-Fi/MQTT disconnect/reconnect preserved direct printer TCP reachability; direct W5500 disconnect/reconnect preserved Wi-Fi/MQTT; `hil-network-recovery-89867cf401c3` | 2026-08-02 |
 | Guarded W5500 reconnect | After a soft reset remained at `ETH_STARTED`, `ethernet reconnect --confirm` cycled the LAN singleton; link returned as `raw_status: 5` and printer probe succeeded without a cable reseat | 2026-08-02 |
+| Automatic W5500 boot initialization | After force-copy deployment and Device reset, W5500 was initialized and active with `192.168.4.50/24`; direct link and printer probe passed without output | 2026-08-07 |
+| Power-only cloud check | After USB disconnection, the no-output MQTT tracer succeeded. One job safely returned `ETHERNET_LINK_DOWN` without delivery; a later job `9d6ff700-9f15-478e-8033-cdb7f34f7fe3` delivered 51 bytes. A separate partial-cut job `fc0a9ab0-c8d0-4692-aa64-0766a5b3e8ba` delivered 5 bytes, and the operator confirmed the cut. No claim is made that the 51-byte text appeared on paper. | 2026-08-07 |
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |

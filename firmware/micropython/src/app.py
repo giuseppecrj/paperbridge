@@ -2,7 +2,7 @@ import sys
 
 from .config import load_config
 from .escpos import EscPosRenderer
-from .ethernet import W5500LAN
+from .ethernet import W5500LAN, EthernetError
 from .job_service import JobService  # type: ignore[reportMissingImports]
 from .mqtt_adapter import MqttTracer  # type: ignore[reportMissingImports]
 from .print_coordinator import PrintCoordinator
@@ -15,24 +15,34 @@ from .wifi import WiFiStation  # type: ignore[reportMissingImports]
 def build_app(reader=None, writer=None, config_path="config.json"):
     config = load_config(config_path)
     ethernet = W5500LAN(config)
+    try:
+        ethernet.initialize()
+        ethernet.configure_static()
+    except EthernetError as exc:
+        ethernet.last_error = str(exc)
     transport = PrinterTransport(config)
     coordinator = PrintCoordinator(EscPosRenderer(), transport)
     job_service = JobService(config, coordinator)
     wifi = None
     if config["wifi"]["enabled"]:
         wifi = WiFiStation(config)
-    mqtt = None
-    if config.get("mqtt", {}).get("enabled"):
-        mqtt = MqttTracer(config, wifi, job_service=job_service)
     router = CommandRouter(
         config,
         ethernet,
         coordinator,
         transport,
-        mqtt=mqtt,
         wifi=wifi,
         job_service=job_service,
     )
+    mqtt = None
+    if config.get("mqtt", {}).get("enabled"):
+        mqtt = MqttTracer(
+            config,
+            wifi,
+            job_service=job_service,
+            before_delivery=router.require_ethernet_link,
+        )
+        router.mqtt = mqtt
     server = SerialRpcServer(
         reader or sys.stdin,
         writer or sys.stdout,

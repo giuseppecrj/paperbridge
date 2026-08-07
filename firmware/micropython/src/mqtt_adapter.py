@@ -26,6 +26,7 @@ class MqttTracer:
         lock=None,
         job_service=None,
         job_ledger=None,
+        before_delivery=None,
         utc_year=None,
         sync_time=None,
     ):
@@ -40,6 +41,7 @@ class MqttTracer:
         self.ticks_diff = ticks_diff or self._default_ticks_diff
         self._lock = lock or __import__("_thread").allocate_lock()
         self.job_service = job_service
+        self.before_delivery = before_delivery
         self.job_ledger = job_ledger or JobLedger(
             config.get("queue", {}).get("max_completed_ids", 100)
         )
@@ -268,7 +270,11 @@ class MqttTracer:
             return
 
         try:
-            delivered = self.job_service.submit(job, allow_cut=self.allow_cut)
+            delivered = self.job_service.submit(
+                job,
+                allow_cut=self.allow_cut,
+                before_delivery=self.before_delivery,
+            )
             result = {
                 "schema_version": "1",
                 "kind": "job_result",
