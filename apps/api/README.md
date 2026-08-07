@@ -2,14 +2,25 @@
 
 This portable Node.js TypeScript package implements Paperbridge's private,
 single-device Phase 2 REST and Streamable HTTP MCP ingress plus the no-output
-MQTT probe. It uses one built-in Node HTTP server; Bun remains workspace tooling
-only.
+MQTT probe. It uses one built-in Node HTTP server. Bun manages the workspace and
+bundles the production JavaScript; Node remains the application runtime.
 
-Start authenticated Mosquitto, set the non-secret `.env` values, then run:
+Start authenticated Mosquitto, set the non-secret `.env` values, then run the
+TypeScript source for local development:
 
 ```sh
 just api
 ```
+
+Build and run the same server as the production Node artifact with:
+
+```sh
+bun run --filter @paperbridge/api build
+bun run --filter @paperbridge/api start:production
+```
+
+The build writes `dist/server.js` and keeps `sharp` external so Node can load its
+native binary. Application code does not use Bun runtime APIs.
 
 The server defaults to `127.0.0.1:3000` and exposes:
 
@@ -23,8 +34,9 @@ The server defaults to `127.0.0.1:3000` and exposes:
 - `GET /ready`, which reports only application MQTT readiness.
 
 REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
-MQTT message, and wait up to 15 seconds by default for the correlated result. Successful delivery ends at
-`delivered_to_printer`, never `printed`. PNG/JPEG `image` blocks are accepted
+MQTT message, and wait up to 15 seconds by default for the correlated result.
+Successful delivery ends at `delivered_to_printer`, never `printed`. PNG/JPEG
+`image` blocks are accepted
 only at REST/MCP: the Node `sharp` adapter validates and prepares a bounded
 monochrome `raster` before MQTT. The device never decodes source images.
 
