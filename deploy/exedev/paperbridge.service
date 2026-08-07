@@ -7,10 +7,10 @@ After=network-online.target
 Type=simple
 User=paperbridge
 Group=paperbridge
-WorkingDirectory=/opt/paperbridge/current
+WorkingDirectory=/opt/paperbridge/current/apps/api
 Environment=HOME=/var/empty
 EnvironmentFile=/etc/paperbridge/paperbridge.env
-ExecStart=/opt/paperbridge/current/deploy/exedev/run-node.sh apps/api/src/server.ts
+ExecStart=/opt/paperbridge/current/deploy/exedev/run-node.sh src/server.ts
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
