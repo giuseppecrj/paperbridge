@@ -21,7 +21,6 @@ printf 'PAPERBRIDGE_MQTT_PASSWORD_BASE64='
 printf '%s' "$PAPERBRIDGE_MQTT_PASSWORD" | base64 | tr -d '\n'
 printf '\n'
 cat <<EOF
-PAPERBRIDGE_MQTT_CLIENT_ID=paperbridge-api-prod
 PAPERBRIDGE_MQTT_TLS_ENABLED=true
 PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE=/etc/ssl/certs/ca-certificates.crt
 PAPERBRIDGE_MQTT_TLS_SERVER_HOSTNAME=t1b28b1a.ala.us-east-1.emqxsl.com
