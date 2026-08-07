@@ -111,12 +111,12 @@ rollback)
     }
     release="$releases/$previous"
     test -d "$release"
-    current=$(current_sha)
+    active=$(current_sha)
     install_unit "$release"
-    printf '%s\n' "$current" | install -m 0600 /dev/stdin "$state_dir/previous-sha"
+    printf '%s\n' "$active" | install -m 0600 /dev/stdin "$state_dir/previous-sha"
     switch_release "$release"
     systemctl restart paperbridge
-    printf 'rolled_back_sha=%s rollback_sha=%s\n' "$previous" "$current"
+    printf 'rolled_back_sha=%s rollback_sha=%s\n' "$previous" "$active"
     ;;
 *)
     echo "unsupported mode: $mode" >&2

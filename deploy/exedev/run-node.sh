@@ -6,4 +6,6 @@ PAPERBRIDGE_MQTT_PASSWORD=$(printf '%s' "$PAPERBRIDGE_MQTT_PASSWORD_BASE64" | ba
 unset PAPERBRIDGE_MQTT_PASSWORD_BASE64
 export PAPERBRIDGE_MQTT_PASSWORD
 cd /opt/paperbridge/current/apps/api
-exec /opt/paperbridge/current/.mise/installs/node/*/bin/node --import tsx "$@"
+node=$(find /opt/paperbridge/current/.mise/installs/node -maxdepth 3 -type f -name node -print -quit)
+test -x "$node"
+exec "$node" --import tsx "$@"
