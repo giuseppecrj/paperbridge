@@ -31,11 +31,18 @@ including the schema's final `{ "type": "cut", "mode": "partial" }` block, not
 by supplying an authorization flag.
 
 The service binds to `127.0.0.1` by default and has no public authentication.
-The plain Node MCP mount additionally rejects non-loopback Host and Origin
-values to prevent DNS rebinding. Keep it local; a future non-loopback/Tailscale
-bind requires an explicit allowed-host/origin policy. Production credential
-provisioning/rotation, public broker exposure, public sender authorization,
-signed updates, and OTA remain future work and may trigger ESP-IDF migration.
+The plain Node MCP mount rejects unconfigured Host and Origin values to prevent
+DNS rebinding. It allows loopback hosts and loopback development Origins by
+default. A private exe.dev deployment must set the non-secret
+`PAPERBRIDGE_API_ALLOWED_HOST` hostname and exact HTTPS
+`PAPERBRIDGE_API_ALLOWED_ORIGIN`; requests without Origin remain valid for
+non-browser MCP clients. The proxy must remain private and provide
+infrastructure access control. `/health` reports process liveness, while
+`/ready` reports only the connected application MQTT client; neither reports
+Device or Printer state. Keep the Node service bound to loopback.
+Production credential provisioning/rotation, public broker exposure, public
+sender authorization, signed updates, and OTA remain future work and may
+trigger ESP-IDF migration.
 The optional EMQX path requires CA verification, SNI, automatic NTP, and a
 separate Fnox profile. Its bounded no-output TLS scope was physically verified
 on 2026-08-07; this is not a production security or reliability claim.

@@ -15,6 +15,7 @@ export const API_JOB_MAX_BYTES = 2 * 1024 * 1024 + 4096;
 export interface ApiServerOptions {
 	submitJob(value: unknown, options?: JobSubmissionOptions): Promise<JobResult>;
 	mcp?: McpEndpoint;
+	isReady?: () => boolean;
 	maxBodyBytes?: number;
 }
 
@@ -63,6 +64,17 @@ export function createApiServer(options: ApiServerOptions): Server {
 	return createServer(async (request, response) => {
 		try {
 			const path = (request.url ?? "/").split("?", 1)[0];
+			if (path === "/health") {
+				writeJson(response, 200, { status: "ok" });
+				return;
+			}
+			if (path === "/ready") {
+				const ready = options.isReady?.() ?? false;
+				writeJson(response, ready ? 200 : 503, {
+					status: ready ? "ready" : "not_ready",
+				});
+				return;
+			}
 			if (path === "/mcp" && options.mcp) {
 				await options.mcp.handle(request, response);
 				return;

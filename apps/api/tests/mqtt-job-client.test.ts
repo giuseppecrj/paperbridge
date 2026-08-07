@@ -111,6 +111,18 @@ test("uses certificate verification and SNI only when MQTT TLS is enabled", () =
 	);
 });
 
+test("readiness follows the connected result-subscription lifecycle", () => {
+	const client = new FakeClient();
+	const broker = adapter(client);
+	assert.equal(broker.isReady(), false);
+
+	client.open();
+	assert.equal(broker.isReady(), true);
+
+	client.connected = false;
+	assert.equal(broker.isReady(), false);
+});
+
 test("publishes once with QoS 1 and resolves only the correlated result", async () => {
 	const client = new FakeClient();
 	const broker = adapter(client);

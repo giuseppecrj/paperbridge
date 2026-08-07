@@ -117,7 +117,7 @@ export class MqttJobClient {
 				new DOMException("Request cancelled", "AbortError"),
 			);
 		}
-		if (!this.ready || !this.client.connected) {
+		if (!this.isReady()) {
 			return Promise.reject(
 				new SubmissionError(
 					503,
@@ -200,8 +200,12 @@ export class MqttJobClient {
 
 	async waitUntilReady(timeoutMs: number): Promise<boolean> {
 		const deadline = Date.now() + timeoutMs;
-		while (!this.ready && Date.now() < deadline) await delay(10);
-		return this.ready;
+		while (!this.isReady() && Date.now() < deadline) await delay(10);
+		return this.isReady();
+	}
+
+	isReady(): boolean {
+		return this.ready && this.client.connected;
 	}
 
 	close(): void {
@@ -226,6 +230,7 @@ export class MqttJobClient {
 	}
 
 	private subscribe(): void {
+		this.ready = false;
 		this.client.subscribe(this.topics.results, { qos: 1 }, (error) => {
 			this.ready = !error;
 		});

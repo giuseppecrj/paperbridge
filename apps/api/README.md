@@ -18,7 +18,9 @@ The server defaults to `127.0.0.1:3000` and exposes:
 - Streamable HTTP MCP at `/mcp`, with one `paperbridge_print` tool accepting v1
   receipt `content` and generating a fresh `job_id`, configured `device_id`, and
   timestamp; and
-- the separate `just mqtt-probe` no-output diagnostic.
+- the separate `just mqtt-probe` no-output diagnostic;
+- `GET /health`, which reports only Node process liveness; and
+- `GET /ready`, which reports only application MQTT readiness.
 
 REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
 MQTT message, and wait up to 15 seconds by default for the correlated result. Successful delivery ends at
@@ -34,13 +36,26 @@ curl -sS \
 ```
 
 MCP uses the official v2 TypeScript SDK's stateless per-request handler. The
-plain Node mount rejects non-loopback Host and Origin values. Timeout returns
-`unknown` and never republishes; cancellation releases only the host waiter, so
-it does not invent a device outcome. Device duplicate suppression is bounded to
-one boot and returns `duplicate` / `DUPLICATE_JOB` without another printer
-connection.
+plain Node mount rejects unconfigured Host and Origin values. It allows
+`localhost`, `127.0.0.1`, and `[::1]` loopback hosts by default; a private proxy
+may add one hostname with `PAPERBRIDGE_API_ALLOWED_HOST` and its exact HTTPS
+origin with `PAPERBRIDGE_API_ALLOWED_ORIGIN`. Requests without an Origin are
+allowed for non-browser MCP clients. Loopback development Origins use a
+loopback hostname and may use HTTP or HTTPS with a local port. The configured
+proxy Origin must be HTTPS and have no path, query, or fragment.
 
-This remains a private MVP with no public authentication. Keep it on localhost.
+`/health` remains 200 when MQTT is disconnected. `/ready` is 200 only after the
+application MQTT client has connected and subscribed to job results; otherwise
+it is 503. Neither route probes or reports Device or Printer state.
+
+Timeout returns `unknown` and never republishes; cancellation releases only the
+host waiter, so it does not invent a device outcome. Device duplicate suppression
+is bounded to one boot and returns `duplicate` / `DUPLICATE_JOB` without another
+printer connection.
+
+This remains a private MVP with no public authentication. The exe.dev proxy
+must remain private and must provide the infrastructure access control. Keep the
+Node service bound to loopback.
 The optional MQTT/TLS configuration was physically verified for the bounded
 no-output EMQX scope on 2026-08-07; plain local Mosquitto remains the default.
 Durable delivery, public OAuth, multi-device routing, and automatic retry are not

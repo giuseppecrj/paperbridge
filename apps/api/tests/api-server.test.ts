@@ -28,6 +28,29 @@ const delivered: JobResult = {
 	bytes_sent: 28,
 };
 
+test("health is live while readiness follows application MQTT state", async (t) => {
+	let ready = false;
+	const server = createApiServer({
+		submitJob: async () => delivered,
+		isReady: () => ready,
+	});
+	t.after(() => server.close());
+	const baseUrl = await listen(server);
+
+	const health = await fetch(`${baseUrl}/health`);
+	assert.equal(health.status, 200);
+	assert.deepEqual(await health.json(), { status: "ok" });
+
+	const unavailable = await fetch(`${baseUrl}/ready`);
+	assert.equal(unavailable.status, 503);
+	assert.deepEqual(await unavailable.json(), { status: "not_ready" });
+
+	ready = true;
+	const available = await fetch(`${baseUrl}/ready`);
+	assert.equal(available.status, 200);
+	assert.deepEqual(await available.json(), { status: "ready" });
+});
+
 test("POST /api/jobs returns the correlated terminal result", async (t) => {
 	let submitted: unknown;
 	const server = createApiServer({

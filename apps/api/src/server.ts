@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import { createApiServer } from "./api-server.js";
-import { mqttTls, positiveInteger, required } from "./env.js";
+import {
+	apiAccessPolicy,
+	mqttTls,
+	positiveInteger,
+	required,
+} from "./env.js";
 import {
 	JobSubmissionService,
 	type JobSubmissionOptions,
@@ -32,8 +37,16 @@ if (!brokerReady) {
 const jobs = new JobSubmissionService(deviceId, broker);
 const submitJob = (value: unknown, options: JobSubmissionOptions = {}) =>
 	jobs.submit(value, options);
-const mcp = createMcpEndpoint({ deviceId, submitJob });
-const server = createApiServer({ submitJob, mcp });
+const mcp = createMcpEndpoint({
+	deviceId,
+	submitJob,
+	accessPolicy: apiAccessPolicy(),
+});
+const server = createApiServer({
+	submitJob,
+	mcp,
+	isReady: () => broker.isReady(),
+});
 await new Promise<void>((resolve, reject) => {
 	server.once("error", reject);
 	server.listen(port, host, resolve);

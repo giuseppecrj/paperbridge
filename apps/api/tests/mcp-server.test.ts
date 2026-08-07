@@ -55,6 +55,72 @@ async function listen(
 	return `http://127.0.0.1:${address.port}`;
 }
 
+test("accepts the configured proxy Host and exact HTTPS Origin", async (t) => {
+	const mcp = createMcpEndpoint({
+		deviceId: "paperbridge-dev-001",
+		submitJob: async () => delivered,
+		accessPolicy: {
+			allowedHostnames: [
+				"localhost",
+				"127.0.0.1",
+				"[::1]",
+				"paperbridge.example.exe.xyz",
+			],
+			allowedOrigins: [
+				"http://localhost",
+				"http://127.0.0.1",
+				"http://[::1]",
+				"https://paperbridge.example.exe.xyz",
+			],
+		},
+	});
+	const server = createApiServer({ submitJob: async () => delivered, mcp });
+	const baseUrl = await listen(server);
+	t.after(async () => {
+		await mcp.close();
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	});
+
+	assert.notEqual(
+		await post(baseUrl, { host: "paperbridge.example.exe.xyz" }),
+		403,
+	);
+	assert.notEqual(
+		await post(baseUrl, {
+			host: "paperbridge.example.exe.xyz",
+			origin: "https://paperbridge.example.exe.xyz",
+		}),
+		403,
+	);
+	assert.notEqual(
+		await post(baseUrl, {
+			host: "127.0.0.1",
+			origin: "http://localhost:3000",
+		}),
+		403,
+	);
+	assert.notEqual(
+		await post(baseUrl, {
+			host: "127.0.0.1",
+			origin: "https://localhost:3000",
+		}),
+		403,
+	);
+	assert.equal(
+		await post(baseUrl, {
+			host: "paperbridge.example.exe.xyz",
+			origin: "http://paperbridge.example.exe.xyz",
+		}),
+		403,
+	);
+	assert.equal(
+		await post(baseUrl, {
+			host: "unconfigured.example.exe.xyz",
+		}),
+		403,
+	);
+});
+
 test("discovers and calls the print tool through the shared job service", async (t) => {
 	const submissions: unknown[] = [];
 	const ids = ["job-mcp-001", "job-mcp-002", "job-mcp-003"];

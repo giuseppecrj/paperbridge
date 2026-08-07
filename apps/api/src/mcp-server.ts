@@ -7,8 +7,7 @@ import {
 	McpServer,
 } from "@modelcontextprotocol/server";
 import {
-	localhostHostValidation,
-	localhostOriginValidation,
+	hostHeaderValidation,
 	toNodeHandler,
 } from "@modelcontextprotocol/node";
 import {
@@ -17,6 +16,7 @@ import {
 	type PrintJobContent,
 } from "@paperbridge/protocol";
 
+import { LOOPBACK_HOSTNAMES } from "./env.js";
 import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 
 export interface McpEndpoint {
@@ -24,12 +24,23 @@ export interface McpEndpoint {
 	close(): Promise<void>;
 }
 
+export interface McpAccessPolicy {
+	allowedHostnames: string[];
+	allowedOrigins: string[];
+}
+
 interface McpEndpointOptions {
 	deviceId: string;
 	submitJob(value: unknown, options?: JobSubmissionOptions): Promise<JobResult>;
+	accessPolicy?: McpAccessPolicy;
 	createJobId?: () => string;
 	now?: () => string;
 }
+
+const defaultAccessPolicy: McpAccessPolicy = {
+	allowedHostnames: LOOPBACK_HOSTNAMES,
+	allowedOrigins: ["http://localhost", "http://127.0.0.1", "http://[::1]"],
+};
 
 const inputSchema = fromJsonSchema<{ content: PrintJobContent }>({
 	type: "object",
@@ -45,6 +56,35 @@ function toolResult(value: unknown, isError = false) {
 		structuredContent: value,
 		...(isError ? { isError: true } : {}),
 	};
+}
+
+function rejectOrigin(response: ServerResponse, message: string): false {
+	response.writeHead(403, { "Content-Type": "application/json" });
+	response.end(
+		JSON.stringify({
+			jsonrpc: "2.0",
+			error: { code: -32000, message },
+			id: null,
+		}),
+	);
+	return false;
+}
+
+function originIsAllowed(
+	request: IncomingMessage,
+	policy: McpAccessPolicy,
+): boolean {
+	const origin = request.headers.origin;
+	if (origin === undefined) return true;
+	if (Array.isArray(origin)) return false;
+	let parsed: URL;
+	try {
+		parsed = new URL(origin);
+	} catch {
+		return false;
+	}
+	if (LOOPBACK_HOSTNAMES.includes(parsed.hostname)) return true;
+	return policy.allowedOrigins.includes(parsed.origin);
 }
 
 export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
@@ -84,13 +124,16 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
 		return server;
 	});
 	const handleMcp = toNodeHandler(handler);
-	const validateHost = localhostHostValidation();
-	const validateOrigin = localhostOriginValidation();
+	const policy = options.accessPolicy ?? defaultAccessPolicy;
+	const validateHost = hostHeaderValidation(policy.allowedHostnames);
 
 	return {
 		async handle(request, response) {
 			if (!validateHost(request, response)) return;
-			if (!validateOrigin(request, response)) return;
+			if (!originIsAllowed(request, policy)) {
+				rejectOrigin(response, "Origin header is not allowed");
+				return;
+			}
 			await handleMcp(request, response);
 		},
 		close: () => handler.close(),
