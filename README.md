@@ -259,7 +259,9 @@ just mqtt-probe
 correlated tracer response—not printer delivery or paper output. MCP clients
 connect to `http://127.0.0.1:3000/mcp` and call `paperbridge_print` with a v1
 receipt `content` object; the service supplies the job envelope and waits for the
-same honest result as REST.
+same honest result as REST. For the deployed private REST/MCP endpoints and
+current exe.dev token-only access model, see
+[`docs/private-cloud-access.md`](docs/private-cloud-access.md).
 
 ## Simulator
 

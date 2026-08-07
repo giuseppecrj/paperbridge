@@ -55,7 +55,8 @@ printer connection.
 
 This remains a private MVP with no public authentication. The exe.dev proxy
 must remain private and must provide the infrastructure access control. Keep the
-Node service bound to loopback.
+Node service bound to loopback. For deployed private REST/MCP client setup, see
+[`../../docs/private-cloud-access.md`](../../docs/private-cloud-access.md).
 The optional MQTT/TLS configuration was physically verified for the bounded
 no-output EMQX scope on 2026-08-07; plain local Mosquitto remains the default.
 Durable delivery, public OAuth, multi-device routing, and automatic retry are not

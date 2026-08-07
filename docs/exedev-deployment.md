@@ -49,7 +49,9 @@ ssh exe.dev 'share set-private paperbridge-prod'
 Create a VM-scoped `X-Exedev-Authorization` token with an explicit finite
 expiry. Store it in 1Password or another approved local secret store; do not
 commit, paste, or log it. Use the token only at the exe.dev edge. The proxy
-removes it before the request reaches Node.
+removes it before the request reaches Node. For client MCP and REST setup, see
+[`private-cloud-access.md`](private-cloud-access.md); do not treat this token as
+a Paperbridge Sender credential.
 
 Configure the service environment with both:
 
