@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "bun build src/server.ts --target=node --format=esm --external=sharp --outfile=dist/server.js",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "start": "node --import tsx src/server.ts",
+    "start:production": "node dist/server.js",
     "mqtt:probe": "node --import tsx src/main.ts"
   },
   "dependencies": {
