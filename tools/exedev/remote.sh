@@ -34,15 +34,16 @@ install_mise() {
 prepare_release() {
     local target=$1
     local release="$releases/$target"
-    as_paperbridge git -C "$repository" fetch --quiet --depth=1 origin "$target"
-    as_paperbridge git -C "$repository" cat-file -e "$target^{commit}"
+    as_paperbridge git -C "$repository" fetch --quiet --depth=1 origin "$target" || return
+    as_paperbridge git -C "$repository" cat-file -e "$target^{commit}" || return
     if [[ ! -d "$release" ]]; then
-        as_paperbridge git -C "$repository" worktree add --detach "$release" "$target" >&2
+        as_paperbridge git -C "$repository" worktree add --detach "$release" "$target" >&2 || return
     fi
+    as_paperbridge /usr/local/bin/mise trust "$release/mise.toml" >&2 || return
     as_paperbridge env MISE_DATA_DIR="$release/.mise" \
-        /usr/local/bin/mise -C "$release" install >&2
+        /usr/local/bin/mise -C "$release" install >&2 || return
     as_paperbridge env MISE_DATA_DIR="$release/.mise" \
-        /usr/local/bin/mise -C "$release" exec -- bun install --frozen-lockfile >&2
+        /usr/local/bin/mise -C "$release" exec -- bun install --frozen-lockfile >&2 || return
     printf '%s\n' "$release"
 }
 
@@ -80,7 +81,7 @@ bootstrap)
     if [[ ! -d "$repository/.git" ]]; then
         as_paperbridge git clone https://github.int.exe.xyz/giuseppecrj/paperbridge.git "$repository"
     fi
-    release=$(prepare_release "$sha")
+    release=$(prepare_release "$sha") || exit $?
     switch_release "$release"
     install_unit "$release"
     systemctl enable paperbridge
@@ -94,7 +95,7 @@ deploy)
         echo "current release SHA is invalid" >&2
         exit 2
     }
-    release=$(prepare_release "$sha")
+    release=$(prepare_release "$sha") || exit $?
     install_unit "$release"
     printf '%s\n' "$previous" | install -m 0600 /dev/stdin "$state_dir/previous-sha"
     switch_release "$release"
