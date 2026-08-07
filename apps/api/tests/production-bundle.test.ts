@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
@@ -39,19 +41,27 @@ function buildProduction(): void {
 	);
 }
 
-function startProduction(apiPort: number, mqttPort: number) {
+function startProduction(
+	apiPort: number,
+	mqttPort: number,
+	passwordFile?: string,
+) {
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		PAPERBRIDGE_API_HOST: "127.0.0.1",
+		PAPERBRIDGE_API_PORT: String(apiPort),
+		PAPERBRIDGE_DEVICE_ID: deviceId,
+		PAPERBRIDGE_MQTT_HOST: "127.0.0.1",
+		PAPERBRIDGE_MQTT_PORT: String(mqttPort),
+		PAPERBRIDGE_MQTT_USERNAME: deviceId,
+	};
+	delete env.PAPERBRIDGE_MQTT_PASSWORD;
+	delete env.PAPERBRIDGE_MQTT_PASSWORD_FILE;
+	if (passwordFile) env.PAPERBRIDGE_MQTT_PASSWORD_FILE = passwordFile;
+	else env.PAPERBRIDGE_MQTT_PASSWORD = password;
 	const child = spawn(process.execPath, ["dist/server.js"], {
 		cwd: apiRoot,
-		env: {
-			...process.env,
-			PAPERBRIDGE_API_HOST: "127.0.0.1",
-			PAPERBRIDGE_API_PORT: String(apiPort),
-			PAPERBRIDGE_DEVICE_ID: deviceId,
-			PAPERBRIDGE_MQTT_HOST: "127.0.0.1",
-			PAPERBRIDGE_MQTT_PORT: String(mqttPort),
-			PAPERBRIDGE_MQTT_USERNAME: deviceId,
-			PAPERBRIDGE_MQTT_PASSWORD: password,
-		},
+		env,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	let output = "";
@@ -167,8 +177,12 @@ test("prepares image fixtures through the production API and MQTT", {
 		);
 	});
 
+	const secretRoot = mkdtempSync(join(tmpdir(), "paperbridge-secret-"));
+	const passwordFile = join(secretRoot, "mqtt-password");
+	writeFileSync(passwordFile, password);
+	t.after(() => rmSync(secretRoot, { recursive: true }));
 	const apiPort = await unusedPort();
-	const { child, output } = startProduction(apiPort, broker.port);
+	const { child, output } = startProduction(apiPort, broker.port, passwordFile);
 	t.after(() => stop(child));
 	const baseUrl = `http://127.0.0.1:${apiPort}`;
 	const ready = await waitForResponse(`${baseUrl}/ready`, child, output);
@@ -242,4 +256,6 @@ test("prepares image fixtures through the production API and MQTT", {
 			status: "delivered_to_printer",
 		},
 	);
+	assert.doesNotMatch(output(), /test-password/);
+	assert.equal(output().includes(passwordFile), false);
 });

@@ -22,6 +22,12 @@ bun run --filter @paperbridge/api start:production
 The build writes `dist/server.js` and keeps `sharp` external so Node can load its
 native binary. Application code does not use Bun runtime APIs.
 
+Local Fnox commands continue to provide `PAPERBRIDGE_MQTT_PASSWORD` directly.
+A deployed runtime may instead set `PAPERBRIDGE_MQTT_PASSWORD_FILE` to a
+non-empty mounted credential. The API and no-output probe read the file once at
+startup without trimming it. Set exactly one of these variables; neither value
+is included in startup errors.
+
 The server defaults to `127.0.0.1:3000` and exposes:
 
 - `POST /api/jobs`, accepting a complete source `print-job.v1` body no larger
