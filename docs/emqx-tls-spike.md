@@ -56,10 +56,12 @@ and safety results.
 Still unverified:
 
 - Wi-Fi loss and MQTT/TLS reconnect;
-- QoS redelivery duplicate behavior over EMQX after reconnect;
-- a valid semantic print job and correlated result over EMQX;
-- physical paper output; and
+- QoS redelivery duplicate behavior over EMQX after reconnect; and
 - long-duration MQTT/TLS and W5500 coexistence.
+
+The later #15 cloud acceptance separately verified one valid semantic job and
+physical paper observation through the private MCP → exe.dev → EMQX path. It
+must not be attributed to this bounded no-output spike.
 
 A TLS memory failure, unreliable coexistence, or normal-fault reset remains an
 ESP-IDF migration signal under ADR 0001. A successful socket write remains

@@ -26,7 +26,11 @@
   `hil-network-recovery-89867cf401c3`. On 2026-08-07, EMQX Serverless MQTT/TLS,
   automatic NTP, a correlated no-output probe, a safely rejected 65,000-byte
   payload, and concurrent direct-printer reachability passed as
-  `emqx-tls-spike-945ac7ad7d78`.
+  `emqx-tls-spike-945ac7ad7d78`. Later that day, the private MCP → exe.dev →
+  EMQX → Device → direct-W5500 cloud path delivered job
+  `d4a6833c-5061-4fb9-98b5-9e95c7c55155` to the printer-facing socket after
+  41,752 bytes. The operator separately observed its expected text/layout,
+  recognizable ACRNM image, scannable QR, two-line feed, and one partial cut.
 
 Official W5500 signal map for this product page:
 
@@ -104,6 +108,7 @@ acceptance remain open.
 | Dedicated direct printer subnet | W5500 `192.168.4.50/24` reached printer `192.168.4.87:9100` | 2026-08-02 |
 | Wi-Fi + MQTT tracer | Wi-Fi obtained `192.168.1.110`; lock-protected firmware returned correlated probe `1e087965-b790-4cd9-a4ef-950c1ab86183`; USB RPC and direct printer probe still succeeded | 2026-08-02 |
 | EMQX MQTT/TLS no-output spike | Verified CA/SNI and automatic NTP on MicroPython 1.28; correlated probe `ebcfeebd-0c42-449f-bba9-8dd548d8d88a` passed; non-retained 65,000-byte job was rejected as `INVALID_PRINT_JOB` before rendering; W5500/printer remained reachable; heap recovered to 8,184,624 bytes; `emqx-tls-spike-945ac7ad7d78` | 2026-08-07 |
+| Cloud MCP/EMQX physical acceptance | Private MCP through exe.dev delivered `d4a6833c-5061-4fb9-98b5-9e95c7c55155` after 41,752 bytes; operator separately confirmed expected text/layout, recognizable ACRNM image, scannable QR, two-line feed, and one partial cut. The earlier one-off job `909ed0bb-a0b3-4d28-887d-6e66dae6046f` failed `PRINTER_CONNECT_TIMEOUT` without a delivery claim after a Device reboot reset W5500 state; post-fix smoke `hil-smoke-31b1e1c31c79` passed before the final job. | 2026-08-07 |
 | Dual-interface recovery | Guarded Wi-Fi/MQTT disconnect/reconnect preserved direct printer TCP reachability; direct W5500 disconnect/reconnect preserved Wi-Fi/MQTT; `hil-network-recovery-89867cf401c3` | 2026-08-02 |
 | Guarded W5500 reconnect | After a soft reset remained at `ETH_STARTED`, `ethernet reconnect --confirm` cycled the LAN singleton; link returned as `raw_status: 5` and printer probe succeeded without a cable reseat | 2026-08-02 |
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |

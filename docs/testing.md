@@ -58,10 +58,17 @@ without a cable reseat. On 2026-08-07, the no-output EMQX TLS spike
 `emqx-tls-spike-945ac7ad7d78` physically verified CA/SNI, automatic NTP, one
 correlated tracer response, safe rejection of a non-retained 65,000-byte invalid
 job before rendering, and direct W5500/printer reachability while MQTT/TLS stayed
-connected. Heap recovered to 8,184,624 bytes. Wi-Fi-loss reconnect, EMQX QoS
-redelivery behavior, valid semantic delivery, paper output, and long-duration
-coexistence remain unverified. Evidence IDs and observations are recorded in
-`hardware.md`; the 72-hour soak also remains.
+connected. Heap recovered to 8,184,624 bytes. On 2026-08-07, issue #15
+physically verified one private MCP → exe.dev → EMQX → Device → direct-W5500
+semantic job: `d4a6833c-5061-4fb9-98b5-9e95c7c55155` returned
+`delivered_to_printer` after 41,752 bytes, and the operator separately confirmed
+expected text/layout, recognizable ACRNM image, scannable QR, two-line feed, and
+one partial cut. The earlier unique job failed `PRINTER_CONNECT_TIMEOUT` after a
+Device reboot reset W5500 state; `e767fd3` preserves Wi-Fi DNS through W5500
+static configuration, and post-fix smoke `hil-smoke-31b1e1c31c79` passed before
+the final job. Wi-Fi-loss reconnect, EMQX QoS redelivery behavior, and
+long-duration coexistence remain unverified. Evidence IDs and observations are
+recorded in `hardware.md`; the 72-hour soak also remains.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
 operates the purchased printer. Real-broker and real-socket simulator tests are
