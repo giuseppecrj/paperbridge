@@ -1,14 +1,22 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import mqtt from "mqtt";
 
-import { probe, topics } from "../src/mqtt-tracer.js";
+import { topics } from "../src/mqtt-tracer.js";
 import {
 	connectMqtt,
 	mosquittoAvailable,
 	startMosquitto,
 } from "./support/mosquitto.js";
+
+const apiRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("Mosquitto rejects anonymous probes and returns one authenticated response", {
 	skip: !mosquittoAvailable,
@@ -61,16 +69,44 @@ test("Mosquitto rejects anonymous probes and returns one authenticated response"
 		);
 	});
 
-	const result = await probe({
-		host: "127.0.0.1",
-		port,
-		username,
-		password,
-		deviceId: username,
-		clientId: "paperbridge-host-test",
-		timeoutMs: 1000,
+	const secretRoot = mkdtempSync(join(tmpdir(), "paperbridge-secret-"));
+	const passwordFile = join(secretRoot, "mqtt-password");
+	writeFileSync(passwordFile, password);
+	t.after(() => rmSync(secretRoot, { recursive: true }));
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		PAPERBRIDGE_MQTT_HOST: "127.0.0.1",
+		PAPERBRIDGE_MQTT_PORT: String(port),
+		PAPERBRIDGE_MQTT_USERNAME: username,
+		PAPERBRIDGE_DEVICE_ID: username,
+		PAPERBRIDGE_MQTT_CLIENT_ID: "paperbridge-host-test",
+		PAPERBRIDGE_MQTT_TIMEOUT_MS: "1000",
+		PAPERBRIDGE_MQTT_TLS_ENABLED: "false",
+		PAPERBRIDGE_MQTT_PASSWORD_FILE: passwordFile,
+	};
+	delete env.PAPERBRIDGE_MQTT_PASSWORD;
+	const probe = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], {
+		cwd: apiRoot,
+		env,
+		stdio: ["ignore", "pipe", "pipe"],
 	});
-
+	t.after(() => {
+		if (probe.exitCode === null && probe.signalCode === null)
+			probe.kill("SIGKILL");
+	});
+	let stdout = "";
+	let stderr = "";
+	probe.stdout.on("data", (chunk) => {
+		stdout += chunk;
+	});
+	probe.stderr.on("data", (chunk) => {
+		stderr += chunk;
+	});
+	const [exitCode] = await once(probe, "exit");
+	assert.equal(exitCode, 0, stderr);
+	assert.doesNotMatch(`${stdout}\n${stderr}`, /test-password/);
+	assert.equal(stderr.includes(passwordFile), false);
+	const result = JSON.parse(stdout);
 	assert.equal(result.status, "ok");
 	assert.equal(result.device_id, username);
 });

@@ -6,6 +6,40 @@ export function required(name: string): string {
 	return value;
 }
 
+export function mqttPassword(): string {
+	const password = process.env.PAPERBRIDGE_MQTT_PASSWORD;
+	const path = process.env.PAPERBRIDGE_MQTT_PASSWORD_FILE;
+	if (password !== undefined && path !== undefined) {
+		throw new Error(
+			"PAPERBRIDGE_MQTT_PASSWORD and PAPERBRIDGE_MQTT_PASSWORD_FILE are mutually exclusive",
+		);
+	}
+	if (password !== undefined) {
+		if (!password) {
+			throw new Error("PAPERBRIDGE_MQTT_PASSWORD must not be empty");
+		}
+		return password;
+	}
+	if (path === undefined) {
+		throw new Error(
+			"PAPERBRIDGE_MQTT_PASSWORD or PAPERBRIDGE_MQTT_PASSWORD_FILE is required",
+		);
+	}
+	if (!path) {
+		throw new Error("PAPERBRIDGE_MQTT_PASSWORD_FILE must not be empty");
+	}
+	let value: string;
+	try {
+		value = readFileSync(path, "utf8");
+	} catch {
+		throw new Error("PAPERBRIDGE_MQTT_PASSWORD_FILE could not be read");
+	}
+	if (!value) {
+		throw new Error("PAPERBRIDGE_MQTT_PASSWORD_FILE must not be empty");
+	}
+	return value;
+}
+
 export function positiveInteger(name: string, fallback: number): number {
 	const value = process.env[name];
 	if (value === undefined) return fallback;

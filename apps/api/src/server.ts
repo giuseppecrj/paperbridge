@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createApiServer } from "./api-server.js";
 import {
 	apiAccessPolicy,
+	mqttPassword,
 	mqttTls,
 	positiveInteger,
 	required,
@@ -21,7 +22,7 @@ const broker = new MqttJobClient({
 	host: required("PAPERBRIDGE_MQTT_HOST"),
 	port: positiveInteger("PAPERBRIDGE_MQTT_PORT", 1883),
 	username: required("PAPERBRIDGE_MQTT_USERNAME"),
-	password: required("PAPERBRIDGE_MQTT_PASSWORD"),
+	password: mqttPassword(),
 	deviceId,
 	clientId:
 		process.env.PAPERBRIDGE_MQTT_CLIENT_ID ?? `paperbridge-api-${randomUUID()}`,
