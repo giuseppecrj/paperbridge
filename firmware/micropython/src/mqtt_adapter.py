@@ -26,12 +26,17 @@ class MqttTracer:
         lock=None,
         job_service=None,
         job_ledger=None,
+        utc_year=None,
+        sync_time=None,
     ):
         self.config = config
         self.wifi = wifi
         self.settings = config["mqtt"]
+        self.tls = self.settings.get("tls", {"enabled": False})
         self.client_factory = client_factory or self._default_client_factory
         self.clock_ms = clock_ms or self._default_clock_ms
+        self.utc_year = utc_year or self._default_utc_year
+        self.sync_time = sync_time or self._default_sync_time
         self.ticks_diff = ticks_diff or self._default_ticks_diff
         self._lock = lock or __import__("_thread").allocate_lock()
         self.job_service = job_service
@@ -52,6 +57,17 @@ class MqttTracer:
     @staticmethod
     def _default_client_factory(**settings):
         mqtt = __import__("umqtt.simple", None, None, ("MQTTClient",))
+        tls = settings.get("tls")
+        if tls is None:
+            return mqtt.MQTTClient(
+                settings["client_id"],
+                settings["host"],
+                port=settings["port"],
+                user=settings["username"],
+                password=settings["password"],
+                keepalive=settings["keepalive_seconds"],
+            )
+        ssl = __import__("ssl")
         return mqtt.MQTTClient(
             settings["client_id"],
             settings["host"],
@@ -59,6 +75,12 @@ class MqttTracer:
             user=settings["username"],
             password=settings["password"],
             keepalive=settings["keepalive_seconds"],
+            ssl=True,
+            ssl_params={
+                "cert_reqs": ssl.CERT_REQUIRED,
+                "cadata": tls["ca_certificate"].encode("ascii"),
+                "server_hostname": tls["server_hostname"],
+            },
         )
 
     @staticmethod
@@ -71,6 +93,16 @@ class MqttTracer:
             return int(time.monotonic() * 1000)
         except AttributeError:
             return int(time.time() * 1000)
+
+    @staticmethod
+    def _default_utc_year():
+        time = __import__("time")
+        return time.gmtime()[0]
+
+    @staticmethod
+    def _default_sync_time():
+        ntptime = __import__("ntptime")
+        ntptime.settime()
 
     @staticmethod
     def _default_ticks_diff(new, old):
@@ -110,15 +142,34 @@ class MqttTracer:
 
     def _connect(self):
         self.last_connect_attempt_ms = self.clock_ms()
+        tls = self.tls
+        if tls["enabled"]:
+            try:
+                clock_ready = self.utc_year() >= 2020
+            except Exception:
+                clock_ready = False
+            if not clock_ready:
+                try:
+                    self.sync_time()
+                    clock_ready = self.utc_year() >= 2020
+                except Exception as exc:
+                    self._set_state(None, f"MQTT_TLS_CLOCK_SYNC_FAILED: {exc}")
+                    return
+            if not clock_ready:
+                self._set_state(None, "MQTT_TLS_CLOCK_NOT_READY")
+                return
         try:
-            client = self.client_factory(
-                client_id=self.settings["client_id"],
-                host=self.settings["host"],
-                port=self.settings["port"],
-                username=self.settings["username"],
-                password=self.settings["password"],
-                keepalive_seconds=self.settings["keepalive_seconds"],
-            )
+            settings = {
+                "client_id": self.settings["client_id"],
+                "host": self.settings["host"],
+                "port": self.settings["port"],
+                "username": self.settings["username"],
+                "password": self.settings["password"],
+                "keepalive_seconds": self.settings["keepalive_seconds"],
+            }
+            if tls["enabled"]:
+                settings["tls"] = tls
+            client = self.client_factory(**settings)
             client.set_callback(self._handle_message)
             client.connect()
             client.subscribe(self.jobs_topic, qos=1)

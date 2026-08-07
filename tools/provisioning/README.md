@@ -53,5 +53,23 @@ The flag is device policy, not a caller-supplied authorization field. Leave it
 `false` when remote senders must not be able to activate the cutter. Local USB
 jobs use the separate explicit `--allow-cut` authorization.
 
+### Optional EMQX TLS spike
+
+Local Mosquitto remains the default. For the reversible EMQX TLS spike, set
+these non-secret ignored `.env` values before `just configure-device`:
+
+```sh
+PAPERBRIDGE_MQTT_TLS_ENABLED=true
+PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE=/absolute/path/to/emqx-ca.pem
+PAPERBRIDGE_MQTT_TLS_SERVER_HOSTNAME=your-broker.example
+```
+
+The generator reads the PEM file into ignored `config.json`; it does not put the
+certificate or password in command arguments. TLS requires the selected broker
+TLS port, automatic device time synchronization, and a password supplied as
+`PAPERBRIDGE_MQTT_PASSWORD`. See
+[`docs/emqx-tls-spike.md`](../../docs/emqx-tls-spike.md) for the physically
+verified no-output scope and remaining gates.
+
 Production device identity and credential provisioning are intentionally not
 implemented.

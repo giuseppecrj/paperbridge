@@ -41,5 +41,7 @@ one boot and returns `duplicate` / `DUPLICATE_JOB` without another printer
 connection.
 
 This remains a private MVP with no public authentication. Keep it on localhost.
-MQTT/TLS, durable delivery, public OAuth, multi-device routing, and automatic
-retry are not implemented.
+The optional MQTT/TLS configuration was physically verified for the bounded
+no-output EMQX scope on 2026-08-07; plain local Mosquitto remains the default.
+Durable delivery, public OAuth, multi-device routing, and automatic retry are not
+implemented.

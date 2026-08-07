@@ -1,7 +1,39 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildProbe, topics } from "../src/mqtt-tracer.js";
+import { buildProbe, connectionOptions, topics } from "../src/mqtt-tracer.js";
+
+test("uses certificate verification and SNI only when MQTT TLS is enabled", () => {
+	const config = {
+		deviceId: "paperbridge-dev-001",
+		host: "abc.emqxsl.com",
+		port: 8883,
+		username: "device",
+		password: "password",
+		clientId: "probe-test",
+		timeoutMs: 1000,
+		tls: { ca: Buffer.from("CA"), servername: "abc.emqxsl.com" },
+	};
+
+	assert.deepEqual(connectionOptions(config), {
+		host: "abc.emqxsl.com",
+		port: 8883,
+		protocol: "mqtts",
+		protocolVersion: 4,
+		clientId: "probe-test",
+		username: "device",
+		password: "password",
+		clean: true,
+		reconnectPeriod: 0,
+		ca: Buffer.from("CA"),
+		servername: "abc.emqxsl.com",
+		rejectUnauthorized: true,
+	});
+	assert.equal(
+		connectionOptions({ ...config, tls: undefined }).protocol,
+		"mqtt",
+	);
+});
 
 test("builds a bounded correlated MQTT probe on the device topics", () => {
 	const probe = buildProbe(

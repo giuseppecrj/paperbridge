@@ -12,6 +12,9 @@ onepass = { type = "1password", vault = "Agent" }
 OP_SERVICE_ACCOUNT_TOKEN = { provider = "keychain", value = "OP_SERVICE_ACCOUNT_TOKEN", env = false, if_missing = "ignore", description = "Optional machine-local 1Password service-account bootstrap" }
 PAPERBRIDGE_MQTT_PASSWORD = { provider = "onepass", value = "op://Agent/paperbridge-mqtt-password/password", description = "Local development broker password" }
 
+[profiles.emqx-spike.secrets]
+PAPERBRIDGE_MQTT_PASSWORD = { provider = "onepass", value = "op://Agent/paperbridge-emqx-spike/password", description = "EMQX Cloud spike broker password" }
+
 [profiles.device.secrets]
 OP_SERVICE_ACCOUNT_TOKEN = { provider = "keychain", value = "OP_SERVICE_ACCOUNT_TOKEN", env = false, if_missing = "ignore", description = "Optional machine-local 1Password service-account bootstrap" }
 PAPERBRIDGE_MQTT_PASSWORD = { provider = "onepass", value = "op://Agent/paperbridge-mqtt-password/password", description = "Local development broker password" }

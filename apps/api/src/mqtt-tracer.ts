@@ -27,6 +27,28 @@ export interface MqttTracerConfig {
 	deviceId: string;
 	clientId: string;
 	timeoutMs: number;
+	tls?: { ca: Buffer; servername: string };
+}
+
+export function connectionOptions(
+	config: MqttTracerConfig,
+): mqtt.IClientOptions {
+	return {
+		host: config.host,
+		port: config.port,
+		protocol: config.tls ? "mqtts" : "mqtt",
+		protocolVersion: 4,
+		clientId: config.clientId,
+		username: config.username,
+		password: config.password,
+		clean: true,
+		reconnectPeriod: 0,
+		...(config.tls && {
+			ca: config.tls.ca,
+			servername: config.tls.servername,
+			rejectUnauthorized: true,
+		}),
+	};
 }
 
 export function topics(deviceId: string) {
@@ -94,17 +116,7 @@ export function probe(config: MqttTracerConfig): Promise<MqttProbeStatus> {
 	const deviceTopics = topics(config.deviceId);
 
 	return new Promise((resolve, reject) => {
-		const client = mqtt.connect({
-			host: config.host,
-			port: config.port,
-			protocol: "mqtt",
-			protocolVersion: 4,
-			clientId: config.clientId,
-			username: config.username,
-			password: config.password,
-			clean: true,
-			reconnectPeriod: 0,
-		});
+		const client = mqtt.connect(connectionOptions(config));
 		const timeout = setTimeout(
 			() => finish(new Error("MQTT probe timed out")),
 			config.timeoutMs,

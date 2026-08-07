@@ -76,6 +76,44 @@ def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
 
 
+def test_generate_tls_configuration_from_a_local_ca_file(tmp_path, monkeypatch):
+    ca_file = tmp_path / "emqx-ca.pem"
+    ca_file.write_text("-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n")
+    values = {
+        "PAPERBRIDGE_DEVICE_ID": "paperbridge-dev-001",
+        "PAPERBRIDGE_PRINTER_HOST": "192.168.4.87",
+        "PAPERBRIDGE_WIFI_SSID": "Paperbridge Test Wi-Fi",
+        "PAPERBRIDGE_WIFI_PASSWORD": "wifi-password",
+        "PAPERBRIDGE_MQTT_HOST": "abc.emqxsl.com",
+        "PAPERBRIDGE_MQTT_USERNAME": "paperbridge-dev-001",
+        "PAPERBRIDGE_MQTT_PASSWORD": "mqtt-password",
+        "PAPERBRIDGE_MQTT_TLS_ENABLED": "true",
+        "PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE": str(ca_file),
+        "PAPERBRIDGE_MQTT_TLS_SERVER_HOSTNAME": "abc.emqxsl.com",
+    }
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
+    output = tmp_path / "config.json"
+
+    gen.main(["--from-env", "--output", str(output)])
+
+    assert json.loads(output.read_text())["mqtt"]["tls"] == {
+        "enabled": True,
+        "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+        "server_hostname": "abc.emqxsl.com",
+    }
+
+
+def test_tls_configuration_rejects_a_non_ascii_ca_file(tmp_path, monkeypatch):
+    ca_file = tmp_path / "invalid-ca.pem"
+    ca_file.write_bytes(b"\xff")
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_TLS_ENABLED", "true")
+    monkeypatch.setenv("PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE", str(ca_file))
+
+    with pytest.raises(SystemExit, match="Unable to read MQTT TLS CA certificate"):
+        gen.tls_environment()
+
+
 def test_remote_cut_policy_requires_an_explicit_boolean(monkeypatch):
     monkeypatch.delenv("PAPERBRIDGE_MQTT_ALLOW_CUT", raising=False)
     assert gen.boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False) is False

@@ -21,6 +21,55 @@ def _ipv4(value, field, nullable=False):
         raise ConfigurationError(f"{field} must be an IPv4 address")
 
 
+def _hostname(value, field):
+    if not isinstance(value, str) or not 1 <= len(value) <= 253:
+        raise ConfigurationError(f"{field} must be a DNS hostname")
+    try:
+        value.encode("ascii")
+    except UnicodeError as exc:
+        raise ConfigurationError(f"{field} must be a DNS hostname") from exc
+    labels = value.split(".")
+    hostname_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"
+    if any(
+        not 1 <= len(label) <= 63
+        or label[0] == "-"
+        or label[-1] == "-"
+        or not all(character in hostname_characters for character in label)
+        for label in labels
+    ):
+        raise ConfigurationError(f"{field} must be a DNS hostname")
+    try:
+        _ipv4(value, field)
+    except ConfigurationError:
+        return
+    raise ConfigurationError(f"{field} must be a DNS hostname")
+
+
+def _tls_settings(mqtt):
+    tls = mqtt.setdefault("tls", {"enabled": False})
+    if not isinstance(tls, dict) or not isinstance(tls.get("enabled"), bool):
+        raise ConfigurationError("mqtt.tls.enabled must be a boolean")
+    if not tls["enabled"]:
+        if set(tls) != {"enabled"}:
+            raise ConfigurationError("mqtt.tls must contain only enabled when disabled")
+        return
+    if set(tls) != {"enabled", "ca_certificate", "server_hostname"}:
+        raise ConfigurationError("mqtt.tls requires CA certificate and server hostname")
+    certificate = tls["ca_certificate"]
+    if (
+        not isinstance(certificate, str)
+        or not 1 <= len(certificate) <= 16_384
+        or not certificate.startswith("-----BEGIN CERTIFICATE-----")
+        or not certificate.rstrip().endswith("-----END CERTIFICATE-----")
+    ):
+        raise ConfigurationError("mqtt.tls.ca_certificate must be one PEM certificate")
+    try:
+        certificate.encode("ascii")
+    except UnicodeError as exc:
+        raise ConfigurationError("mqtt.tls.ca_certificate must be ASCII PEM") from exc
+    _hostname(tls["server_hostname"], "mqtt.tls.server_hostname")
+
+
 def validate_config(config):
     if not isinstance(config, dict):
         raise ConfigurationError("configuration must be an object")
@@ -102,6 +151,7 @@ def validate_config(config):
         allow_cut = mqtt.setdefault("allow_cut", False)
         if not isinstance(allow_cut, bool):
             raise ConfigurationError("mqtt.allow_cut must be a boolean")
+        _tls_settings(mqtt)
         if mqtt["enabled"] and not wifi["enabled"]:
             raise ConfigurationError("mqtt requires wifi.enabled=true")
     return config
@@ -122,6 +172,8 @@ def redacted(config):
         raise ConfigurationError("configuration is not JSON-compatible") from exc
     if "mqtt" in value:
         value["mqtt"]["password"] = "***"
+        if value["mqtt"].get("tls", {}).get("enabled"):
+            value["mqtt"]["tls"]["ca_certificate"] = "***"
     if "wifi" in value:
         value["wifi"]["password"] = "***"
     return value

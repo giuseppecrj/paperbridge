@@ -21,4 +21,10 @@ bounds reject large prepared rasters. For Ethernet-only use, copy
 
 Deploy with `PORT=/dev/cu.usbmodem... just deploy`. Deployment refuses to
 proceed without local config and waits for RPC readiness after reset.
-`config.show_redacted` never returns either password.
+`config.show_redacted` never returns either password or an enabled MQTT TLS CA.
+
+The optional MQTT/TLS configuration preserves plain local MQTT by default and
+uses NTP to establish a valid clock before certificate verification. Its bounded
+no-output EMQX scope was physically verified on 2026-08-07. See
+[`docs/emqx-tls-spike.md`](../../docs/emqx-tls-spike.md) for evidence and
+remaining gates.

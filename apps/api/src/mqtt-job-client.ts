@@ -36,6 +36,11 @@ export interface MqttConnection {
 	end(force?: boolean): void;
 }
 
+interface MqttTlsConfig {
+	ca: Buffer;
+	servername: string;
+}
+
 export interface MqttJobClientConfig {
 	host: string;
 	port: number;
@@ -44,6 +49,28 @@ export interface MqttJobClientConfig {
 	deviceId: string;
 	clientId: string;
 	timeoutMs: number;
+	tls?: MqttTlsConfig;
+}
+
+export function connectionOptions(
+	config: MqttJobClientConfig,
+): mqtt.IClientOptions {
+	return {
+		host: config.host,
+		port: config.port,
+		protocol: config.tls ? "mqtts" : "mqtt",
+		protocolVersion: 4,
+		clientId: config.clientId,
+		username: config.username,
+		password: config.password,
+		clean: true,
+		reconnectPeriod: 1000,
+		...(config.tls && {
+			ca: config.tls.ca,
+			servername: config.tls.servername,
+			rejectUnauthorized: true,
+		}),
+	};
 }
 
 interface PendingResult {
@@ -67,17 +94,7 @@ export class MqttJobClient {
 		this.topics = jobTopics(config.deviceId);
 		this.client =
 			client ??
-			(mqtt.connect({
-				host: config.host,
-				port: config.port,
-				protocol: "mqtt",
-				protocolVersion: 4,
-				clientId: config.clientId,
-				username: config.username,
-				password: config.password,
-				clean: true,
-				reconnectPeriod: 1000,
-			}) as unknown as MqttConnection);
+			(mqtt.connect(connectionOptions(config)) as unknown as MqttConnection);
 		this.client.on("connect", () => this.subscribe());
 		this.client.on("close", () => {
 			this.ready = false;

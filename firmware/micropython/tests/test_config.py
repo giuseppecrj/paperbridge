@@ -32,6 +32,50 @@ def test_network_passwords_are_redacted_from_configuration_output():
     assert redacted(config)["wifi"]["password"] == "***"
 
 
+def test_device_config_avoids_unavailable_micropython_string_methods():
+    source = Path("firmware/micropython/src/config.py").read_text()
+
+    assert ".isalnum(" not in source
+
+
+def test_tls_requires_a_pem_ca_and_sni_and_redacts_the_ca():
+    config = example()
+    config["mqtt"]["tls"] = {
+        "enabled": True,
+        "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+        "server_hostname": "abc.emqxsl.com",
+    }
+
+    validated = validate_config(config)
+
+    assert validated["mqtt"]["tls"]["server_hostname"] == "abc.emqxsl.com"
+    assert redacted(validated)["mqtt"]["tls"]["ca_certificate"] == "***"
+
+
+@pytest.mark.parametrize(
+    "tls",
+    [
+        {"enabled": True},
+        {
+            "enabled": True,
+            "ca_certificate": "not a certificate",
+            "server_hostname": "abc.emqxsl.com",
+        },
+        {
+            "enabled": True,
+            "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----",
+            "server_hostname": "192.0.2.1",
+        },
+    ],
+)
+def test_tls_configuration_rejects_incomplete_or_unsafe_trust_settings(tls):
+    config = example()
+    config["mqtt"]["tls"] = tls
+
+    with pytest.raises(ConfigurationError):
+        validate_config(config)
+
+
 def test_device_id_must_be_a_safe_mqtt_topic_segment():
     config = example()
     config["device_id"] = "device/other"

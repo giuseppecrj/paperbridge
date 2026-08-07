@@ -1,8 +1,9 @@
 # ADR 0006: Use a Mac mini and local MQTT for the Phase 2 MVP
 
-- Status: Accepted
+- Status: Superseded by ADR 0007
 - Date: 2026-08-01
 - Corrected: 2026-08-02 (Wi-Fi control plane; dedicated printer Ethernet)
+- Evidence update: 2026-08-07 (bounded managed MQTT/TLS spike)
 
 ## Context
 
@@ -65,6 +66,12 @@ anonymous connections, and uses development username/password credentials
 stored outside the repository. Local MQTT/TLS and production device
 provisioning are deferred. Tailscale protects MCP/API access; it does not expose
 the MQTT broker to the public internet.
+
+A separate optional EMQX Serverless spike physically verified CA/SNI, automatic
+clock synchronization, bounded message handling, and Wi-Fi/W5500 coexistence on
+2026-08-07. This evidence does not supersede the accepted local-MVP decision or
+establish production reliability; see `docs/emqx-tls-spike.md` for its exact
+scope and remaining gates.
 
 Phase 2 supports exactly one configured device and printer. Topics and jobs keep
 their `device_id`, but callers cannot select arbitrary devices. There is no
@@ -129,8 +136,10 @@ receipt, direct-W5500 printing, and result publication.
 
 The MVP tests the product experience with little infrastructure and reuses the
 existing semantic, rendering, and printer-delivery boundaries. It does not prove
-public availability, MQTT/TLS, offline delivery, reboot-safe deduplication,
-durability, multi-device operation, production security, or the website.
+public availability, offline delivery, reboot-safe deduplication, durability,
+multi-device operation, production security, or the website. The bounded EMQX
+spike proves only the managed MQTT/TLS scope recorded in
+`docs/emqx-tls-spike.md`.
 
 The later move to a serverless API will not be a process-level lift-and-shift:
 the Mac mini can keep a persistent MQTT subscription, while a serverless design

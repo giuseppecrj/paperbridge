@@ -4,7 +4,11 @@ import test from "node:test";
 
 import type { JobResult, PrintJob } from "@paperbridge/protocol";
 
-import { MqttJobClient, type MqttConnection } from "../src/mqtt-job-client.js";
+import {
+	connectionOptions,
+	MqttJobClient,
+	type MqttConnection,
+} from "../src/mqtt-job-client.js";
 import { SubmissionError } from "../src/job-service.js";
 
 class FakeClient extends EventEmitter implements MqttConnection {
@@ -74,6 +78,38 @@ function adapter(client: FakeClient, timeoutMs = 1000): MqttJobClient {
 		client,
 	);
 }
+
+test("uses certificate verification and SNI only when MQTT TLS is enabled", () => {
+	const config = {
+		deviceId: "paperbridge-dev-001",
+		host: "abc.emqxsl.com",
+		port: 8883,
+		username: "device",
+		password: "password",
+		clientId: "api-test",
+		timeoutMs: 1000,
+		tls: { ca: Buffer.from("CA"), servername: "abc.emqxsl.com" },
+	};
+
+	assert.deepEqual(connectionOptions(config), {
+		host: "abc.emqxsl.com",
+		port: 8883,
+		protocol: "mqtts",
+		protocolVersion: 4,
+		clientId: "api-test",
+		username: "device",
+		password: "password",
+		clean: true,
+		reconnectPeriod: 1000,
+		ca: Buffer.from("CA"),
+		servername: "abc.emqxsl.com",
+		rejectUnauthorized: true,
+	});
+	assert.equal(
+		connectionOptions({ ...config, tls: undefined }).protocol,
+		"mqtt",
+	);
+});
 
 test("publishes once with QoS 1 and resolves only the correlated result", async () => {
 	const client = new FakeClient();

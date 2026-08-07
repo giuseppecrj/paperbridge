@@ -1,4 +1,6 @@
+import builtins
 import json
+import types
 from pathlib import Path
 
 import pytest
@@ -120,6 +122,143 @@ def connected_tracer(job_service=None, job_ledger=None, settings=None):
     assert client.callback is not None
     assert wifi.poll_calls == 1
     return tracer, client
+
+
+def test_default_tls_client_factory_uses_ca_verification_and_sni(monkeypatch):
+    captured = {}
+
+    def mqtt_client(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return object()
+
+    original_import = builtins.__import__
+    modules = {
+        "umqtt.simple": types.SimpleNamespace(MQTTClient=mqtt_client),
+        "ssl": types.SimpleNamespace(CERT_REQUIRED="required"),
+    }
+    monkeypatch.setattr(
+        builtins,
+        "__import__",
+        lambda name, *args, **kwargs: modules.get(name) or original_import(name, *args, **kwargs),
+    )
+
+    MqttTracer._default_client_factory(
+        client_id="paperbridge-dev-001",
+        host="abc.emqxsl.com",
+        port=8883,
+        username="device",
+        password="password",
+        keepalive_seconds=30,
+        tls={
+            "enabled": True,
+            "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+            "server_hostname": "abc.emqxsl.com",
+        },
+    )
+
+    assert captured == {
+        "args": ("paperbridge-dev-001", "abc.emqxsl.com"),
+        "kwargs": {
+            "port": 8883,
+            "user": "device",
+            "password": "password",
+            "keepalive": 30,
+            "ssl": True,
+            "ssl_params": {
+                "cert_reqs": "required",
+                "cadata": b"-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+                "server_hostname": "abc.emqxsl.com",
+            },
+        },
+    }
+
+
+def test_tls_client_factory_receives_required_ca_verification_and_sni():
+    settings = config()
+    settings["mqtt"]["tls"] = {
+        "enabled": True,
+        "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+        "server_hostname": "abc.emqxsl.com",
+    }
+    received = {}
+    client = FakeClient()
+    tracer = MqttTracer(
+        settings,
+        ConnectedWiFi(),
+        client_factory=lambda **kwargs: (received.update(kwargs) or client),
+        utc_year=lambda: 2026,
+    )
+
+    tracer.poll()
+
+    assert received == {
+        "client_id": "paperbridge-dev-001",
+        "host": "192.0.2.1",
+        "port": 1883,
+        "username": "paperbridge-dev-001",
+        "password": "not-a-real-secret",
+        "keepalive_seconds": 30,
+        "tls": {
+            "enabled": True,
+            "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+            "server_hostname": "abc.emqxsl.com",
+        },
+    }
+    assert client.subscriptions == [
+        (b"v1/devices/paperbridge-dev-001/jobs", 1),
+        (b"v1/devices/paperbridge-dev-001/print-jobs", 1),
+    ]
+
+
+def test_tls_syncs_time_before_connecting_when_the_device_clock_is_not_ready():
+    settings = config()
+    settings["mqtt"]["tls"] = {
+        "enabled": True,
+        "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+        "server_hostname": "abc.emqxsl.com",
+    }
+    year = [2019]
+    client = FakeClient()
+    tracer = MqttTracer(
+        settings,
+        ConnectedWiFi(),
+        client_factory=lambda **_kwargs: client,
+        utc_year=lambda: year[0],
+        sync_time=lambda: year.__setitem__(0, 2026),
+    )
+
+    tracer.poll()
+
+    assert tracer.status() == {
+        "enabled": True,
+        "connected": True,
+        "last_error": None,
+    }
+
+
+def test_tls_does_not_connect_until_the_device_clock_is_ready():
+    settings = config()
+    settings["mqtt"]["tls"] = {
+        "enabled": True,
+        "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
+        "server_hostname": "abc.emqxsl.com",
+    }
+    tracer = MqttTracer(
+        settings,
+        ConnectedWiFi(),
+        client_factory=lambda **_kwargs: pytest.fail("TLS client must not be created"),
+        utc_year=lambda: 2019,
+        sync_time=lambda: None,
+    )
+
+    tracer.poll()
+
+    assert tracer.status() == {
+        "enabled": True,
+        "connected": False,
+        "last_error": "MQTT_TLS_CLOCK_NOT_READY",
+    }
 
 
 def test_tracer_returns_correlated_probe_after_connecting():

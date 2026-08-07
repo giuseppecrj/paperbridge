@@ -37,6 +37,9 @@
     "retry_interval_ms": 1000,
     "max_message_bytes": 65536,
     "topic_prefix": "v1/devices",
-    "allow_cut": false
+    "allow_cut": false,
+    "tls": {
+      "enabled": false
+    }
   }
 }

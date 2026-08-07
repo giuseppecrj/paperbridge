@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createApiServer } from "./api-server.js";
-import { positiveInteger, required } from "./env.js";
+import { mqttTls, positiveInteger, required } from "./env.js";
 import {
 	JobSubmissionService,
 	type JobSubmissionOptions,
@@ -21,6 +21,7 @@ const broker = new MqttJobClient({
 	clientId:
 		process.env.PAPERBRIDGE_MQTT_CLIENT_ID ?? `paperbridge-api-${randomUUID()}`,
 	timeoutMs: positiveInteger("PAPERBRIDGE_JOB_RESULT_TIMEOUT_MS", 15_000),
+	tls: mqttTls(),
 });
 const brokerReady = await broker.waitUntilReady(1000);
 if (!brokerReady) {

@@ -33,7 +33,9 @@ by supplying an authorization flag.
 The service binds to `127.0.0.1` by default and has no public authentication.
 The plain Node MCP mount additionally rejects non-loopback Host and Origin
 values to prevent DNS rebinding. Keep it local; a future non-loopback/Tailscale
-bind requires an explicit allowed-host/origin policy. MQTT/TLS, production
-credential provisioning/rotation, public broker exposure, public sender
-authorization, signed updates, and OTA remain future work and may trigger
-ESP-IDF migration.
+bind requires an explicit allowed-host/origin policy. Production credential
+provisioning/rotation, public broker exposure, public sender authorization,
+signed updates, and OTA remain future work and may trigger ESP-IDF migration.
+The optional EMQX path requires CA verification, SNI, automatic NTP, and a
+separate Fnox profile. Its bounded no-output TLS scope was physically verified
+on 2026-08-07; this is not a production security or reliability claim.

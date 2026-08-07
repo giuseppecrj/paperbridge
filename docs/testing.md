@@ -54,9 +54,14 @@ Wi-Fi/MQTT. The private REST/MQTT path was physically verified on 2026-08-02:
 `delivered_to_printer` after 34 bytes, and the operator observed the expected
 receipt. A later soft reset left W5500 at `ETH_STARTED`; guarded
 `ethernet reconnect --confirm` restored `raw_status: 5` and printer reachability
-without a cable reseat. Evidence IDs and observations are recorded in
-`hardware.md`; the 72-hour soak and longer Wi-Fi/W5500 coexistence testing
-remain.
+without a cable reseat. On 2026-08-07, the no-output EMQX TLS spike
+`emqx-tls-spike-945ac7ad7d78` physically verified CA/SNI, automatic NTP, one
+correlated tracer response, safe rejection of a non-retained 65,000-byte invalid
+job before rendering, and direct W5500/printer reachability while MQTT/TLS stayed
+connected. Heap recovered to 8,184,624 bytes. Wi-Fi-loss reconnect, EMQX QoS
+redelivery behavior, valid semantic delivery, paper output, and long-duration
+coexistence remain unverified. Evidence IDs and observations are recorded in
+`hardware.md`; the 72-hour soak also remains.
 
 Ordinary `just test` must remain hardware-free. It never opens a serial port or
 operates the purchased printer. Real-broker and real-socket simulator tests are

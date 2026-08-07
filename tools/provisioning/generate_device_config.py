@@ -33,6 +33,21 @@ def boolean_env(name, default):
     raise SystemExit(f"{name} must be true or false")
 
 
+def tls_environment():
+    if not boolean_env("PAPERBRIDGE_MQTT_TLS_ENABLED", False):
+        return {"enabled": False}
+    certificate_file = Path(required_env("PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE"))
+    try:
+        certificate = certificate_file.read_text(encoding="ascii")
+    except (OSError, UnicodeError) as exc:
+        raise SystemExit(f"Unable to read MQTT TLS CA certificate: {exc}") from exc
+    return {
+        "enabled": True,
+        "ca_certificate": certificate,
+        "server_hostname": required_env("PAPERBRIDGE_MQTT_TLS_SERVER_HOSTNAME"),
+    }
+
+
 def apply_environment(template):
     device_id = required_env("PAPERBRIDGE_DEVICE_ID")
     template["device_id"] = device_id
@@ -51,6 +66,7 @@ def apply_environment(template):
         username=required_env("PAPERBRIDGE_MQTT_USERNAME"),
         password=required_env("PAPERBRIDGE_MQTT_PASSWORD"),
         allow_cut=boolean_env("PAPERBRIDGE_MQTT_ALLOW_CUT", False),
+        tls=tls_environment(),
     )
 
 

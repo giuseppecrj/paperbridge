@@ -43,7 +43,10 @@ public backend, OTA, or production provisioning is implemented.
 - The no-output MQTT 3.1.1 tracer over ESP32 Wi-Fi is implemented, host-tested,
   and physically verified on 2026-08-02. Guarded Wi-Fi/MQTT recovery preserved
   direct printer TCP reachability, and direct W5500 cable recovery preserved
-  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`.
+  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`. On 2026-08-07,
+  `emqx-tls-spike-945ac7ad7d78` physically verified EMQX MQTT/TLS, automatic NTP,
+  one correlated no-output probe, safe rejection of a 65,000-byte invalid job,
+  and concurrent direct-printer reachability without paper output.
 - `POST /api/jobs` validates and delivers bounded `print-job.v1` through
   authenticated local MQTT to the same firmware coordinator. On 2026-08-02,
   `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with

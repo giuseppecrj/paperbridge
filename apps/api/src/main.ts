@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { positiveInteger, required } from "./env.js";
+import { mqttTls, positiveInteger, required } from "./env.js";
 import { probe } from "./mqtt-tracer.js";
 
 const result = await probe({
@@ -13,5 +13,6 @@ const result = await probe({
 		process.env.PAPERBRIDGE_MQTT_CLIENT_ID ??
 		`paperbridge-probe-${randomUUID()}`,
 	timeoutMs: positiveInteger("PAPERBRIDGE_MQTT_TIMEOUT_MS", 5000),
+	tls: mqttTls(),
 });
 process.stdout.write(`${JSON.stringify(result)}\n`);
