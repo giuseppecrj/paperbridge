@@ -2,9 +2,11 @@ from src.ethernet import W5500LAN
 
 
 class FakeLAN:
-    def __init__(self, current, fail_on_set=False):
+    def __init__(self, current, fail_on_set=False, network=None, clear_dns_on_addr4=False):
         self.current = current
         self.fail_on_set = fail_on_set
+        self.network = network
+        self.clear_dns_on_addr4 = clear_dns_on_addr4
         self.set_calls = 0
         self.ipconfig_calls = []
         self.active_calls = []
@@ -22,6 +24,8 @@ class FakeLAN:
         self.ipconfig_calls.append(settings)
         if "addr4" in settings:
             self.current = (*settings["addr4"], *self.current[2:])
+            if self.clear_dns_on_addr4 and self.network is not None:
+                self.network.dns = None
         if "gw4" in settings:
             self.current = (*self.current[:2], settings["gw4"], self.current[3])
 
@@ -67,11 +71,23 @@ def config():
     }
 
 
-def make_adapter(current, fail_on_set=False, dns=None, fail_dns=False):
+def make_adapter(
+    current,
+    fail_on_set=False,
+    dns=None,
+    fail_dns=False,
+    clear_dns_on_addr4=False,
+):
     value = W5500LAN(config())
-    lan = FakeLAN(current, fail_on_set=fail_on_set)
+    network = FakeNetwork(dns=dns if dns is not None else current[3], fail_dns=fail_dns)
+    lan = FakeLAN(
+        current,
+        fail_on_set=fail_on_set,
+        network=network,
+        clear_dns_on_addr4=clear_dns_on_addr4,
+    )
     value.lan = lan
-    value.network = FakeNetwork(dns=dns if dns is not None else current[3], fail_dns=fail_dns)
+    value.network = network
     return value, lan
 
 
@@ -127,6 +143,23 @@ def test_configure_static_does_not_reapply_identical_configuration():
     )
     assert lan.ipconfig_calls == []
     assert lan.set_calls == 0
+
+
+def test_configure_static_restores_existing_dns_after_lan_address_change():
+    value, _lan = make_adapter(
+        ("0.0.0.0", "0.0.0.0", "0.0.0.0", "0.0.0.0"),
+        dns="192.168.1.1",
+        clear_dns_on_addr4=True,
+    )
+
+    result = value.configure_static()
+
+    assert result["ifconfig"] == (
+        "192.168.1.50",
+        "255.255.255.0",
+        "0.0.0.0",
+        "192.168.1.1",
+    )
 
 
 def test_status_reads_address_gateway_and_dns_via_ipconfig():

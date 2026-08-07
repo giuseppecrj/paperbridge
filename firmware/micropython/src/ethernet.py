@@ -59,14 +59,19 @@ class W5500LAN:
             raise EthernetError("Ethernet is not initialized")
         network = self.network
         settings = self.config["ethernet"]
+        try:
+            resolver = network.ipconfig("dns")
+        except (OSError, TypeError, ValueError, AttributeError):
+            resolver = None
         desired = (settings["address"], settings["netmask"])
         if tuple(self.lan.ipconfig("addr4")) != desired:
             self.lan.ipconfig(dhcp4=False)
             self.lan.ipconfig(addr4=desired)
         if settings.get("gateway"):
             self.lan.ipconfig(gw4=settings["gateway"])
-        if settings.get("dns"):
-            network.ipconfig(dns=settings["dns"])
+        resolver = settings.get("dns") or resolver
+        if resolver:
+            network.ipconfig(dns=resolver)
         return self.status()
 
     def status(self):
