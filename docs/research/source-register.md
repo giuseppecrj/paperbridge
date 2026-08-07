@@ -21,6 +21,8 @@ facts, not physical verification of purchased units.
 | 1Password CLI | <https://developer.1password.com/docs/cli/secret-reference-syntax> | `op://` references identify vault/item/field locations and resolve the latest stored value without embedding plaintext in configuration. |
 | Epson ESC/POS text commands | <https://download4.epson.biz/sec_pubs/pos/reference_en/escpos/> | Official ESC/POS references document `ESC a`, `ESC E`, `ESC -`, and `GS !` for alignment, emphasis, underline, and character size. |
 | MCP TypeScript SDK v2 | <https://ts.sdk.modelcontextprotocol.io/v2/serving/http.html> | `@modelcontextprotocol/server` provides stateless per-request `createMcpHandler`; `@modelcontextprotocol/node` adapts it to plain Node HTTP. Tool cancellation is exposed as `ctx.mcpReq.signal`; plain mounts must add Host/Origin validation and close the handler during shutdown. |
+| MQTT 3.1.1 | <https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html> | QoS 1 is at-least-once; persistent sessions can retain offline QoS 1/2 messages; retained messages preserve only the last message per topic. These transport facts do not provide semantic idempotency or paper-output proof. |
+| EMQX durability | <https://docs.emqx.com/en/emqx/latest/durability/durability_introduction.html> | EMQX Durable Sessions can retain session state and messages, but remain broker-specific and at-least-once to applications. See `durable-mqtt-delivery-2026-08-07.md` for the complete primary-source comparison. |
 
 ## Purchased-unit observations
 

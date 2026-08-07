@@ -56,6 +56,23 @@ A versioned request describing printable meaning as bounded receipt blocks rathe
 than printer-specific bytes.
 _Avoid_: Payload, raw job, RPC request
 
+**Durable Semantic Job**:
+A semantic print job with a Host-held lifecycle record and a Device execution
+receipt that survive restart. It is not a broker queue or proof that paper
+emerged.
+_Avoid_: Retained message, exactly-once print
+
+**Delivery Attempt**:
+The bounded interval after a Host commits a job for dispatch and before the
+Device records a terminal result. It can become an Unknown Delivery Result.
+_Avoid_: Retry, printing attempt
+
+**Manual Reconciliation**:
+An Owner's recorded resolution of an Unknown Delivery Result. It may close the
+job or create a separately authorized replacement; it does not re-dispatch the
+old job.
+_Avoid_: Automatic retry, duplicate suppression
+
 **Job Result**:
 A versioned terminal device report correlated to a semantic print job by
 `job_id`. It may report delivered to printer, rejected, or failed; it never

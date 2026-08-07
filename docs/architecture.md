@@ -57,6 +57,10 @@ never a client field. When a development device is explicitly provisioned with
 `PAPERBRIDGE_MQTT_ALLOW_CUT=true`, REST/MCP/MQTT jobs may request a final
 `{ "type": "cut", "mode": "partial" }` block; otherwise the device rejects it.
 
+ADR 0008 documents a future durable v2 delivery path. It is not implemented:
+v1 remains online-only, non-retained, and one-boot duplicate-suppressed until
+that versioned path passes its fault-injection and rollout gates.
+
 ## Order and non-goals
 
 USB ping/info precedes direct W5500 initialization; printer reachability remains
