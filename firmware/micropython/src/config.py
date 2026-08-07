@@ -113,6 +113,7 @@ def validate_config(config):
         raise ConfigurationError("wifi must be an object")
     if not isinstance(wifi.get("enabled"), bool):
         raise ConfigurationError("wifi.enabled must be a boolean")
+    _ipv4(wifi.get("dns"), "wifi.dns", nullable=True)
     for field, minimum, maximum in (("ssid", 1, 32), ("password", 8, 64)):
         value = wifi.get(field)
         if not isinstance(value, str) or not minimum <= len(value) <= maximum:

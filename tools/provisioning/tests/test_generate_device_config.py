@@ -47,6 +47,7 @@ def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch
         "PAPERBRIDGE_PRINTER_HOST": "192.168.4.87",
         "PAPERBRIDGE_WIFI_SSID": "Paperbridge Test Wi-Fi",
         "PAPERBRIDGE_WIFI_PASSWORD": "wifi-password",
+        "PAPERBRIDGE_WIFI_DNS": "192.168.1.1",
         "PAPERBRIDGE_MQTT_HOST": "192.168.1.20",
         "PAPERBRIDGE_MQTT_USERNAME": "paperbridge-dev-001",
         "PAPERBRIDGE_MQTT_PASSWORD": "mqtt-password",
@@ -64,6 +65,7 @@ def test_generate_networked_device_config_from_environment(tmp_path, monkeypatch
         "enabled": True,
         "ssid": "Paperbridge Test Wi-Fi",
         "password": "wifi-password",
+        "dns": "192.168.1.1",
         "retry_interval_ms": 5000,
     }
     assert payload["mqtt"]["enabled"] is True

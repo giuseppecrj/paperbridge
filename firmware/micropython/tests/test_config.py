@@ -99,6 +99,7 @@ def test_enabled_mqtt_requires_enabled_wifi():
         (("printer", "port"), 0),
         (("serial", "max_line_bytes"), 1_000_000),
         (("wifi", "ssid"), ""),
+        (("wifi", "dns"), "not-an-ip-address"),
         (("mqtt", "allow_cut"), 1),
         (("mqtt", "max_message_bytes"), 65_537),
     ],

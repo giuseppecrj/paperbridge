@@ -79,6 +79,24 @@ def test_poll_activates_station_and_starts_wifi_connection():
     }
 
 
+def test_poll_configures_static_dns_before_connecting():
+    wlan = FakeWLAN()
+    dns_calls = []
+    settings = config()
+    settings["wifi"]["dns"] = "192.168.1.1"
+    station = WiFiStation(
+        settings,
+        wlan_factory=lambda: wlan,
+        clock_ms=lambda: 0,
+        dns_setter=dns_calls.append,
+    )
+
+    station.poll()
+
+    assert dns_calls == ["192.168.1.1"]
+    assert wlan.connect_calls == [("Paperbridge Test", "not-a-real-password")]
+
+
 def test_connected_station_reports_wifi_address_without_reconnecting():
     wlan = FakeWLAN()
     wlan.connected = True

@@ -58,6 +58,9 @@ def apply_environment(template):
         ssid=required_env("PAPERBRIDGE_WIFI_SSID"),
         password=required_env("PAPERBRIDGE_WIFI_PASSWORD"),
     )
+    dns = os.environ.get("PAPERBRIDGE_WIFI_DNS")
+    if dns:
+        template["wifi"]["dns"] = dns
     template["mqtt"].update(
         enabled=True,
         host=required_env("PAPERBRIDGE_MQTT_HOST"),

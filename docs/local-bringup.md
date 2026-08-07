@@ -9,7 +9,9 @@ production reliability claim.
 
 1. `mise install && just bootstrap && just test`.
 2. Copy `.env.example` to ignored `.env`, set this machine's non-secret values,
-   unlock 1Password, and run `just secrets-check`.
+   unlock 1Password, and run `just secrets-check`. If Device Wi-Fi DHCP reports
+   DNS as `0.0.0.0`, set `PAPERBRIDGE_WIFI_DNS` to the approved resolver before
+   generating `config.json`.
 3. Connect a known data cable and run `just ports`.
 4. Inspect board revision, download/checksum/flash the selected MicroPython image,
    open the REPL, then run `PORT=... just verify-board`.

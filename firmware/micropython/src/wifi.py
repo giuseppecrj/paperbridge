@@ -5,12 +5,14 @@ class WiFiStation:
         self,
         config,
         wlan_factory=None,
+        dns_setter=None,
         clock_ms=None,
         ticks_diff=None,
         lock=None,
     ):
         self.settings = config["wifi"]
         self.wlan_factory = wlan_factory or self._default_wlan_factory
+        self.dns_setter = dns_setter or self._default_dns_setter
         self.clock_ms = clock_ms or self._default_clock_ms
         self.ticks_diff = ticks_diff or self._default_ticks_diff
         self._lock = lock or __import__("_thread").allocate_lock()
@@ -38,6 +40,10 @@ class WiFiStation:
         return wlan_class(station_id)
 
     @staticmethod
+    def _default_dns_setter(dns):
+        __import__("network").ipconfig(dns=dns)
+
+    @staticmethod
     def _default_clock_ms():
         time = __import__("time")
         ticks_ms = getattr(time, "ticks_ms", None)
@@ -58,6 +64,8 @@ class WiFiStation:
         if self.wlan is None:
             self.wlan = self.wlan_factory()
             self.wlan.active(True)
+            if self.settings.get("dns"):
+                self.dns_setter(self.settings["dns"])
 
     def _should_connect(self):
         if self.last_connect_attempt_ms is None:
