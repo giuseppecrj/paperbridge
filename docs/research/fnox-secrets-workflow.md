@@ -1,88 +1,95 @@
 # Fnox and 1Password development secrets
 
-Research performed 2026-08-02 against Fnox 1.31.1 and 1Password CLI 2.35.0.
-These are development-workflow findings, not a production provisioning design.
+Research performed 2026-08-02 against Fnox 1.31.1 and 1Password CLI 2.35.0,
+then updated 2026-08-07 after the production deployment boundary was accepted.
+These are operator-workflow findings, not proof that a deployment occurred.
 
 ## Decision
 
-Paperbridge uses a checked-in root `fnox.toml` as the development secret-name
-contract. The file contains 1Password references only, never secret values.
-Fnox resolves those references and injects values only into a child command:
+Paperbridge uses a checked-in root `fnox.toml` as its secret-name contract. The
+file contains 1Password references only, never secret values. Fnox authenticates
+through 1Password desktop CLI integration and injects values only into a child
+command:
 
 ```text
 1Password Agent vault -> fnox project mapping -> `fnox exec` -> Paperbridge process
 ```
 
-The machine-local 1Password service-account token remains an optional bootstrap
-credential in the OS keychain. It is marked `env = false`, so Paperbridge child
-processes receive the requested Paperbridge secrets but not the bootstrap token.
-Developers using 1Password desktop-app integration may omit the service-account
-token.
+The mappings are:
 
-The current mappings are:
-
-- `PAPERBRIDGE_WIFI_SSID` -> `op://Agent/home-router/name`
-- `PAPERBRIDGE_WIFI_PASSWORD` -> `op://Agent/home-router/password`
-- local `PAPERBRIDGE_MQTT_PASSWORD` ->
-  `op://Agent/paperbridge-mqtt-password/password`
+- default local `PAPERBRIDGE_MQTT_PASSWORD` ->
+  `op://Agent/paperbridge-mqtt-password/password`;
+- Device `PAPERBRIDGE_WIFI_PASSWORD` ->
+  `op://Agent/home-router/password`; and
 - production `PAPERBRIDGE_MQTT_PASSWORD` ->
-  `op://Agent/paperbridge-emqx-token/password`
+  `op://Agent/paperbridge-emqx-token/password`.
 
-The `host` profile exposes only the local MQTT password. The `device` profile
-exposes that password plus Wi-Fi name/password. The `production` profile
-exposes only the managed-broker MQTT password and is composed with `host` for
-the private production service. Recipes set `FNOX_CONFIG_DIR` to an
-empty location so no global Fnox file is loaded, use `--no-defaults` to select
-only the named project profile, and use `--no-daemon` for direct resolution
-without shared per-user cache state. Non-secret, machine-local settings such
-as serial port and broker address belong
-in ignored `.env`, based on `.env.example`. MQTT username and device identity
-also remain ordinary configuration, not secrets.
+The default secrets represent the local Host. The `device` profile inherits the
+local MQTT password and adds only the Wi-Fi password. The `production` profile
+replaces the local MQTT password. A Device using the production broker composes
+`device,production`.
 
-`just` is the operator interface. Recipes that need secrets invoke Fnox; direct
-`paperbridge` CLI commands remain available for parameterized USB diagnostics.
-MCP is live product ingress at `/mcp`, not an operator diagnostic or substitute
-for the USB CLI.
+Stable non-secret machine settings belong in ignored `.env`, based on
+`.env.example`. These include the serial port, addresses, MQTT username, Device
+identity, and Wi-Fi SSID. Generated `firmware/micropython/config.json` is
+disposable derived state that contains deployed credentials; regenerate it
+through `just configure-device` instead of editing it manually.
+
+`just` is the operator interface. Recipes set `FNOX_CONFIG_DIR=/nonexistent` so
+no global Fnox file is loaded and use `--no-daemon` for direct resolution without
+shared per-user cache state. Default inheritance is intentional: local Host
+commands use the default secrets, Device commands select `device`, and
+production commands select `production`.
+
+`just lint` parses the Fnox configuration without resolving secrets. Live checks
+are explicit and print no values:
+
+```sh
+just secrets-check
+just production-secrets-check
+```
+
+Neither live check is a test-suite prerequisite or a reason to grant CI access
+to 1Password.
 
 ## Why project-local configuration
 
-Fnox loads the global config first and then walks project `fnox.toml` files from
-parents to the current directory. A checked-in project file therefore owns the
+Fnox loads its global configuration and then walks project `fnox.toml` files from
+parents to the current directory. The checked-in project file owns the
 Paperbridge names and 1Password references. `root = true` prevents unrelated
-parent-project configuration from being merged. Fnox normally loads its global
-file even with `root = true`, so Paperbridge recipes follow Fnox's documented
-isolation mechanism: point `FNOX_CONFIG_DIR` at an empty location and select an
-explicit profile with `--no-defaults`. The optional 1Password service-account
-token is still resolved directly from the OS keychain by the project mapping.
+parent-project configuration from being merged. `FNOX_CONFIG_DIR=/nonexistent`
+excludes unrelated global state.
 
 Fnox 1.31.1 supports `env = "exec"`, which keeps mapped secrets out of the
 interactive shell and injects them only into `fnox exec` children. Fnox 1.29.0
-does not accept that setting, so the repository pins 1.31.1. The optional
-`OP_SERVICE_ACCOUNT_TOKEN` mapping has `env = false`: Fnox may use it to reach
-1Password, but the launched Paperbridge process cannot read it.
+does not accept that setting, so the repository pins 1.31.1. Product secrets use
+`if_missing = "error"`, so a command does not continue with a missing credential.
 
 ## 1Password authentication
 
-For interactive local development, enable the 1Password desktop application's
-CLI integration and authenticate when `op` prompts. For unattended local
-operation, use a least-privilege service account scoped to the development
-vault. Store `OP_SERVICE_ACCOUNT_TOKEN` in the OS keychain, not this repository.
-Do not pass secret values as command-line arguments: Fnox documents that they
-can appear in shell history and process listings.
+Enable the 1Password desktop application's CLI integration, unlock the app, and
+authenticate when `op` prompts. Do not pass secret values as command-line
+arguments because they can appear in shell history and process listings.
 
-## Future Cloudflare boundary
+## Deployment boundary
 
-Cloudflare will be a separate runtime secret store. Fnox remains a local
-operator tool: it may supply a value to a future deployment command, but
-Cloudflare receives and stores the runtime binding. Keep stable
-`PAPERBRIDGE_*` names where the meaning is unchanged; do not make a Worker depend
-on Fnox or 1Password at runtime. Device Wi-Fi credentials are provisioning data
-and should not become Cloudflare Worker bindings.
+Fnox remains an operator-side provisioning tool. Local commands receive
+`PAPERBRIDGE_MQTT_PASSWORD` directly. The target container deployment instead
+stores an encrypted systemd credential and gives the API
+`PAPERBRIDGE_MQTT_PASSWORD_FILE=/run/secrets/mqtt-password`. That file setting is
+deployment configuration and does not belong in local `.env`.
+
+The target checked-in deployment environment file will contain only non-secret
+runtime configuration plus the mounted credential path. Issue #28 will create
+that file together with its systemd/container consumer. The VM and container do
+not install Fnox or receive 1Password credentials.
 
 ## Primary sources
 
-- Fnox configuration hierarchy, project/local files, and `root` behavior:
+- Fnox configuration hierarchy and `root` behavior:
   <https://fnox.jdx.dev/reference/configuration>
+- Fnox profiles and default inheritance:
+  <https://fnox.jdx.dev/guide/profiles>
 - Fnox 1Password provider and `op://` references:
   <https://fnox.jdx.dev/providers/1password>
 - Fnox resolution and `fnox exec` behavior:

@@ -17,6 +17,7 @@ bootstrap:
     bun install
 
 lint:
+    FNOX_CONFIG_DIR=/nonexistent fnox profiles >/dev/null
     uv run ruff check .
     bun run lint
 
@@ -38,7 +39,7 @@ test-hardware-smoke:
 # Opt-in no-output dual-interface recovery HIL; MQTT secret stays Fnox-managed.
 test-hardware-network-recovery:
     test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- uv run python tools/hardware/hil.py network-recovery \
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- uv run python tools/hardware/hil.py network-recovery \
         --port "{{PORT}}" \
         --timeout-seconds "{{NETWORK_RECOVERY_TIMEOUT_SECONDS}}" \
         --interval-seconds "{{NETWORK_RECOVERY_INTERVAL_SECONDS}}"
@@ -108,26 +109,30 @@ serial-monitor:
 printer-simulator:
     uv run python tools/printer-simulator/server.py
 
-# No-output MQTT tracer; requires the configured local Mosquitto credentials.
+# Verify local Device configuration without printing secret values.
 secrets-check:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- python -c 'import os; names=("PAPERBRIDGE_MQTT_PASSWORD", "PAPERBRIDGE_WIFI_SSID", "PAPERBRIDGE_WIFI_PASSWORD"); missing=[name for name in names if not os.environ.get(name)]; assert not missing, missing; assert "OP_SERVICE_ACCOUNT_TOKEN" not in os.environ'
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device exec -- python -c 'import os; names=("PAPERBRIDGE_MQTT_PASSWORD", "PAPERBRIDGE_WIFI_SSID", "PAPERBRIDGE_WIFI_PASSWORD"); missing=[name for name in names if not os.environ.get(name)]; assert not missing, missing'
 
-# Generate ignored firmware config without putting passwords in argv or shell history.
+# Generate disposable ignored firmware config without putting passwords in argv or shell history.
 configure-device:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- uv run python tools/provisioning/generate_device_config.py \
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device exec -- uv run python tools/provisioning/generate_device_config.py \
         --from-env \
         --output firmware/micropython/config.json
 
 mqtt-probe:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run mqtt:probe
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- bun run mqtt:probe
 
 # Private exe.dev production Host. Set PAPERBRIDGE_SHA to an exact reviewed SHA.
 production-bootstrap:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
     tools/exedev/operator.sh bootstrap
 
+# Verify the production MQTT credential without printing its value.
+production-secrets-check:
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- python -c 'import os; assert os.environ.get("PAPERBRIDGE_MQTT_PASSWORD")'
+
 production-configure:
-    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host,production --no-defaults exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
+    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
 
 production-deploy:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
@@ -157,7 +162,7 @@ production-reboot:
 # Private single-device REST/MQTT service; defaults to 127.0.0.1:3000.
 [continue]
 api:
-    status=0; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run --filter @paperbridge/api start || status=$?; if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then exit "$status"; fi
+    status=0; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- bun run --filter @paperbridge/api start || status=$?; if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then exit "$status"; fi
 
 clean:
     rm -rf .pytest_cache .ruff_cache .venv captures

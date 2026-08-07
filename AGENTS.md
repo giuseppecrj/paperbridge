@@ -126,9 +126,8 @@ or substitute for the USB CLI.
 Development passwords resolve from 1Password through the checked-in project
 `fnox.toml`; non-secret machine settings come from ignored `.env`. Recipes that
 need secrets invoke `fnox exec`, which keeps values out of command arguments and
-the interactive shell. Never print resolved values or commit `.env`,
-`fnox.local.toml`, or generated firmware configuration. See
-`docs/research/fnox-secrets-workflow.md`.
+the interactive shell. Never print resolved values or commit `.env` or generated
+firmware configuration. See `docs/research/fnox-secrets-workflow.md`.
 
 For non-trivial behavior, add or identify the smallest failing behavioral check,
 make it pass, then refactor. Run focused tests during work and all three checks
@@ -151,9 +150,9 @@ Before doing so:
 2. Confirm the purchased board and selected firmware variant match.
 3. Verify the downloaded firmware SHA-256 from
    `docs/micropython-bringup.md` immediately before flashing.
-4. Generate ignored `firmware/micropython/config.json` through the project Fnox
-   workflow when networking is enabled; never commit it, `.env`,
-   `fnox.local.toml`, credentials, firmware downloads, or captures accidentally.
+4. Regenerate ignored `firmware/micropython/config.json` through the project
+   Fnox workflow when networking is enabled; never edit it manually or commit it,
+   `.env`, credentials, firmware downloads, or captures accidentally.
 5. Power the printer from its 24 V adapter and the board from USB; never cross
    power them.
 6. Follow the order: ping/info → Ethernet init/link/address → probe → text →
