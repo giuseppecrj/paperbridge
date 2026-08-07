@@ -115,7 +115,9 @@ acceptance remain open.
 | Dual-interface recovery | Guarded Wi-Fi/MQTT disconnect/reconnect preserved direct printer TCP reachability; direct W5500 disconnect/reconnect preserved Wi-Fi/MQTT; `hil-network-recovery-89867cf401c3` | 2026-08-02 |
 | Guarded W5500 reconnect | After a soft reset remained at `ETH_STARTED`, `ethernet reconnect --confirm` cycled the LAN singleton; link returned as `raw_status: 5` and printer probe succeeded without a cable reseat | 2026-08-02 |
 | Automatic W5500 boot initialization | After force-copy deployment and Device reset, W5500 was initialized and active with `192.168.4.50/24`; direct link and printer probe passed without output | 2026-08-07 |
+| Link recovery after Printer power/cable changes | On the purchased setup, W5500 can remain link-down after Printer power or direct Ethernet cable changes until the Printer is power-cycled. Recheck Ethernet status and Printer probe after the power cycle. This is an observed recovery sequence, not a root-cause claim. | 2026-08-07 |
 | Power-only cloud check | After USB disconnection, the no-output MQTT tracer succeeded. One job safely returned `ETHERNET_LINK_DOWN` without delivery; a later job `9d6ff700-9f15-478e-8033-cdb7f34f7fe3` delivered 51 bytes. A separate partial-cut job `fc0a9ab0-c8d0-4692-aa64-0766a5b3e8ba` delivered 5 bytes, and the operator confirmed the cut. No claim is made that the 51-byte text appeared on paper. | 2026-08-07 |
+| Post-deployment MCP text and cut | After force-copy deployment, MCP job `e45262e6-245f-41fc-b70c-f287a204422d` delivered 25 bytes. The operator confirmed its test text and explicit partial cut. | 2026-08-07 |
 | Printer firmware | `GD207_V1.14`, self-test date `26-01-28` | 2026-08-02 |
 | Direct-link negotiation | `link_up: true` | 2026-08-01 |
 | Printer text/feed | physically observed | 2026-08-01 |

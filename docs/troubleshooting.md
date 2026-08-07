@@ -9,6 +9,9 @@
   `config.json`, then use `mpremote` REPL to inspect typed startup errors.
 - **No Ethernet LEDs/link:** do not rewrite application code first. Check power,
   cable, board revision/pins, crossover cable, switch/router, then raw link state.
+  On the purchased setup, if the link remains down after Printer power or direct
+  Ethernet cable changes, power-cycle the Printer, then recheck Ethernet status
+  and Printer probe. This is an observed recovery step, not a root-cause claim.
 - **Link but no probe:** compare subnet/mask and self-test endpoint; gateway/DNS
   are unnecessary on direct link; distinguish timeout from refusal.
 - **Bytes delivered but no receipt:** check printer power, paper, cover, endpoint,
