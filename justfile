@@ -121,6 +121,39 @@ configure-device:
 mqtt-probe:
     FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run mqtt:probe
 
+# Private exe.dev production Host. Set PAPERBRIDGE_SHA to an exact reviewed SHA.
+production-bootstrap:
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/operator.sh bootstrap
+
+production-configure:
+    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host,emqx-spike --no-defaults exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
+
+production-deploy:
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/operator.sh deploy
+
+production-status:
+    tools/exedev/operator.sh status
+
+production-logs:
+    tools/exedev/operator.sh logs
+
+production-verify:
+    tools/exedev/operator.sh verify
+
+production-probe:
+    tools/exedev/operator.sh probe
+
+production-restart:
+    tools/exedev/operator.sh restart
+
+production-rollback:
+    tools/exedev/operator.sh rollback
+
+production-reboot:
+    tools/exedev/operator.sh reboot
+
 # Private single-device REST/MQTT service; defaults to 127.0.0.1:3000.
 [continue]
 api:

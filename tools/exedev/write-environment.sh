@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${PAPERBRIDGE_MQTT_PASSWORD:?PAPERBRIDGE_MQTT_PASSWORD is required}"
+[[ $PAPERBRIDGE_MQTT_PASSWORD != *$'\n'* ]] || {
+    echo "PAPERBRIDGE_MQTT_PASSWORD must not contain a newline" >&2
+    exit 2
+}
+
+cat <<EOF
+PAPERBRIDGE_API_HOST=127.0.0.1
+PAPERBRIDGE_API_PORT=3000
+PAPERBRIDGE_API_ALLOWED_HOST=api.paperbridge.tech
+PAPERBRIDGE_API_ALLOWED_ORIGIN=https://api.paperbridge.tech
+PAPERBRIDGE_DEVICE_ID=paperbridge-dev-001
+PAPERBRIDGE_MQTT_HOST=t1b28b1a.ala.us-east-1.emqxsl.com
+PAPERBRIDGE_MQTT_PORT=8883
+PAPERBRIDGE_MQTT_USERNAME=paperbridge-dev-001
+EOF
+printf 'PAPERBRIDGE_MQTT_PASSWORD_BASE64='
+printf '%s' "$PAPERBRIDGE_MQTT_PASSWORD" | base64 | tr -d '\n'
+printf '\n'
+cat <<EOF
+PAPERBRIDGE_MQTT_CLIENT_ID=paperbridge-api-prod
+PAPERBRIDGE_MQTT_TLS_ENABLED=true
+PAPERBRIDGE_MQTT_TLS_CA_CERTIFICATE_FILE=/etc/ssl/certs/ca-certificates.crt
+PAPERBRIDGE_MQTT_TLS_SERVER_HOSTNAME=t1b28b1a.ala.us-east-1.emqxsl.com
+PAPERBRIDGE_JOB_RESULT_TIMEOUT_MS=15000
+EOF

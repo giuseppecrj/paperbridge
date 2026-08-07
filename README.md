@@ -288,4 +288,5 @@ cause watchdog resets; or printer status needs lower-level control. See
 
 Start with [`docs/local-bringup.md`](docs/local-bringup.md),
 [`docs/hardware.md`](docs/hardware.md), and
-[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md).
+[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The private Phase 2 Host
+operator workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md).
