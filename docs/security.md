@@ -21,12 +21,15 @@ temporary MQTT password file read-only and checks image history, environment
 metadata, arguments, and logs for the value. This is local image evidence, not a
 VM or production security claim.
 
-The target container deployment keeps Fnox and 1Password on the deployment
-operator's machine. Its checked-in environment file will contain only non-secret
-runtime configuration and the mounted credential path. Systemd will decrypt the
-MQTT credential for the API runtime, which will read it through
-`PAPERBRIDGE_MQTT_PASSWORD_FILE`; no 1Password credential belongs on the VM or in
-the container. Issue #28 owns that deployment slice.
+The checked-in candidate container operator keeps Fnox and 1Password on the
+operator machine. Its environment template contains only non-secret runtime
+configuration and the mounted credential path. The operator removes the local
+secret environment variable before it starts SSH and sends the bytes through
+SSH stdin. systemd stores the encrypted blob, decrypts it at service start, and
+copies it to a root-only transient `/run` directory so dockerd can bind-mount it
+read-only. The API reads `PAPERBRIDGE_MQTT_PASSWORD_FILE`; no 1Password
+credential, persistent plaintext file, or Docker secret environment variable is
+created. This path is Host-tested with fakes and has not run on an exe.dev VM.
 
 The ESP32 uses station-mode Wi-Fi to reach an authenticated local Mosquitto
 listener; its direct W5500 printer subnet has no gateway or DNS. Semantic MQTT
@@ -49,9 +52,10 @@ infrastructure access control. `/health` reports process liveness, while
 `/ready` reports application MQTT readiness and whether submissions are
 accepted; neither reports Device or Printer state. Keep the Node service bound
 to loopback.
-Production credential provisioning/rotation, public broker exposure, public
-sender authorization, signed updates, and OTA remain future work and may
-trigger ESP-IDF migration.
+Executing candidate-VM credential provisioning or rotation remains issue #29
+work with explicit Owner authorization. Public broker exposure, public sender
+authorization, signed updates, and OTA remain future work and may trigger
+ESP-IDF migration.
 The EMQX path requires CA verification, SNI, automatic NTP, and the Fnox
 `production` overlay. Its bounded no-output TLS scope was physically verified
 on 2026-08-07; this is not a production security or reliability claim.

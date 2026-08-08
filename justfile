@@ -129,7 +129,69 @@ configure-device:
 mqtt-probe:
     FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- bun run mqtt:probe
 
-# Private exe.dev production Host. Set PAPERBRIDGE_SHA to an exact reviewed SHA.
+# Candidate exe.dev container VM. Mutating actions require EXEDEV_CONFIRM_VM=EXEDEV_VM.
+exedev-container-bootstrap:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/container-operator.sh bootstrap
+
+exedev-container-credential:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/container-operator.sh credential
+
+exedev-container-build:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/container-operator.sh build
+
+exedev-container-deploy:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_IMAGE_DIGEST:?PAPERBRIDGE_IMAGE_DIGEST is required}"
+    tools/exedev/container-operator.sh deploy
+
+exedev-container-status:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh status
+
+exedev-container-logs:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh logs
+
+exedev-container-verify:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh verify
+
+exedev-container-probe:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh probe
+
+exedev-container-restart:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh restart
+
+exedev-container-reboot:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh reboot
+
+exedev-container-rotate:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/container-operator.sh rotate
+
+exedev-container-rollback:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh rollback
+
+# Existing direct-Node production Host; preserved until explicit cutover.
+# Set PAPERBRIDGE_SHA to an exact reviewed SHA.
 production-bootstrap:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
     tools/exedev/operator.sh bootstrap

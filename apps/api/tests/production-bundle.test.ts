@@ -39,6 +39,10 @@ function buildProduction(): void {
 		readFileSync(new URL("../dist/server.js", import.meta.url), "utf8"),
 		/from "sharp";/,
 	);
+	assert.match(
+		readFileSync(new URL("../dist/main.js", import.meta.url), "utf8"),
+		/PAPERBRIDGE_MQTT_HOST/,
+	);
 }
 
 function startProduction(

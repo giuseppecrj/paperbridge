@@ -74,15 +74,17 @@ arguments because they can appear in shell history and process listings.
 ## Deployment boundary
 
 Fnox remains an operator-side provisioning tool. Local commands receive
-`PAPERBRIDGE_MQTT_PASSWORD` directly. The target container deployment instead
-stores an encrypted systemd credential and gives the API
-`PAPERBRIDGE_MQTT_PASSWORD_FILE=/run/secrets/mqtt-password`. That file setting is
-deployment configuration and does not belong in local `.env`.
+`PAPERBRIDGE_MQTT_PASSWORD` directly. The candidate container operator captures
+and removes that environment variable before it starts SSH, then sends the bytes
+through SSH stdin for `systemd-creds` encryption. The VM and container do not
+install Fnox or receive 1Password credentials.
 
-The target checked-in deployment environment file will contain only non-secret
-runtime configuration plus the mounted credential path. Issue #28 will create
-that file together with its systemd/container consumer. The VM and container do
-not install Fnox or receive 1Password credentials.
+The checked-in deployment environment template contains only non-secret runtime
+configuration and
+`PAPERBRIDGE_MQTT_PASSWORD_FILE=/run/secrets/mqtt-password`. That file setting is
+deployment configuration and does not belong in local `.env`. systemd decrypts
+the credential at service start; a transient root-only `/run` copy lets dockerd
+mount it read-only into the container and is removed when the service stops.
 
 ## Primary sources
 
