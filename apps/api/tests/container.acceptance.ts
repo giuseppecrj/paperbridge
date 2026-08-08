@@ -69,6 +69,19 @@ async function waitForStatus(
 	);
 }
 
+test("includes the TLS CA bundle required by production MQTT", () => {
+	assert(image, "PAPERBRIDGE_TEST_CONTAINER_IMAGE is required");
+	docker([
+		"run",
+		"--rm",
+		"--network=none",
+		"--entrypoint=node",
+		image,
+		"--eval",
+		'require("node:fs").accessSync("/etc/ssl/certs/ca-certificates.crt")',
+	]);
+});
+
 function publishDelivered(
 	client: mqtt.MqttClient,
 	topic: string,

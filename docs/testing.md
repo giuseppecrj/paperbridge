@@ -15,9 +15,10 @@ just test-api-container
 ```
 
 It requires Docker, Mosquitto, and `mosquitto_passwd`. It rebuilds the exact
-pinned image, inspects its runtime boundaries and secret metadata, and exercises
-health, readiness, REST, MCP, Linux-native image preparation, MQTT correlation,
-and SIGTERM. The broker and MQTT peer remain Host test processes. The check does
+pinned image, requires its production TLS CA bundle, inspects its runtime
+boundaries and secret metadata, and exercises health, readiness, REST, MCP,
+Linux-native image preparation, MQTT correlation, and SIGTERM. The broker and
+MQTT peer remain Host test processes. The check does
 not contact the purchased Device or Printer and is not deployment evidence.
 
 The ordinary Python suite also executes the candidate exe.dev operator through

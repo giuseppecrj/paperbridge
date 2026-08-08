@@ -21,8 +21,8 @@ remote_source="$root/tools/exedev/container-remote.sh"
 }
 
 target="$vm.exe.xyz"
-ssh=(ssh -o BatchMode=yes -o ForwardAgent=no "$target")
-control_ssh=(ssh -o BatchMode=yes -o ForwardAgent=no exe.dev)
+ssh=(ssh -o BatchMode=yes -o ForwardAgent=no -o StrictHostKeyChecking=yes "$target")
+control_ssh=(ssh -o BatchMode=yes -o ForwardAgent=no -o StrictHostKeyChecking=yes exe.dev)
 
 render() {
     printf 'DRY RUN:'

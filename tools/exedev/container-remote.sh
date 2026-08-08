@@ -258,7 +258,7 @@ bootstrap)
 
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    apt-get install --yes ca-certificates git docker.io
+    apt-get install --yes ca-certificates curl git docker.io
     systemctl enable --now docker.service
     docker info >/dev/null
     check_encrypted_credentials
