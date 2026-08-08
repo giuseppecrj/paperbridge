@@ -1,8 +1,9 @@
 # Security
 
-The current trust boundary is local USB plus a private localhost REST/MCP
-service, authenticated local MQTT, and the configured printer LAN. USB and HTTP
-bound input before parsing, validate the authoritative semantic contract, reject
+The current trust boundary is local USB plus private localhost or
+exe.dev-proxied REST/MCP service access, authenticated MQTT, and the configured
+printer LAN. USB and HTTP bound input before parsing, validate the authoritative
+semantic contract, reject
 raw printer bytes/control injection, and use explicit timeouts. Device
 `config.show_redacted` hides ignored Wi-Fi and MQTT passwords. No credential
 values are committed.
@@ -29,7 +30,9 @@ SSH stdin. systemd stores the encrypted blob, decrypts it at service start, and
 copies it to a root-only transient `/run` directory so dockerd can bind-mount it
 read-only. The API reads `PAPERBRIDGE_MQTT_PASSWORD_FILE`; no 1Password
 credential, persistent plaintext file, or Docker secret environment variable is
-created. This path is Host-tested with fakes and has not run on an exe.dev VM.
+created. Issue #29 accepted this path on `paperbridge-api` and compared the
+actual secret in memory against Docker metadata, process state, image history,
+logs, encrypted storage, runtime configuration, and tracked repository files.
 
 The ESP32 uses station-mode Wi-Fi to reach an authenticated local Mosquitto
 listener; its direct W5500 printer subnet has no gateway or DNS. Semantic MQTT
@@ -52,10 +55,12 @@ infrastructure access control. `/health` reports process liveness, while
 `/ready` reports application MQTT readiness and whether submissions are
 accepted; neither reports Device or Printer state. Keep the Node service bound
 to loopback.
-Executing candidate-VM credential provisioning or rotation remains issue #29
-work with explicit Owner authorization. Public broker exposure, public sender
-authorization, signed updates, and OTA remain future work and may trigger
-ESP-IDF migration.
+
+Generating the replacement VM-scoped client token and changing custom-domain or
+DNS state remain issue #30 work with separate Owner authorization. Public broker
+exposure, public sender authorization, signed updates, and OTA remain future
+work and may trigger ESP-IDF migration.
+
 The EMQX path requires CA verification, SNI, automatic NTP, and the Fnox
 `production` overlay. Its bounded no-output TLS scope was physically verified
 on 2026-08-07; this is not a production security or reliability claim.

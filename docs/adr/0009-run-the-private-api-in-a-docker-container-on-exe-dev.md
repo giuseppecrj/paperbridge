@@ -1,6 +1,6 @@
 # ADR 0009: Run the private API in a Docker container on exe.dev
 
-- Status: Accepted; implementation staged.
+- Status: Accepted; candidate accepted, production cutover pending.
 - Date: 2026-08-07
 - Amends: ADR 0007 VM operation
 
@@ -13,10 +13,10 @@ VM. This changes the API runtime packaging only. It does not change private
 proxy access, MQTT/TLS, the Device, the Printer, semantic job contracts, or
 honest delivery results.
 
-This is a target design, not a claim that the container deployment has been
-performed or accepted. The existing API route remains unchanged until the new
-VM passes the stated no-output gates and an Owner explicitly approves route
-cutover.
+Issue #29 accepted the container deployment on the separate `paperbridge-api`
+VM. The existing API route remains unchanged until the implementation source is
+merged, that exact commit is rebuilt and accepted, and an Owner explicitly
+approves route cutover under issue #30.
 
 ## Decision
 
@@ -90,12 +90,13 @@ work. The no-output checks prove API and MQTT-client operation only; they do
 not prove Device reachability, Printer delivery, or paper output.
 
 As of 2026-08-08, the digest-pinned image and hardened local container acceptance
-are implemented and Host-tested on Linux ARM64 under OrbStack. The separate
-candidate-VM operator, encrypted-credential flow, exact-commit build, digest
-state, systemd unit, rollback, and no-output runbook are implemented and
-Host-tested with dry runs and fake remote commands. This does not prove the
-future exe.dev VM architecture, deployment, private proxy, credential mount, or
-route; issue #29 owns those observations.
+are implemented and Host-tested on Linux ARM64 under OrbStack. Issue #29 also
+accepted the exact image on the x86_64 `paperbridge-api` VM with its private
+proxy, encrypted credential, hardening, health/readiness, tracer, service
+restart, and VM reboot. This remains VM acceptance, not physical verification.
+The legacy `paperbridge-prod` VM still owns `api.paperbridge.tech`; issue #30 and
+[`exedev-container-cutover.md`](../exedev-container-cutover.md) own the merged
+rebuild and approval-gated route change.
 
 The research behind this decision is recorded in:
 

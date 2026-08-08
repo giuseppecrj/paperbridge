@@ -58,10 +58,12 @@ public backend, OTA, or production provisioning is implemented.
   delivered 42 bytes, and an operator observed the expected receipt.
 - A digest-pinned, non-root API container with a read-only root filesystem and
   loopback-only publication is implemented and host-tested.
-- A separate exe.dev container operator, encrypted-systemd-credential flow,
-  digest deploy/rollback state, and no-output runbook are implemented and
-  Host-tested with dry runs and fake remote commands. No new VM, production
-  deployment, proxy, route, or cutover has occurred.
+- The separate `paperbridge-api` exe.dev VM was accepted on 2026-08-08 at commit
+  `768edcf5dae7ed8151e2f23867d154200aa86afe` and image digest
+  `sha256:f0afd11525510b3c0038b8862aa2e9d6a7faacf67882af4cc99edbc841b71976`.
+  Its private proxy, encrypted credential, hardening, health/readiness, tracer,
+  service restart, and VM reboot gates passed. `api.paperbridge.tech` remains on
+  `paperbridge-prod`; merged-image rebuild and route cutover remain issue #30.
 
 ## Mac setup
 
@@ -300,3 +302,5 @@ Start with [`docs/local-bringup.md`](docs/local-bringup.md),
 workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md). The separate candidate
 container workflow is in
 [`docs/exedev-container-deployment.md`](docs/exedev-container-deployment.md).
+The approval-gated merged-image and production-route procedure is in
+[`docs/exedev-container-cutover.md`](docs/exedev-container-cutover.md).

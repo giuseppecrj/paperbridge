@@ -13,8 +13,11 @@ host-loopback publication. A separate checked-in operator can build an exact
 commit on a fresh candidate VM, provision an encrypted systemd credential, and
 select current and previous local image digests. systemd owns the one container
 and exposes the decrypted credential through a transient root-only `/run` file
-that Docker mounts read-only. These workflows are Host-tested only; they do not
-establish VM deployment, proxy, or route state. All ingress paths reach one
+that Docker mounts read-only. Issue #29 accepted this path on the separate
+`paperbridge-api` VM, including its private proxy, credential mount, exact image
+digest, restart, reboot, and no-output tracer. `api.paperbridge.tech` still routes
+to the direct-Node `paperbridge-prod` VM until issue #30's approved cutover. All
+ingress paths reach one
 firmware job module and the
 same coordinator, renderer, and printer transport. The shared coordinator
 serializes every delivery so USB diagnostics and USB/MQTT jobs cannot open
