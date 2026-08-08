@@ -16,8 +16,10 @@ implemented, simulator-tested, and physically verified on the purchased
 device/printer. MCP uses the same application path. Image preparation is host-/
 simulator-tested to 576×576, and `test.png` was physically observed at that
 bound through REST/MQTT on 2026-08-05. A smaller PNG feed/cut job was also
-observed. JPEG and broader image-quality acceptance remain unverified. No website,
-public backend, OTA, or production provisioning is implemented.
+observed. JPEG and broader image-quality acceptance remain unverified. The
+private single-device service is production-provisioned on exe.dev. No website,
+public application authentication, durable job delivery, OTA, or multi-Device
+routing is implemented.
 
 ## Status
 
@@ -56,6 +58,16 @@ public backend, OTA, or production provisioning is implemented.
   same application service. It is host-/simulator-tested and was physically
   verified on 2026-08-02: job `6e46f155-c3f2-4b11-9c56-46f9261f2abe`
   delivered 42 bytes, and an operator observed the expected receipt.
+- A digest-pinned, non-root API container with a read-only root filesystem and
+  loopback-only publication is implemented and host-tested.
+- The hardened container on `paperbridge-api` is the active private production
+  runtime. On 2026-08-08, issue #30 moved `api.paperbridge.tech` to merged commit
+  `7d0d4e163fc12f841c427df89e94af431d21d2d9` and image digest
+  `sha256:2ff7b29167b8d86c0c36fd100c0f15ba54bccb9b052d93f3bdfab414e81ad5bd`.
+  Its private proxy, encrypted credential, hardening, health/readiness, tracer,
+  service restart, VM reboot, and route gates passed. The direct-Node
+  `paperbridge-prod` VM remains available only as the rollback route until issue
+  #49 completes its observation and retirement gates.
 
 ## Mac setup
 
@@ -74,8 +86,8 @@ just test
 
 ## Development configuration and secrets
 
-Copy the non-secret local settings and replace the example broker address and
-serial port for this machine:
+Copy the non-secret local settings and replace the example broker address,
+Wi-Fi SSID, and serial port for this machine:
 
 ```sh
 cp .env.example .env
@@ -91,10 +103,10 @@ op vault list
 just secrets-check
 ```
 
-Fnox injects secrets only into the recipes that need them. `.env`,
-`fnox.local.toml`, and generated firmware `config.json` are ignored. An optional
-machine-local `OP_SERVICE_ACCOUNT_TOKEN` may live in the OS keychain for
-unattended use; it is never injected into Paperbridge child processes. See
+Fnox uses 1Password desktop CLI integration and injects secrets only into the
+recipes that need them. `.env` and generated firmware `config.json` are ignored.
+Treat `config.json` as disposable derived state: regenerate it from `.env` and
+Fnox instead of editing it manually. See
 [`docs/research/fnox-secrets-workflow.md`](docs/research/fnox-secrets-workflow.md).
 
 ## Discover the ESP32 serial port
@@ -290,5 +302,10 @@ cause watchdog resets; or printer status needs lower-level control. See
 
 Start with [`docs/local-bringup.md`](docs/local-bringup.md),
 [`docs/hardware.md`](docs/hardware.md), and
-[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The private Phase 2 Host
-operator workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md).
+[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The active container operator
+workflow is in
+[`docs/exedev-container-deployment.md`](docs/exedev-container-deployment.md).
+The retained direct-Node rollback workflow is in
+[`docs/exedev-deployment.md`](docs/exedev-deployment.md). The completed cutover
+and route rollback procedure is in
+[`docs/exedev-container-cutover.md`](docs/exedev-container-cutover.md).

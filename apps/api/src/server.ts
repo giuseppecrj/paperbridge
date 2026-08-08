@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createApiServer } from "./api-server.js";
 import {
 	apiAccessPolicy,
+	mqttPassword,
 	mqttTls,
 	positiveInteger,
 	required,
@@ -21,7 +22,7 @@ const broker = new MqttJobClient({
 	host: required("PAPERBRIDGE_MQTT_HOST"),
 	port: positiveInteger("PAPERBRIDGE_MQTT_PORT", 1883),
 	username: required("PAPERBRIDGE_MQTT_USERNAME"),
-	password: required("PAPERBRIDGE_MQTT_PASSWORD"),
+	password: mqttPassword(),
 	deviceId,
 	clientId:
 		process.env.PAPERBRIDGE_MQTT_CLIENT_ID ?? `paperbridge-api-${randomUUID()}`,
@@ -45,16 +46,31 @@ const mcp = createMcpEndpoint({
 const server = createApiServer({
 	submitJob,
 	mcp,
-	isReady: () => broker.isReady(),
+	isReady: () => broker.isReady() && !jobs.isDraining(),
 });
 await new Promise<void>((resolve, reject) => {
 	server.once("error", reject);
 	server.listen(port, host, resolve);
 });
-async function shutdown(): Promise<void> {
-	await mcp.close();
-	broker.close();
-	server.close();
+let shutdownPromise: Promise<void> | undefined;
+function shutdown(): Promise<void> {
+	shutdownPromise ??= (async () => {
+		await jobs.drain();
+		await mcp.close();
+		broker.close();
+		await new Promise<void>((resolve, reject) => {
+			server.close((error) => (error ? reject(error) : resolve()));
+		});
+	})();
+	return shutdownPromise;
 }
-process.once("SIGINT", () => void shutdown());
-process.once("SIGTERM", () => void shutdown());
+function handleShutdown(): void {
+	void shutdown().catch((error: unknown) => {
+		process.stderr.write(
+			`Shutdown failed: ${error instanceof Error ? error.message : "unknown error"}\n`,
+		);
+		process.exitCode = 1;
+	});
+}
+process.once("SIGINT", handleShutdown);
+process.once("SIGTERM", handleShutdown);

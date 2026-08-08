@@ -8,6 +8,34 @@ just format-check
 just test
 ```
 
+The explicit Docker acceptance gate is separate from the ordinary suite:
+
+```sh
+just test-api-container
+```
+
+It requires Docker, Mosquitto, and `mosquitto_passwd`. It rebuilds the exact
+pinned image, requires its production TLS CA bundle, inspects its runtime
+boundaries and secret metadata, and exercises health, readiness, REST, MCP,
+Linux-native image preparation, MQTT correlation, and SIGTERM. The broker and
+MQTT peer remain Host test processes. The check does
+not contact the purchased Device or Printer and is not deployment evidence.
+
+The ordinary Python suite also executes the candidate exe.dev operator through
+its dry-run interface and runs the remote helper against temporary directories
+and fake Git, Docker, systemd, curl, and journal commands. These checks cover
+explicit target rejection, Owner confirmation, exact SHA and digest validation,
+secret-safe SSH construction, encrypted-credential failure, image records,
+current/previous rollback state, retention, and bounded no-output commands. They
+open no SSH connection, resolve no real secret, and do not create or change a
+VM, proxy, route, Device, or Printer.
+
+Issue #29 separately recorded real-VM observations on 2026-08-08: the exact
+`paperbridge-api` image digest, private proxy, encrypted credential, hardening,
+health/readiness, three correlated no-output probes, service restart, and VM
+reboot. These are VM acceptance observations, not Host tests or physical-output
+evidence. Issue #30 owns the merged-image rebuild and custom-route checks.
+
 Tests cover request parsing/correlation, malformed and oversized JSON, stable
 unsupported-command errors, strict diagnostic and semantic-cut authorization,
 configuration validation, shared schema/device/renderer fixtures, raw/control
@@ -18,11 +46,12 @@ transitions, simulator capture hashing, station-mode Wi-Fi connection/retry
 behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
 protocol package, HTTP body/device validation, MCP discovery/tool calls and
 Host/Origin guards, MQTT result correlation, timeout/cancellation without retry,
-QoS duplicate suppression, device cut policy, and partial-write result reporting.
-The Bun workspace checks both TypeScript packages with `tsc` and Node's test
-runner. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
-also run the Node probe and full REST and MCP job paths through real local
-Mosquitto; otherwise those broker tests are reported as skipped.
+QoS duplicate suppression, device cut policy, partial-write result reporting,
+and built-Node SIGTERM draining. The Bun workspace checks both TypeScript
+packages with `tsc` and Node's test runner. When `mosquitto` and
+`mosquitto_passwd` are installed, integration tests also run the Node probe, full
+REST and MCP job paths, and graceful shutdown through real local Mosquitto;
+otherwise those broker tests are reported as skipped.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.

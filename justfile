@@ -8,6 +8,7 @@ NETWORK_RECOVERY_TIMEOUT_SECONDS := env_var_or_default("NETWORK_RECOVERY_TIMEOUT
 NETWORK_RECOVERY_INTERVAL_SECONDS := env_var_or_default("NETWORK_RECOVERY_INTERVAL_SECONDS", "1")
 SOAK_DURATION_SECONDS := env_var_or_default("SOAK_DURATION_SECONDS", "259200")
 SOAK_INTERVAL_SECONDS := env_var_or_default("SOAK_INTERVAL_SECONDS", "60")
+API_CONTAINER_IMAGE := env_var_or_default("PAPERBRIDGE_TEST_CONTAINER_IMAGE", "paperbridge-api:test")
 
 # Verified ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin (docs/micropython-bringup.md)
 MICROPYTHON_SHA256 := "67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a62ff5dd"
@@ -17,6 +18,7 @@ bootstrap:
     bun install
 
 lint:
+    FNOX_CONFIG_DIR=/nonexistent fnox profiles >/dev/null
     uv run ruff check .
     bun run lint
 
@@ -30,6 +32,12 @@ test:
     uv run pytest
     bun run test
 
+build-api-container:
+    docker build --file apps/api/Dockerfile --tag "{{API_CONTAINER_IMAGE}}" .
+
+test-api-container: build-api-container
+    cd apps/api && PAPERBRIDGE_TEST_CONTAINER_IMAGE="{{API_CONTAINER_IMAGE}}" node --import tsx --test tests/container.acceptance.ts
+
 # Opt-in HIL: never part of ordinary `just test`. Requires a selected PORT.
 test-hardware-smoke:
     test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
@@ -38,7 +46,7 @@ test-hardware-smoke:
 # Opt-in no-output dual-interface recovery HIL; MQTT secret stays Fnox-managed.
 test-hardware-network-recovery:
     test -n "{{PORT}}" || (echo "PORT is required" >&2; exit 2)
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- uv run python tools/hardware/hil.py network-recovery \
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- uv run python tools/hardware/hil.py network-recovery \
         --port "{{PORT}}" \
         --timeout-seconds "{{NETWORK_RECOVERY_TIMEOUT_SECONDS}}" \
         --interval-seconds "{{NETWORK_RECOVERY_INTERVAL_SECONDS}}"
@@ -108,26 +116,101 @@ serial-monitor:
 printer-simulator:
     uv run python tools/printer-simulator/server.py
 
-# No-output MQTT tracer; requires the configured local Mosquitto credentials.
+# Verify local Device configuration without printing secret values.
 secrets-check:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- python -c 'import os; names=("PAPERBRIDGE_MQTT_PASSWORD", "PAPERBRIDGE_WIFI_SSID", "PAPERBRIDGE_WIFI_PASSWORD"); missing=[name for name in names if not os.environ.get(name)]; assert not missing, missing; assert "OP_SERVICE_ACCOUNT_TOKEN" not in os.environ'
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device exec -- python -c 'import os; names=("PAPERBRIDGE_MQTT_PASSWORD", "PAPERBRIDGE_WIFI_SSID", "PAPERBRIDGE_WIFI_PASSWORD"); missing=[name for name in names if not os.environ.get(name)]; assert not missing, missing'
 
-# Generate ignored firmware config without putting passwords in argv or shell history.
+# Generate disposable ignored firmware config without putting passwords in argv or shell history.
 configure-device:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device --no-defaults exec -- uv run python tools/provisioning/generate_device_config.py \
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P device exec -- uv run python tools/provisioning/generate_device_config.py \
         --from-env \
         --output firmware/micropython/config.json
 
 mqtt-probe:
-    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run mqtt:probe
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- bun run mqtt:probe
 
-# Private exe.dev production Host. Set PAPERBRIDGE_SHA to an exact reviewed SHA.
+# Candidate exe.dev container VM. Mutating actions require EXEDEV_CONFIRM_VM=EXEDEV_VM.
+exedev-container-bootstrap:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/container-operator.sh bootstrap
+
+exedev-container-credential:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/container-operator.sh credential
+
+exedev-container-build:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
+    tools/exedev/container-operator.sh build
+
+exedev-container-deploy:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    test -n "${PAPERBRIDGE_IMAGE_DIGEST:?PAPERBRIDGE_IMAGE_DIGEST is required}"
+    tools/exedev/container-operator.sh deploy
+
+exedev-container-status:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh status
+
+exedev-container-logs:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh logs
+
+exedev-container-verify:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    tools/exedev/container-operator.sh verify
+
+exedev-container-probe:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh probe
+
+exedev-container-restart:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh restart
+
+exedev-container-reboot:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh reboot
+
+exedev-container-rotate:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/container-operator.sh rotate
+
+exedev-container-rollback:
+    test -n "${EXEDEV_VM:?EXEDEV_VM is required}"
+    test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
+    tools/exedev/container-operator.sh rollback
+
+# Guarded exe.dev custom-domain registration; DNS remains an Owner action.
+exedev-container-route-activate:
+    test -n "${EXEDEV_CONFIRM_ROUTE:?EXEDEV_CONFIRM_ROUTE is required}"
+    uv run python tools/exedev/cutover_operator.py activate
+
+exedev-container-route-restore:
+    test -n "${EXEDEV_CONFIRM_ROUTE:?EXEDEV_CONFIRM_ROUTE is required}"
+    uv run python tools/exedev/cutover_operator.py restore
+
+# Existing direct-Node production Host; preserved until explicit cutover.
+# Set PAPERBRIDGE_SHA to an exact reviewed SHA.
 production-bootstrap:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
     tools/exedev/operator.sh bootstrap
 
+# Verify the production MQTT credential without printing its value.
+production-secrets-check:
+    FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- python -c 'import os; assert os.environ.get("PAPERBRIDGE_MQTT_PASSWORD")'
+
 production-configure:
-    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host,emqx-spike --no-defaults exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
+    set -o pipefail; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P production exec -- tools/exedev/write-environment.sh | tools/exedev/operator.sh configure
 
 production-deploy:
     test -n "${PAPERBRIDGE_SHA:?PAPERBRIDGE_SHA is required}"
@@ -157,7 +240,7 @@ production-reboot:
 # Private single-device REST/MQTT service; defaults to 127.0.0.1:3000.
 [continue]
 api:
-    status=0; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon -P host --no-defaults exec -- bun run --filter @paperbridge/api start || status=$?; if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then exit "$status"; fi
+    status=0; FNOX_CONFIG_DIR=/nonexistent fnox --no-daemon exec -- bun run --filter @paperbridge/api start || status=$?; if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then exit "$status"; fi
 
 clean:
     rm -rf .pytest_cache .ruff_cache .venv captures

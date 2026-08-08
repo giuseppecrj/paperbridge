@@ -1,8 +1,10 @@
 # Private cloud REST and MCP access
 
 Use this guide to connect an approved private client to the deployed Paperbridge
-service. It is not the VM deployment runbook; see
-[`exedev-deployment.md`](exedev-deployment.md) for that workflow.
+service. It is not a VM deployment runbook. See
+[`exedev-container-deployment.md`](exedev-container-deployment.md) for the active
+container workflow or [`exedev-deployment.md`](exedev-deployment.md) for the
+retained direct-Node rollback workflow.
 
 ## Boundary
 

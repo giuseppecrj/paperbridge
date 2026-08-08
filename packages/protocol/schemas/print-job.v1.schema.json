@@ -52,12 +52,13 @@
     },
     "image": {
       "type": "object",
+      "description": "API/MCP-only source image. Paperbridge auto-orients, resizes within 576×576 raster dots, flattens transparency to white, converts to grayscale, and dithers it before delivery. Pre-resize to 576 pixels wide or less to reduce upload time.",
       "additionalProperties": false,
       "required": ["type", "mime_type", "data_base64"],
       "properties": {
         "type": { "const": "image" },
-        "mime_type": { "enum": ["image/png", "image/jpeg"] },
-        "data_base64": { "type": "string", "minLength": 4, "maxLength": 2097152, "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" }
+        "mime_type": { "enum": ["image/png", "image/jpeg"], "description": "The image MIME type. It must match the encoded image bytes." },
+        "data_base64": { "type": "string", "description": "Complete RFC 4648 Base64 encoding of the image bytes. Do not include a data-URL prefix, whitespace, shell output, or explanatory text. The length must be divisible by four and decoding must succeed. Truncated or invalid data is rejected before delivery. Maximum 2,097,152 Base64 characters; this is not a decoded-byte limit.", "minLength": 4, "maxLength": 2097152, "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" }
       }
     },
     "raster": {

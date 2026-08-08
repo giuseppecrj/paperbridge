@@ -25,11 +25,14 @@ demonstrated on the purchased hardware. Treat these as bring-up evidence, not a
 production-reliability claim: the 72-hour soak remains a separate gate. Never
 infer hardware success from host tests or stale documentation.
 
-Not implemented: web app, public API/authentication, MQTT/TLS, durable job
-delivery, OTA, production provisioning, or an ESP-IDF firmware
-port. Do not build these without an approved issue. `apps/api` contains the
-private single-device REST/MCP/MQTT v1 service; `firmware/esp-idf/` remains a
-future placeholder.
+Not implemented: web app, public application authentication, durable job
+delivery, OTA, or an ESP-IDF firmware port. The private single-device API is
+production-provisioned as a hardened container on `paperbridge-api`;
+`paperbridge-prod` remains the route rollback target until issue #49 completes.
+Do not operate production or build unimplemented capabilities without an
+approved issue and required Owner authorization. `apps/api` contains the private
+single-device REST/MCP/MQTT v1 service; `firmware/esp-idf/` remains a future
+placeholder.
 
 ## Sources of truth
 
@@ -80,6 +83,14 @@ stale claim.
 - `packages/protocol/` — authoritative schemas, fixtures, and TypeScript
   validators/topic contracts.
 - `apps/api/` — portable private REST/MCP/MQTT v1 service plus no-output probe.
+- `apps/api/Dockerfile` and `apps/api/tests/container.acceptance.ts` —
+  digest-pinned local API image and hardened Host acceptance. These tests do not
+  prove the separately recorded production observations.
+- `tools/exedev/container-operator.sh`, `container-remote.sh`, and
+  `deploy/exedev/paperbridge-container.*` — explicit production-VM targeting,
+  encrypted credential provisioning, digest state, and systemd supervision.
+  Their tests use dry runs and fake remote commands; issues #29 and #30 record
+  the real VM and route observations.
 - `tools/mosquitto/` — authenticated local-broker development configuration.
 - `tools/provisioning/` — local device-configuration generation.
 - `tools/printer-simulator/` — TCP capture and transport-failure testing.
@@ -117,6 +128,13 @@ just format-check
 just test
 ```
 
+When the API image or runtime boundary changes, also run the explicit
+Docker/Mosquitto Host gate:
+
+```sh
+just test-api-container
+```
+
 `mise.toml` pins the tools, `uv.lock` and `bun.lock` pin dependencies, and
 `justfile` is the repeatable operator interface. Use the `paperbridge` CLI for
 parameterized USB diagnostics and jobs rather than adding a `just` wrapper for
@@ -126,9 +144,8 @@ or substitute for the USB CLI.
 Development passwords resolve from 1Password through the checked-in project
 `fnox.toml`; non-secret machine settings come from ignored `.env`. Recipes that
 need secrets invoke `fnox exec`, which keeps values out of command arguments and
-the interactive shell. Never print resolved values or commit `.env`,
-`fnox.local.toml`, or generated firmware configuration. See
-`docs/research/fnox-secrets-workflow.md`.
+the interactive shell. Never print resolved values or commit `.env` or generated
+firmware configuration. See `docs/research/fnox-secrets-workflow.md`.
 
 For non-trivial behavior, add or identify the smallest failing behavioral check,
 make it pass, then refactor. Run focused tests during work and all three checks
@@ -143,6 +160,15 @@ dependency to device code.
 
 ## Hardware and deployment safety
 
+The exe.dev container operator requires an explicit VM name, rejects
+`paperbridge-prod`, and requires a matching confirmation for every mutating
+command. Do not create a VM, provision or rotate a credential, build or deploy
+on a VM, probe, restart, reboot, roll back, change proxy visibility, or move a
+route without the issue-specific Owner authorization in
+`docs/exedev-container-deployment.md`. Issues #29 and #30 record the completed
+VM acceptance and cutover. Issue #49 owns the active rollback observation and
+legacy retirement.
+
 Hardware commands are external effects. Do not erase, flash, deploy, reboot,
 print, feed, cut, or alter printer networking unless the user explicitly asks.
 Before doing so:
@@ -151,9 +177,9 @@ Before doing so:
 2. Confirm the purchased board and selected firmware variant match.
 3. Verify the downloaded firmware SHA-256 from
    `docs/micropython-bringup.md` immediately before flashing.
-4. Generate ignored `firmware/micropython/config.json` through the project Fnox
-   workflow when networking is enabled; never commit it, `.env`,
-   `fnox.local.toml`, credentials, firmware downloads, or captures accidentally.
+4. Regenerate ignored `firmware/micropython/config.json` through the project
+   Fnox workflow when networking is enabled; never edit it manually or commit it,
+   `.env`, credentials, firmware downloads, or captures accidentally.
 5. Power the printer from its 24 V adapter and the board from USB; never cross
    power them.
 6. Follow the order: ping/info → Ethernet init/link/address → probe → text →

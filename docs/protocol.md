@@ -105,10 +105,13 @@ configured `device_id`, and timestamp before calling the same
 cancellation removes only the host waiter and does not label the device outcome.
 
 The REST and MCP service maps validation/device rejection, body limit, broker
-unavailability, printer failure/partial write, and timeout distinctly. A timeout
-is `unknown`: the service removes only its pending waiter and never republishes
-the job. The development result wait defaults to 15 seconds. The complete REST/MCP/MQTT path is host-/simulator-tested with real
-local Mosquitto and the real TCP printer simulator. REST/MQTT was physically
+unavailability, printer failure/partial write, and timeout distinctly. During
+shutdown, new submissions return `failed` / `SERVICE_DRAINING` without an MQTT
+publish while accepted submissions keep their correlated waiter. A timeout is
+`unknown`: the service removes only its pending waiter and never republishes the
+job. The development result wait defaults to 15 seconds. The complete
+REST/MCP/MQTT path is host-/simulator-tested with real local Mosquitto and the
+real TCP printer simulator. REST/MQTT was physically
 verified on 2026-08-02: `job-hw-acceptance-20260802T203016Z` returned HTTP 200
 with `delivered_to_printer` after 34 bytes, and an operator observed its expected
 receipt. MCP was physically verified the same day through a Pi MCP client: job

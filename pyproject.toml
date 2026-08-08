@@ -37,6 +37,7 @@ pythonpath = [
 testpaths = [
   "firmware/micropython/tests",
   "tools/device-cli/tests",
+  "tools/exedev/tests",
   "tools/firmware/tests",
   "tools/hardware/tests",
   "tools/provisioning/tests",

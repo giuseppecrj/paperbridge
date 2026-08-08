@@ -1,24 +1,38 @@
 # Security
 
-The current trust boundary is local USB plus a private localhost REST/MCP
-service, authenticated local MQTT, and the configured printer LAN. USB and HTTP
-bound input before parsing, validate the authoritative semantic contract, reject
+The current trust boundary is local USB plus private localhost or
+exe.dev-proxied REST/MCP service access, authenticated MQTT, and the configured
+printer LAN. USB and HTTP bound input before parsing, validate the authoritative
+semantic contract, reject
 raw printer bytes/control injection, and use explicit timeouts. Device
 `config.show_redacted` hides ignored Wi-Fi and MQTT passwords. No credential
 values are committed.
 
-Development values live in 1Password. Checked-in `fnox.toml` contains only
-remote references and injects values into bounded child commands; the optional
-1Password service-account bootstrap remains in the OS keychain and is not
-injected into Paperbridge processes. Non-secret machine configuration lives in
-ignored `.env`; generated device `config.json` is also ignored but necessarily
-contains the credentials deployed to the ESP32.
+Development passwords live in 1Password. Checked-in `fnox.toml` contains only
+remote references, authenticates through 1Password desktop CLI integration, and
+injects values into bounded child commands. Stable non-secret machine
+configuration, including the Wi-Fi SSID, lives in ignored `.env`. Generated
+Device `config.json` is disposable ignored state that necessarily contains the
+credentials deployed to the ESP32; regenerate it instead of editing it.
 
-A future Cloudflare deployment will store runtime bindings in Cloudflare's
-secret manager. Fnox may supply values to a deployment command, but Workers must
-not depend on Fnox or 1Password at runtime. Keep `PAPERBRIDGE_*` names stable
-where their meaning survives the migration; device Wi-Fi credentials remain
-provisioning data, not Worker bindings.
+The implemented local API image runs as non-root from a read-only root
+filesystem with no capabilities, `no-new-privileges`, no Docker socket, bridged
+networking, and host-loopback-only publication. Its Host acceptance mounts a
+temporary MQTT password file read-only and checks image history, environment
+metadata, arguments, and logs for the value. This is local image evidence, not a
+VM or production security claim.
+
+The checked-in candidate container operator keeps Fnox and 1Password on the
+operator machine. Its environment template contains only non-secret runtime
+configuration and the mounted credential path. The operator removes the local
+secret environment variable before it starts SSH and sends the bytes through
+SSH stdin. systemd stores the encrypted blob, decrypts it at service start, and
+copies it to a root-only transient `/run` directory so dockerd can bind-mount it
+read-only. The API reads `PAPERBRIDGE_MQTT_PASSWORD_FILE`; no 1Password
+credential, persistent plaintext file, or Docker secret environment variable is
+created. Issue #29 accepted this path on `paperbridge-api` and compared the
+actual secret in memory against Docker metadata, process state, image history,
+logs, encrypted storage, runtime configuration, and tracked repository files.
 
 The ESP32 uses station-mode Wi-Fi to reach an authenticated local Mosquitto
 listener; its direct W5500 printer subnet has no gateway or DNS. Semantic MQTT
@@ -38,11 +52,15 @@ default. A private exe.dev deployment must set the non-secret
 `PAPERBRIDGE_API_ALLOWED_ORIGIN`; requests without Origin remain valid for
 non-browser MCP clients. The proxy must remain private and provide
 infrastructure access control. `/health` reports process liveness, while
-`/ready` reports only the connected application MQTT client; neither reports
-Device or Printer state. Keep the Node service bound to loopback.
-Production credential provisioning/rotation, public broker exposure, public
-sender authorization, signed updates, and OTA remain future work and may
-trigger ESP-IDF migration.
-The optional EMQX path requires CA verification, SNI, automatic NTP, and a
-separate Fnox profile. Its bounded no-output TLS scope was physically verified
+`/ready` reports application MQTT readiness and whether submissions are
+accepted; neither reports Device or Printer state. Keep the Node service bound
+to loopback.
+
+Generating the replacement VM-scoped client token and changing custom-domain or
+DNS state remain issue #30 work with separate Owner authorization. Public broker
+exposure, public sender authorization, signed updates, and OTA remain future
+work and may trigger ESP-IDF migration.
+
+The EMQX path requires CA verification, SNI, automatic NTP, and the Fnox
+`production` overlay. Its bounded no-output TLS scope was physically verified
 on 2026-08-07; this is not a production security or reliability claim.

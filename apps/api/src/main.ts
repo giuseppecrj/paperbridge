@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { mqttTls, positiveInteger, required } from "./env.js";
+import { mqttPassword, mqttTls, positiveInteger, required } from "./env.js";
 import { probe } from "./mqtt-tracer.js";
 
 const result = await probe({
 	host: required("PAPERBRIDGE_MQTT_HOST"),
 	port: positiveInteger("PAPERBRIDGE_MQTT_PORT", 1883),
 	username: required("PAPERBRIDGE_MQTT_USERNAME"),
-	password: required("PAPERBRIDGE_MQTT_PASSWORD"),
+	password: mqttPassword(),
 	deviceId: required("PAPERBRIDGE_DEVICE_ID"),
 	clientId:
 		process.env.PAPERBRIDGE_MQTT_CLIENT_ID ??
