@@ -9,8 +9,13 @@ service, validate the authoritative schema and configured device, and publish
 one bounded MQTT job. The same generated Node bundle is packaged in a
 multi-stage, digest-pinned Docker image with external Linux-native `sharp`
 dependencies. Local acceptance runs that image with the intended hardening and
-host-loopback publication; it does not establish VM deployment or route state.
-All ingress paths reach one firmware job module and the
+host-loopback publication. A separate checked-in operator can build an exact
+commit on a fresh candidate VM, provision an encrypted systemd credential, and
+select current and previous local image digests. systemd owns the one container
+and exposes the decrypted credential through a transient root-only `/run` file
+that Docker mounts read-only. These workflows are Host-tested only; they do not
+establish VM deployment, proxy, or route state. All ingress paths reach one
+firmware job module and the
 same coordinator, renderer, and printer transport. The shared coordinator
 serializes every delivery so USB diagnostics and USB/MQTT jobs cannot open
 overlapping printer sockets.

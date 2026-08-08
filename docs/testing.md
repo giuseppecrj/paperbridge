@@ -20,6 +20,15 @@ health, readiness, REST, MCP, Linux-native image preparation, MQTT correlation,
 and SIGTERM. The broker and MQTT peer remain Host test processes. The check does
 not contact the purchased Device or Printer and is not deployment evidence.
 
+The ordinary Python suite also executes the candidate exe.dev operator through
+its dry-run interface and runs the remote helper against temporary directories
+and fake Git, Docker, systemd, curl, and journal commands. These checks cover
+explicit target rejection, Owner confirmation, exact SHA and digest validation,
+secret-safe SSH construction, encrypted-credential failure, image records,
+current/previous rollback state, retention, and bounded no-output commands. They
+open no SSH connection, resolve no real secret, and do not create or change a
+VM, proxy, route, Device, or Printer.
+
 Tests cover request parsing/correlation, malformed and oversized JSON, stable
 unsupported-command errors, strict diagnostic and semantic-cut authorization,
 configuration validation, shared schema/device/renderer fixtures, raw/control

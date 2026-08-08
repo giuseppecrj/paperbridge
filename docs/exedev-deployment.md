@@ -1,8 +1,13 @@
 # exe.dev private Host deployment
 
-This is the manual Phase 2 workflow for one `paperbridge-prod` VM. It runs the
-existing Node API as a hardened systemd service. It is not CI/CD, Docker, public
-sharing, durable delivery, or physical acceptance.
+This is the legacy manual workflow for the current `paperbridge-prod` VM. Keep
+it available until explicit cutover so the existing production route remains
+operable. The separate candidate Docker workflow is in
+[`exedev-container-deployment.md`](exedev-container-deployment.md); it refuses to
+target this VM.
+
+The current VM runs the Node API as a hardened systemd service. This runbook is
+not CI/CD, Docker, public sharing, durable delivery, or physical acceptance.
 
 ## Boundaries
 

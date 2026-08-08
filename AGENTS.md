@@ -25,9 +25,10 @@ demonstrated on the purchased hardware. Treat these as bring-up evidence, not a
 production-reliability claim: the 72-hour soak remains a separate gate. Never
 infer hardware success from host tests or stale documentation.
 
-Not implemented: web app, public API/authentication, MQTT/TLS, durable job
-delivery, OTA, production provisioning, or an ESP-IDF firmware
-port. Do not build these without an approved issue. `apps/api` contains the
+Not implemented: web app, public API/authentication, durable job delivery, OTA,
+or an ESP-IDF firmware port. Production provisioning has not occurred; the
+checked-in candidate operator is Host-tested only. Do not build or run these
+without an approved issue and required Owner authorization. `apps/api` contains the
 private single-device REST/MCP/MQTT v1 service; `firmware/esp-idf/` remains a
 future placeholder.
 
@@ -81,8 +82,13 @@ stale claim.
   validators/topic contracts.
 - `apps/api/` — portable private REST/MCP/MQTT v1 service plus no-output probe.
 - `apps/api/Dockerfile` and `apps/api/tests/container.acceptance.ts` —
-  digest-pinned local API
-  image and hardened Host acceptance; these do not prove VM deployment.
+  digest-pinned local API image and hardened Host acceptance; these do not prove
+  VM deployment.
+- `tools/exedev/container-operator.sh`, `container-remote.sh`, and
+  `deploy/exedev/paperbridge-container.*` — explicit candidate-VM targeting,
+  encrypted credential provisioning, digest state, and systemd supervision.
+  Their tests use dry runs and fake remote commands; they do not prove VM
+  deployment or route state.
 - `tools/mosquitto/` — authenticated local-broker development configuration.
 - `tools/provisioning/` — local device-configuration generation.
 - `tools/printer-simulator/` — TCP capture and transport-failure testing.
@@ -151,6 +157,14 @@ MicroPython cannot load duplicate module/class identities. Do not add a host-onl
 dependency to device code.
 
 ## Hardware and deployment safety
+
+The candidate exe.dev operator requires an explicit new VM name, rejects
+`paperbridge-prod`, and requires a matching confirmation for every mutating
+command. Do not create a VM, provision or rotate a credential, build or deploy
+on a VM, probe, restart, reboot, roll back, change proxy visibility, or move a
+route without the issue-specific Owner authorization in
+`docs/exedev-container-deployment.md`. Issues #29 and #30 own real VM acceptance
+and cutover.
 
 Hardware commands are external effects. Do not erase, flash, deploy, reboot,
 print, feed, cut, or alter printer networking unless the user explicitly asks.

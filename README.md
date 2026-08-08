@@ -57,8 +57,11 @@ public backend, OTA, or production provisioning is implemented.
   verified on 2026-08-02: job `6e46f155-c3f2-4b11-9c56-46f9261f2abe`
   delivered 42 bytes, and an operator observed the expected receipt.
 - A digest-pinned, non-root API container with a read-only root filesystem and
-  loopback-only publication is implemented and host-tested. This is local image
-  evidence only; no new VM, production deployment, route, or cutover has occurred.
+  loopback-only publication is implemented and host-tested.
+- A separate exe.dev container operator, encrypted-systemd-credential flow,
+  digest deploy/rollback state, and no-output runbook are implemented and
+  Host-tested with dry runs and fake remote commands. No new VM, production
+  deployment, proxy, route, or cutover has occurred.
 
 ## Mac setup
 
@@ -293,5 +296,7 @@ cause watchdog resets; or printer status needs lower-level control. See
 
 Start with [`docs/local-bringup.md`](docs/local-bringup.md),
 [`docs/hardware.md`](docs/hardware.md), and
-[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The private Phase 2 Host
-operator workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md).
+[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The current direct-Node Host
+workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md). The separate candidate
+container workflow is in
+[`docs/exedev-container-deployment.md`](docs/exedev-container-deployment.md).

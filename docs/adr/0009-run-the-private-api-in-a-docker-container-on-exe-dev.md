@@ -90,8 +90,12 @@ work. The no-output checks prove API and MQTT-client operation only; they do
 not prove Device reachability, Printer delivery, or paper output.
 
 As of 2026-08-08, the digest-pinned image and hardened local container acceptance
-are implemented and Host-tested on Linux ARM64 under OrbStack. This does not
-prove the future exe.dev VM architecture, deployment, private proxy, or route.
+are implemented and Host-tested on Linux ARM64 under OrbStack. The separate
+candidate-VM operator, encrypted-credential flow, exact-commit build, digest
+state, systemd unit, rollback, and no-output runbook are implemented and
+Host-tested with dry runs and fake remote commands. This does not prove the
+future exe.dev VM architecture, deployment, private proxy, credential mount, or
+route; issue #29 owns those observations.
 
 The research behind this decision is recorded in:
 
