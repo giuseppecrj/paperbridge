@@ -1,4 +1,4 @@
-# ADR 0009: Use WorkOS OAuth and Paperbridge device authorization
+# ADR 0010: Use WorkOS OAuth and Paperbridge device authorization
 
 - Status: Accepted
 - Date: 2026-08-08
