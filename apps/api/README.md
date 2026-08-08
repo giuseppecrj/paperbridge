@@ -37,7 +37,8 @@ The server defaults to `127.0.0.1:3000` and exposes:
   timestamp; and
 - the separate `just mqtt-probe` no-output diagnostic;
 - `GET /health`, which reports only Node process liveness; and
-- `GET /ready`, which reports only application MQTT readiness.
+- `GET /ready`, which reports MQTT readiness and whether the application accepts
+  new submissions.
 
 REST and MCP call the same `JobSubmissionService`, publish one QoS 1 non-retained
 MQTT message, and wait up to 15 seconds by default for the correlated result.
@@ -63,8 +64,17 @@ loopback hostname and may use HTTP or HTTPS with a local port. The configured
 proxy Origin must be HTTPS and have no path, query, or fragment.
 
 `/health` remains 200 when MQTT is disconnected. `/ready` is 200 only after the
-application MQTT client has connected and subscribed to job results; otherwise
-it is 503. Neither route probes or reports Device or Printer state.
+application MQTT client has connected and subscribed to job results and while
+the application accepts new submissions; otherwise it is 503. Neither route
+probes or reports Device or Printer state.
+
+On SIGINT or SIGTERM, the application starts draining before it closes MCP,
+MQTT, or HTTP resources. New REST and MCP submissions fail with
+`SERVICE_DRAINING` and do not publish MQTT work. Already accepted submissions
+can receive their correlated result or reach the existing timeout without a
+republish. `/health` remains live and `/ready` remains unavailable until draining
+finishes, after which the resources close in order. The default 15-second result
+wait fits within the 20-second systemd stop allowance.
 
 Timeout returns `unknown` and never republishes; cancellation releases only the
 host waiter, so it does not invent a device outcome. Device duplicate suppression

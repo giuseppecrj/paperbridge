@@ -52,6 +52,12 @@ The Node broker adapter keeps one result subscription and correlates pending
 REST or MCP requests by `job_id`. A bounded timeout is `unknown`; it does not
 expire, fail, or republish the job. The service supports one configured device
 only.
+
+On SIGINT or SIGTERM, the shared Job submission service stops accepting new REST
+and MCP work before any transport closes. Readiness becomes unavailable while
+health remains live. Accepted submissions can still receive a correlated result
+or reach their existing timeout; only then does the application close MCP, MQTT,
+and HTTP resources. Draining creates no retry, queue, or new Job lifecycle.
 Remote cut permission is device configuration (`mqtt.allow_cut`, default false),
 never a client field. When a development device is explicitly provisioned with
 `PAPERBRIDGE_MQTT_ALLOW_CUT=true`, REST/MCP/MQTT jobs may request a final

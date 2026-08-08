@@ -191,3 +191,40 @@ test("does not expose a client cut authorization field", async () => {
 			error.errorCode === "INVALID_PRINT_JOB",
 	);
 });
+
+test("draining waits for accepted work and rejects new submissions", async () => {
+	let finish: ((result: JobResult) => void) | undefined;
+	let submitted: (() => void) | undefined;
+	const brokerReceived = new Promise<void>((resolve) => {
+		submitted = resolve;
+	});
+	const result = new Promise<JobResult>((resolve) => {
+		finish = resolve;
+	});
+	let publications = 0;
+	const service = new JobSubmissionService("paperbridge-dev-001", {
+		submit: () => {
+			publications += 1;
+			submitted?.();
+			return result;
+		},
+	});
+	const accepted = service.submit(fixture("valid-text-feed.json"));
+	await brokerReceived;
+
+	const drained = service.drain();
+
+	assert.equal(service.isDraining(), true);
+	await assert.rejects(
+		service.submit(fixture("valid-text-feed.json")),
+		(error: unknown) =>
+			error instanceof SubmissionError &&
+			error.statusCode === 503 &&
+			error.errorCode === "SERVICE_DRAINING" &&
+			error.responseStatus === "failed",
+	);
+	assert.equal(publications, 1);
+	finish?.(delivered);
+	assert.deepEqual(await accepted, delivered);
+	await drained;
+});

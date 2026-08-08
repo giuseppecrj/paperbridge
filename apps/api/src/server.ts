@@ -46,16 +46,31 @@ const mcp = createMcpEndpoint({
 const server = createApiServer({
 	submitJob,
 	mcp,
-	isReady: () => broker.isReady(),
+	isReady: () => broker.isReady() && !jobs.isDraining(),
 });
 await new Promise<void>((resolve, reject) => {
 	server.once("error", reject);
 	server.listen(port, host, resolve);
 });
-async function shutdown(): Promise<void> {
-	await mcp.close();
-	broker.close();
-	server.close();
+let shutdownPromise: Promise<void> | undefined;
+function shutdown(): Promise<void> {
+	shutdownPromise ??= (async () => {
+		await jobs.drain();
+		await mcp.close();
+		broker.close();
+		await new Promise<void>((resolve, reject) => {
+			server.close((error) => (error ? reject(error) : resolve()));
+		});
+	})();
+	return shutdownPromise;
 }
-process.once("SIGINT", () => void shutdown());
-process.once("SIGTERM", () => void shutdown());
+function handleShutdown(): void {
+	void shutdown().catch((error: unknown) => {
+		process.stderr.write(
+			`Shutdown failed: ${error instanceof Error ? error.message : "unknown error"}\n`,
+		);
+		process.exitCode = 1;
+	});
+}
+process.once("SIGINT", handleShutdown);
+process.once("SIGTERM", handleShutdown);

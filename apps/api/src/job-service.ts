@@ -50,15 +50,43 @@ export class SubmissionError extends Error {
 }
 
 export class JobSubmissionService {
+	private readonly inFlight = new Set<Promise<JobResult>>();
+	private draining = false;
+
 	constructor(
 		private readonly deviceId: string,
 		private readonly broker: JobBroker,
 		private readonly imageDecoder: ImageDecoder = sharpImageDecoder,
 	) {}
 
-	async submit(
+	submit(
 		value: unknown,
 		options: JobSubmissionOptions = {},
+	): Promise<JobResult> {
+		if (this.draining) {
+			return Promise.reject(
+				new SubmissionError(503, "SERVICE_DRAINING", "failed"),
+			);
+		}
+		const submission = this.submitAccepted(value, options);
+		this.inFlight.add(submission);
+		const complete = () => this.inFlight.delete(submission);
+		void submission.then(complete, complete);
+		return submission;
+	}
+
+	async drain(): Promise<void> {
+		this.draining = true;
+		await Promise.allSettled(this.inFlight);
+	}
+
+	isDraining(): boolean {
+		return this.draining;
+	}
+
+	private async submitAccepted(
+		value: unknown,
+		options: JobSubmissionOptions,
 	): Promise<JobResult> {
 		let job: PrintJob;
 		try {
