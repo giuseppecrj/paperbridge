@@ -18,11 +18,12 @@ transitions, simulator capture hashing, station-mode Wi-Fi connection/retry
 behavior, the bounded no-output MQTT tracer, the schema-backed TypeScript
 protocol package, HTTP body/device validation, MCP discovery/tool calls and
 Host/Origin guards, MQTT result correlation, timeout/cancellation without retry,
-QoS duplicate suppression, device cut policy, and partial-write result reporting.
-The Bun workspace checks both TypeScript packages with `tsc` and Node's test
-runner. When `mosquitto` and `mosquitto_passwd` are installed, integration tests
-also run the Node probe and full REST and MCP job paths through real local
-Mosquitto; otherwise those broker tests are reported as skipped.
+QoS duplicate suppression, device cut policy, partial-write result reporting,
+and built-Node SIGTERM draining. The Bun workspace checks both TypeScript
+packages with `tsc` and Node's test runner. When `mosquitto` and
+`mosquitto_passwd` are installed, integration tests also run the Node probe, full
+REST and MCP job paths, and graceful shutdown through real local Mosquitto;
+otherwise those broker tests are reported as skipped.
 
 `just printer-simulator` captures TCP bytes and supports delayed accept/read,
 small partial reads, close/reset during transfer, payload recording, and SHA-256.

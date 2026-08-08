@@ -45,6 +45,7 @@ function startProduction(
 	apiPort: number,
 	mqttPort: number,
 	passwordFile?: string,
+	jobResultTimeoutMs?: number,
 ) {
 	const env: NodeJS.ProcessEnv = {
 		...process.env,
@@ -54,6 +55,9 @@ function startProduction(
 		PAPERBRIDGE_MQTT_HOST: "127.0.0.1",
 		PAPERBRIDGE_MQTT_PORT: String(mqttPort),
 		PAPERBRIDGE_MQTT_USERNAME: deviceId,
+		...(jobResultTimeoutMs && {
+			PAPERBRIDGE_JOB_RESULT_TIMEOUT_MS: String(jobResultTimeoutMs),
+		}),
 	};
 	delete env.PAPERBRIDGE_MQTT_PASSWORD;
 	delete env.PAPERBRIDGE_MQTT_PASSWORD_FILE;
@@ -258,4 +262,159 @@ test("prepares image fixtures through the production API and MQTT", {
 	);
 	assert.doesNotMatch(output(), /test-password/);
 	assert.equal(output().includes(passwordFile), false);
+});
+
+test("SIGTERM drains accepted REST and MCP submissions before exit", {
+	skip: !mosquittoAvailable,
+	timeout: 20_000,
+}, async (t) => {
+	buildProduction();
+	const broker = await startMosquitto();
+	t.after(() => broker.process.kill());
+	const topics = jobTopics(deviceId);
+	const receivedJobs: PrintJob[] = [];
+	let receivedTwo: (() => void) | undefined;
+	const twoJobsReceived = new Promise<void>((resolve) => {
+		receivedTwo = resolve;
+	});
+	const device = await connectMqtt({
+		host: "127.0.0.1",
+		port: broker.port,
+		protocol: "mqtt",
+		protocolVersion: 4,
+		clientId: "paperbridge-shutdown-drain-device",
+		username: deviceId,
+		password,
+		reconnectPeriod: 0,
+	});
+	t.after(() => device.end(true));
+	await new Promise<void>((resolve, reject) => {
+		device.subscribe(topics.jobs, { qos: 1 }, (error) =>
+			error ? reject(error) : resolve(),
+		);
+	});
+	device.on("message", (_topic, payload) => {
+		receivedJobs.push(JSON.parse(payload.toString("utf8")) as PrintJob);
+		if (receivedJobs.length === 2) receivedTwo?.();
+	});
+
+	const apiPort = await unusedPort();
+	const { child, output } = startProduction(
+		apiPort,
+		broker.port,
+		undefined,
+		1500,
+	);
+	t.after(() => stop(child));
+	const baseUrl = `http://127.0.0.1:${apiPort}`;
+	const ready = await waitForResponse(`${baseUrl}/ready`, child, output);
+	assert.equal(ready.status, 200);
+
+	const job = {
+		schema_version: "1",
+		device_id: deviceId,
+		created_at: "2026-08-07T00:00:00Z",
+		content: {
+			kind: "receipt",
+			blocks: [{ type: "text", text: "Drain accepted job" }],
+		},
+	};
+	const accepted = fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ ...job, job_id: "job-drain-delivered" }),
+	});
+	const unresolved = fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ ...job, job_id: "job-drain-timeout" }),
+	});
+	await twoJobsReceived;
+
+	const mcp = new Client(
+		{ name: "paperbridge-shutdown-drain", version: "1.0.0" },
+		{ versionNegotiation: { mode: { pin: "2026-07-28" } } },
+	);
+	await mcp.connect(
+		new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`)),
+	);
+	const shutdownStarted = Date.now();
+	const exited = once(child, "exit");
+	assert.equal(child.kill("SIGTERM"), true);
+
+	let unavailable: Response | undefined;
+	const readinessDeadline = Date.now() + 1000;
+	while (Date.now() < readinessDeadline) {
+		try {
+			const response = await fetch(`${baseUrl}/ready`);
+			if (response.status === 503) {
+				unavailable = response;
+				break;
+			}
+		} catch {
+			await delay(10);
+		}
+	}
+	assert.equal(unavailable?.status, 503, output());
+	assert.deepEqual(await unavailable?.json(), { status: "not_ready" });
+	assert.equal((await fetch(`${baseUrl}/health`)).status, 200);
+
+	const rejected = await fetch(`${baseUrl}/api/jobs`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ ...job, job_id: "job-drain-rejected" }),
+	});
+	assert.equal(rejected.status, 503);
+	assert.deepEqual(await rejected.json(), {
+		status: "failed",
+		error_code: "SERVICE_DRAINING",
+	});
+	const rejectedMcp = await mcp.callTool({
+		name: "paperbridge_print",
+		arguments: { content: job.content },
+	});
+	assert.equal(rejectedMcp.isError, true);
+	assert.deepEqual(rejectedMcp.structuredContent, {
+		status: "failed",
+		error_code: "SERVICE_DRAINING",
+	});
+	assert.equal(receivedJobs.length, 2);
+	await mcp.close();
+
+	const firstJob = receivedJobs.find(
+		(received) => received.job_id === "job-drain-delivered",
+	);
+	assert(firstJob);
+	await new Promise<void>((resolve, reject) => {
+		device.publish(
+			topics.results,
+			JSON.stringify({
+				schema_version: "1",
+				kind: "job_result",
+				job_id: firstJob.job_id,
+				device_id: deviceId,
+				status: "delivered_to_printer",
+				bytes_sent: 8,
+			}),
+			{ qos: 1, retain: false },
+			(error) => (error ? reject(error) : resolve()),
+		);
+	});
+	const deliveredResponse = await accepted;
+	assert.equal(deliveredResponse.status, 200);
+	assert.equal((await deliveredResponse.json()).status, "delivered_to_printer");
+	const timeoutResponse = await unresolved;
+	assert.equal(timeoutResponse.status, 504);
+	assert.deepEqual(await timeoutResponse.json(), {
+		job_id: "job-drain-timeout",
+		device_id: deviceId,
+		status: "unknown",
+		error_code: "DEVICE_RESULT_TIMEOUT",
+	});
+	assert.equal(receivedJobs.length, 2);
+
+	const [exitCode, signal] = await exited;
+	assert.equal(exitCode, 0, output());
+	assert.equal(signal, null, output());
+	assert(Date.now() - shutdownStarted < 20_000);
 });
