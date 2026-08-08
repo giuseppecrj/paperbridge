@@ -34,9 +34,15 @@ def test_systemd_unit_owns_one_hardened_digest_selected_container():
         "ExecStop=/usr/bin/docker stop --time=18 paperbridge-api",
         "ExecStopPost=-/usr/bin/rm -f /run/paperbridge-container/mqtt-password",
         "Restart=on-failure",
+        "TimeoutStartSec=40",
         "TimeoutStopSec=20",
     ):
         assert directive in unit
+
+    assert unit.count("ExecStartPost=/usr/bin/curl") == 2
+    assert "http://127.0.0.1:3000/health" in unit
+    assert "http://127.0.0.1:3000/ready" in unit
+    assert "--retry-connrefused" in unit
 
     assert "--network=host" not in unit
     assert "docker.sock" not in unit
@@ -149,7 +155,7 @@ fi
         f"vm=paperbridge-container-stage\nbootstrap_sha={sha}\n"
     )
     recorded = calls.read_text()
-    assert "apt-get install --yes ca-certificates git docker.io" in recorded
+    assert "apt-get install --yes ca-certificates curl git docker.io" in recorded
     assert "systemctl enable --now docker.service" in recorded
     assert "docker info" in recorded
     assert "systemd-creds encrypt" in recorded

@@ -17,6 +17,9 @@ COPY packages/protocol/schemas packages/protocol/schemas
 RUN bun run --filter @paperbridge/api build
 
 FROM node:26.3.0-bookworm-slim@sha256:3fe807a03a4436e7bc76b7e84e6861899cd75c9028ae99bc00581940141ae150 AS runtime
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 WORKDIR /app/apps/api
 COPY --from=production-dependencies --chown=node:node /app/node_modules /app/node_modules

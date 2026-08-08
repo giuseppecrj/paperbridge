@@ -62,6 +62,7 @@ def test_bootstrap_requires_confirmation_and_an_exact_reviewed_sha():
     assert "paperbridge-container-stage.exe.xyz" in rendered.stdout
     assert "BatchMode=yes" in rendered.stdout
     assert "ForwardAgent=no" in rendered.stdout
+    assert "StrictHostKeyChecking=yes" in rendered.stdout
     assert "a" * 40 in rendered.stdout
     assert "paperbridge-prod" not in rendered.stdout
     assert "api.paperbridge.tech" not in rendered.stdout
@@ -143,6 +144,7 @@ def test_operator_exposes_bounded_read_only_and_confirmed_actions():
     reboot = run_operator("reboot", EXEDEV_VM=vm, EXEDEV_CONFIRM_VM=vm)
     assert reboot.returncode == 0, reboot.stderr
     assert "exe.dev restart paperbridge-container-stage" in reboot.stdout
+    assert "StrictHostKeyChecking=yes" in reboot.stdout
 
     combined = "\n".join(
         run_operator(mode, EXEDEV_VM=vm, EXEDEV_CONFIRM_VM=vm).stdout

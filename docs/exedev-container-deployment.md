@@ -1,9 +1,9 @@
 # exe.dev candidate container operator
 
 This runbook describes the checked-in workflow for one hardened Paperbridge API
-container on a separate `exeuntu` VM. The workflow is implemented and
-Host-tested through dry runs and fake remote commands. It has not been run on an
-exe.dev VM.
+container on a separate `exeuntu` VM. The workflow is Host-tested through dry
+runs and fake remote commands. Real-VM acceptance is tracked separately in
+issue #29 and must not be inferred from this runbook.
 
 The current `paperbridge-prod` VM and `api.paperbridge.tech` route remain
 unchanged. The operator rejects `paperbridge-prod`. The existing direct-Node
@@ -69,7 +69,7 @@ running it:
 ```sh
 export EXEDEV_VM=<new-vm-name>
 export EXEDEV_GITHUB_INTEGRATION=<read-only-integration-name>
-ssh exe.dev new \
+ssh -o BatchMode=yes -o ForwardAgent=no exe.dev new \
   --name "$EXEDEV_VM" \
   --image exeuntu \
   --integration "$EXEDEV_GITHUB_INTEGRATION"
@@ -78,6 +78,38 @@ ssh exe.dev new \
 Do not pass secrets through `new --env`, a setup script, or forwarded SSH
 credentials. Record the returned VM name. Do not configure the proxy or custom
 domain in this issue.
+
+Before the first direct connection, scan only the published RSA host-key type
+and require exactly one key with exe.dev's [published fingerprint][exe-dev-host-key]:
+
+```sh
+candidate_host="$EXEDEV_VM.exe.xyz"
+candidate_key=$(mktemp)
+expected_fingerprint='SHA256:JJOP/lwiBGOMilfONPWZCXUrfK154cnJFXcqlsi6lPo'
+trap 'rm -f "$candidate_key"' EXIT
+ssh-keyscan -T 10 -t rsa "$candidate_host" >"$candidate_key"
+test "$(wc -l <"$candidate_key" | tr -d ' ')" = 1
+candidate_fingerprint=$(ssh-keygen -lf "$candidate_key" | awk '{print $2}')
+printf 'candidate_fingerprint=%s\n' "$candidate_fingerprint"
+test "$candidate_fingerprint" = "$expected_fingerprint"
+```
+
+Only after that exact programmatic comparison, enroll the verified key:
+
+```sh
+install -d -m 0700 "$HOME/.ssh"
+touch "$HOME/.ssh/known_hosts"
+chmod 0600 "$HOME/.ssh/known_hosts"
+ssh-keygen -R "$candidate_host"
+cat "$candidate_key" >>"$HOME/.ssh/known_hosts"
+rm -f "$candidate_key"
+trap - EXIT
+```
+
+Do not enroll a different fingerprint. The operator forces
+`StrictHostKeyChecking=yes` on every subsequent SSH connection.
+
+[exe-dev-host-key]: https://exe.dev/docs/faq/host-key.md
 
 ## 2. Bootstrap Docker and encrypted credentials — Owner action
 
@@ -92,7 +124,7 @@ Bootstrap performs a read-only preflight before it uploads the remote helper. It
 then:
 
 1. requires the `/exe.dev` marker and no legacy Paperbridge service;
-2. installs `ca-certificates`, Git, and the Ubuntu `docker.io` package;
+2. installs `ca-certificates`, curl, Git, and the Ubuntu `docker.io` package;
 3. enables Docker and requires `docker info` to succeed;
 4. runs an encrypted `systemd-creds` round trip through a transient systemd
    unit without printing the probe value;
@@ -164,8 +196,9 @@ EXEDEV_CONFIRM_VM="$EXEDEV_VM" just exedev-container-deploy
 
 Deploy verifies that this workflow built the digest, installs the unit and
 non-secret environment from that build's exact commit, records the current and
-previous digests, and restarts `paperbridge-container.service`. Only after a
-successful restart does it remove older release images. The current and
+previous digests, and restarts `paperbridge-container.service`. systemd requires
+both loopback `/health` and `/ready` before activation succeeds. Only after that
+bounded gate does deploy remove older release images. The current and
 immediately previous images remain available.
 
 The service:
