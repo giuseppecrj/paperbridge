@@ -8,6 +8,8 @@ target this VM.
 
 The current VM runs the Node API as a hardened systemd service. This runbook is
 not CI/CD, Docker, public sharing, durable delivery, or physical acceptance.
+Keep it available as the route rollback procedure during
+[`exedev-container-cutover.md`](exedev-container-cutover.md).
 
 ## Boundaries
 

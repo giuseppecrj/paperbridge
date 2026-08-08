@@ -190,6 +190,15 @@ exedev-container-rollback:
     test -n "${EXEDEV_CONFIRM_VM:?EXEDEV_CONFIRM_VM is required}"
     tools/exedev/container-operator.sh rollback
 
+# Guarded exe.dev custom-domain registration; DNS remains an Owner action.
+exedev-container-route-activate:
+    test -n "${EXEDEV_CONFIRM_ROUTE:?EXEDEV_CONFIRM_ROUTE is required}"
+    uv run python tools/exedev/cutover_operator.py activate
+
+exedev-container-route-restore:
+    test -n "${EXEDEV_CONFIRM_ROUTE:?EXEDEV_CONFIRM_ROUTE is required}"
+    uv run python tools/exedev/cutover_operator.py restore
+
 # Existing direct-Node production Host; preserved until explicit cutover.
 # Set PAPERBRIDGE_SHA to an exact reviewed SHA.
 production-bootstrap:

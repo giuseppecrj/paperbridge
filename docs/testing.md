@@ -30,6 +30,12 @@ current/previous rollback state, retention, and bounded no-output commands. They
 open no SSH connection, resolve no real secret, and do not create or change a
 VM, proxy, route, Device, or Printer.
 
+Issue #29 separately recorded real-VM observations on 2026-08-08: the exact
+`paperbridge-api` image digest, private proxy, encrypted credential, hardening,
+health/readiness, three correlated no-output probes, service restart, and VM
+reboot. These are VM acceptance observations, not Host tests or physical-output
+evidence. Issue #30 owns the merged-image rebuild and custom-route checks.
+
 Tests cover request parsing/correlation, malformed and oversized JSON, stable
 unsupported-command errors, strict diagnostic and semantic-cut authorization,
 configuration validation, shared schema/device/renderer fixtures, raw/control

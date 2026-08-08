@@ -2,8 +2,8 @@
 
 This runbook describes the checked-in workflow for one hardened Paperbridge API
 container on a separate `exeuntu` VM. The workflow is Host-tested through dry
-runs and fake remote commands. Real-VM acceptance is tracked separately in
-issue #29 and must not be inferred from this runbook.
+runs and fake remote commands. Issue #29 separately accepted it on the real
+`paperbridge-api` VM; do not infer those observations from this runbook alone.
 
 The current `paperbridge-prod` VM and `api.paperbridge.tech` route remain
 unchanged. The operator rejects `paperbridge-prod`. The existing direct-Node
@@ -55,10 +55,12 @@ Do not combine these checkpoints into an unattended script.
 - **Rollback:** Switches the candidate service to its recorded previous digest.
   The Owner approves both current and previous digests.
 - **Proxy acceptance:** Changes or verifies the new VM's private exe.dev
-  ingress. **Stop here. Issue #29 requires separate Owner authorization.**
+  ingress. Issue #29 completed this checkpoint; any repeat still needs separate
+  Owner authorization.
 - **DNS or custom-domain cutover:** Moves `api.paperbridge.tech` or exe.dev
-  domain registration. **This runbook forbids that action. Issue #30 requires a
-  maintenance window and separate Owner authorization.**
+  domain registration. **This runbook forbids that action.** Follow
+  [`exedev-container-cutover.md`](exedev-container-cutover.md) only during an
+  issue #30 maintenance window with separate Owner authorization.
 
 ## 1. Create the candidate VM — Owner action
 
@@ -270,8 +272,8 @@ just exedev-container-verify
 EXEDEV_CONFIRM_VM="$EXEDEV_VM" just exedev-container-probe
 ```
 
-Record that the same digest returned after restart and reboot. Running these
-commands against a real VM is issue #29 acceptance, not evidence from #28.
+Record that the same digest returned after restart and reboot. Issue #29
+recorded these real-VM observations; they are not evidence from #28's Host tests.
 
 ## 8. Rotate the credential — Owner action
 
@@ -312,8 +314,8 @@ For #28, record only checked-in code, dry-run output without secrets, focused
 test results, and repository checks. Do not claim VM, proxy, MQTT, restart,
 reboot, Device, Printer, or physical-output success.
 
-Issue #29 may record the exact VM, commit, digest, architecture, tool versions,
-private-proxy observations, health/readiness results, and correlated probe IDs
-after separate Owner authorization. Issue #30 alone owns the merged-commit
-rebuild, custom-domain registration, DNS change, maintenance window, and route
-rollback.
+Issue #29 records the accepted VM, commit, digest, architecture, tool versions,
+private-proxy observations, health/readiness results, and correlated probe IDs.
+Issue #30 and [`exedev-container-cutover.md`](exedev-container-cutover.md) alone
+own the merged-commit rebuild, replacement client token, custom-domain
+registration, DNS change, maintenance window, and route rollback.

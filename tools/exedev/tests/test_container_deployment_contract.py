@@ -50,14 +50,14 @@ def test_systemd_unit_owns_one_hardened_digest_selected_container():
     assert "PAPERBRIDGE_MQTT_PASSWORD=" not in unit
 
 
-def test_environment_template_contains_only_selected_vm_and_file_secret_config():
+def test_environment_template_targets_the_private_production_domain():
     environment = ENVIRONMENT.read_text()
 
     assert "PAPERBRIDGE_API_HOST=0.0.0.0" in environment
-    assert "PAPERBRIDGE_API_ALLOWED_HOST=@EXEDEV_HOST@" in environment
-    assert "PAPERBRIDGE_API_ALLOWED_ORIGIN=https://@EXEDEV_HOST@" in environment
+    assert "PAPERBRIDGE_API_ALLOWED_HOST=api.paperbridge.tech" in environment
+    assert "PAPERBRIDGE_API_ALLOWED_ORIGIN=https://api.paperbridge.tech" in environment
+    assert "@EXEDEV_HOST@" not in environment
     assert "PAPERBRIDGE_MQTT_PASSWORD_FILE=/run/secrets/mqtt-password" in environment
-    assert "api.paperbridge.tech" not in environment
     assert "PAPERBRIDGE_MQTT_PASSWORD=" not in environment
     assert "BASE64" not in environment
 
@@ -447,9 +447,10 @@ if [ \"${PAPERBRIDGE_TEST_RESTART_FAIL:-0}\" = 1 ] && [ \"$1\" = restart ]; then
     assert (images / f"{'2' * 64}.sha").exists()
     assert not (images / f"{'3' * 64}.sha").exists()
     config = (root / "etc/paperbridge-container/api.env").read_text()
-    assert "paperbridge-container-stage.exe.xyz" in config
+    assert "PAPERBRIDGE_API_ALLOWED_HOST=api.paperbridge.tech" in config
+    assert "PAPERBRIDGE_API_ALLOWED_ORIGIN=https://api.paperbridge.tech" in config
+    assert "paperbridge-container-stage.exe.xyz" not in config
     assert "@EXEDEV_HOST@" not in config
-    assert "api.paperbridge.tech" not in config
     assert f"RELEASE_SHA={shas[1]}" in config
 
     rolled_back = subprocess.run(
