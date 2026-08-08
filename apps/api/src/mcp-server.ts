@@ -97,7 +97,7 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
 			{
 				title: "Print a Paperbridge receipt",
 				description:
-					"Submit one semantic print-job.v1 receipt to the configured Paperbridge device and wait for an honest result.",
+					"Submit one semantic print-job.v1 receipt to the configured Paperbridge device and wait for an honest result. Image blocks accept PNG or JPEG sources and are preprocessed by the Host; Paperbridge resizes them within 576×576 raster dots, so pre-resize large images to reduce upload time. Image jobs may take longer than text jobs. Provide raw Base64 image bytes without a data-URL prefix.",
 				inputSchema,
 			},
 			async ({ content }, context) => {

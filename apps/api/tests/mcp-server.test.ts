@@ -184,10 +184,30 @@ test("discovers and calls the print tool through the shared job service", async 
 		new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`)),
 	);
 
+	const listedTools = (await client.listTools()).tools;
 	assert.deepEqual(
-		(await client.listTools()).tools.map((tool) => tool.name),
+		listedTools.map((tool) => tool.name),
 		["paperbridge_print"],
 	);
+	const printTool = listedTools[0];
+	assert(printTool);
+	assert.match(printTool.description ?? "", /raw Base64 image bytes/);
+	const imageSchema = (
+		printTool.inputSchema as {
+			$defs?: {
+				image?: {
+					properties?: {
+						data_base64?: { description?: string };
+					};
+				};
+			};
+		}
+	).$defs?.image;
+	assert.match(
+		imageSchema?.properties?.data_base64?.description ?? "",
+		/RFC 4648 Base64/,
+	);
+
 	const invalid = await client.callTool({
 		name: "paperbridge_print",
 		arguments: {
