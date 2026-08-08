@@ -16,8 +16,10 @@ implemented, simulator-tested, and physically verified on the purchased
 device/printer. MCP uses the same application path. Image preparation is host-/
 simulator-tested to 576×576, and `test.png` was physically observed at that
 bound through REST/MQTT on 2026-08-05. A smaller PNG feed/cut job was also
-observed. JPEG and broader image-quality acceptance remain unverified. No website,
-public backend, OTA, or production provisioning is implemented.
+observed. JPEG and broader image-quality acceptance remain unverified. The
+private single-device service is production-provisioned on exe.dev. No website,
+public application authentication, durable job delivery, OTA, or multi-Device
+routing is implemented.
 
 ## Status
 
@@ -58,12 +60,14 @@ public backend, OTA, or production provisioning is implemented.
   delivered 42 bytes, and an operator observed the expected receipt.
 - A digest-pinned, non-root API container with a read-only root filesystem and
   loopback-only publication is implemented and host-tested.
-- The separate `paperbridge-api` exe.dev VM was accepted on 2026-08-08 at commit
-  `768edcf5dae7ed8151e2f23867d154200aa86afe` and image digest
-  `sha256:f0afd11525510b3c0038b8862aa2e9d6a7faacf67882af4cc99edbc841b71976`.
+- The hardened container on `paperbridge-api` is the active private production
+  runtime. On 2026-08-08, issue #30 moved `api.paperbridge.tech` to merged commit
+  `7d0d4e163fc12f841c427df89e94af431d21d2d9` and image digest
+  `sha256:2ff7b29167b8d86c0c36fd100c0f15ba54bccb9b052d93f3bdfab414e81ad5bd`.
   Its private proxy, encrypted credential, hardening, health/readiness, tracer,
-  service restart, and VM reboot gates passed. `api.paperbridge.tech` remains on
-  `paperbridge-prod`; merged-image rebuild and route cutover remain issue #30.
+  service restart, VM reboot, and route gates passed. The direct-Node
+  `paperbridge-prod` VM remains available only as the rollback route until issue
+  #49 completes its observation and retirement gates.
 
 ## Mac setup
 
@@ -298,9 +302,10 @@ cause watchdog resets; or printer status needs lower-level control. See
 
 Start with [`docs/local-bringup.md`](docs/local-bringup.md),
 [`docs/hardware.md`](docs/hardware.md), and
-[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The current direct-Node Host
-workflow is in [`docs/exedev-deployment.md`](docs/exedev-deployment.md). The separate candidate
-container workflow is in
+[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The active container operator
+workflow is in
 [`docs/exedev-container-deployment.md`](docs/exedev-container-deployment.md).
-The approval-gated merged-image and production-route procedure is in
+The retained direct-Node rollback workflow is in
+[`docs/exedev-deployment.md`](docs/exedev-deployment.md). The completed cutover
+and route rollback procedure is in
 [`docs/exedev-container-cutover.md`](docs/exedev-container-cutover.md).

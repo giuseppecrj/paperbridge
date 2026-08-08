@@ -1,14 +1,15 @@
-# exe.dev candidate container operator
+# exe.dev production container operator
 
-This runbook describes the checked-in workflow for one hardened Paperbridge API
-container on a separate `exeuntu` VM. The workflow is Host-tested through dry
-runs and fake remote commands. Issue #29 separately accepted it on the real
-`paperbridge-api` VM; do not infer those observations from this runbook alone.
+This runbook describes the checked-in workflow for the hardened Paperbridge API
+container on the `paperbridge-api` `exeuntu` VM. The workflow is Host-tested
+through dry runs and fake remote commands. Issues #29 and #30 separately record
+its real VM acceptance and promotion to `api.paperbridge.tech`; do not infer
+those observations from this runbook alone.
 
-The current `paperbridge-prod` VM and `api.paperbridge.tech` route remain
-unchanged. The operator rejects `paperbridge-prod`. The existing direct-Node
-production runbook remains in [`exedev-deployment.md`](exedev-deployment.md)
-until explicit cutover.
+The operator rejects the retained direct-Node `paperbridge-prod` rollback VM.
+Its legacy runbook remains in
+[`exedev-deployment.md`](exedev-deployment.md) until issue #49 explicitly
+retires that rollback path.
 
 ## Boundaries
 
@@ -57,10 +58,11 @@ Do not combine these checkpoints into an unattended script.
 - **Proxy acceptance:** Changes or verifies the new VM's private exe.dev
   ingress. Issue #29 completed this checkpoint; any repeat still needs separate
   Owner authorization.
-- **DNS or custom-domain cutover:** Moves `api.paperbridge.tech` or exe.dev
-  domain registration. **This runbook forbids that action.** Follow
-  [`exedev-container-cutover.md`](exedev-container-cutover.md) only during an
-  issue #30 maintenance window with separate Owner authorization.
+- **DNS or custom-domain movement:** Moves `api.paperbridge.tech` or exe.dev
+  domain registration. **This runbook forbids that action.** The completed issue
+  #30 procedure is in
+  [`exedev-container-cutover.md`](exedev-container-cutover.md). Any later route
+  movement needs a new approved issue and separate Owner authorization.
 
 ## 1. Create the candidate VM — Owner action
 
@@ -316,6 +318,7 @@ reboot, Device, Printer, or physical-output success.
 
 Issue #29 records the accepted VM, commit, digest, architecture, tool versions,
 private-proxy observations, health/readiness results, and correlated probe IDs.
-Issue #30 and [`exedev-container-cutover.md`](exedev-container-cutover.md) alone
-own the merged-commit rebuild, replacement client token, custom-domain
-registration, DNS change, maintenance window, and route rollback.
+Issue #30 and [`exedev-container-cutover.md`](exedev-container-cutover.md)
+record the merged-commit rebuild, replacement client token, custom-domain
+registration, DNS change, maintenance window, and route rollback. Issue #49
+owns the retained rollback observation and legacy retirement.

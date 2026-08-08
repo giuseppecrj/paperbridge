@@ -1,22 +1,22 @@
 # exe.dev container production cutover
 
-This runbook promotes the accepted container VM to `api.paperbridge.tech` for
-issue #30. It is a manual maintenance-window procedure. It does not authorize
-an unattended cutover.
+This runbook records the manual issue #30 promotion of the accepted container
+VM to `api.paperbridge.tech`. The cutover completed on 2026-08-08. Do not rerun
+its activation steps without a new approved maintenance window.
 
-The current production VM remains the route rollback target. The accepted
-candidate digest remains the image rollback target after the merged image is
-deployed. Keep both VMs and both image digests until the Owner explicitly ends
-the rollback window.
+`paperbridge-api` is the active production VM. `paperbridge-prod` remains the
+route rollback target, and the accepted previous container digest remains the
+image rollback target. Issue #49 keeps both VMs and both image digests until the
+Owner explicitly ends the rollback window.
 
 ## Fixed scope
 
 ```text
-current VM:       paperbridge-prod
-candidate VM:     paperbridge-api
-custom domain:    api.paperbridge.tech
-current CNAME:    paperbridge-prod.exe.xyz
-candidate CNAME:  paperbridge-api.exe.xyz
+pre-cutover VM:    paperbridge-prod
+active VM:         paperbridge-api
+custom domain:     api.paperbridge.tech
+rollback CNAME:    paperbridge-prod.exe.xyz
+active CNAME:      paperbridge-api.exe.xyz
 ```
 
 The custom domain and both exe.dev VM shares must remain private. Verification

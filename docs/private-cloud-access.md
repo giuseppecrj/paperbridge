@@ -2,9 +2,9 @@
 
 Use this guide to connect an approved private client to the deployed Paperbridge
 service. It is not a VM deployment runbook. See
-[`exedev-deployment.md`](exedev-deployment.md) for the current direct-Node Host
-or [`exedev-container-deployment.md`](exedev-container-deployment.md) for the
-separate candidate container workflow.
+[`exedev-container-deployment.md`](exedev-container-deployment.md) for the active
+container workflow or [`exedev-deployment.md`](exedev-deployment.md) for the
+retained direct-Node rollback workflow.
 
 ## Boundary
 

@@ -1,22 +1,22 @@
 # exe.dev private Host deployment
 
-This is the legacy manual workflow for the current `paperbridge-prod` VM. Keep
-it available until explicit cutover so the existing production route remains
-operable. The separate candidate Docker workflow is in
+This is the legacy manual workflow for the retained `paperbridge-prod` rollback
+VM. It no longer owns `api.paperbridge.tech`. Keep it operable until issue #49
+explicitly retires it. The active Docker workflow is in
 [`exedev-container-deployment.md`](exedev-container-deployment.md); it refuses to
 target this VM.
 
-The current VM runs the Node API as a hardened systemd service. This runbook is
+The rollback VM runs the Node API as a hardened systemd service. This runbook is
 not CI/CD, Docker, public sharing, durable delivery, or physical acceptance.
-Keep it available as the route rollback procedure during
+Keep it available only as the route rollback procedure recorded in
 [`exedev-container-cutover.md`](exedev-container-cutover.md).
 
 ## Boundaries
 
 - The VM is a fresh exeuntu VM, not the `dotfiles` development base or a clone.
 - Its only repository integration is read-only `giuseppecrj/paperbridge` access.
-- The service binds `127.0.0.1:3000`. The exe.dev proxy is its only HTTP path,
-  at `https://api.paperbridge.tech`.
+- The service binds `127.0.0.1:3000`. Its private exe.dev proxy is the only HTTP
+  path. `api.paperbridge.tech` returns here only during an approved rollback.
 - `/health` is process liveness. `/ready` is MQTT-client connectivity only.
 - `production-probe` is a correlated no-output MQTT tracer probe. It does not
   submit a Semantic Print Job or contact the Printer.

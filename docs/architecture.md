@@ -9,17 +9,16 @@ service, validate the authoritative schema and configured device, and publish
 one bounded MQTT job. The same generated Node bundle is packaged in a
 multi-stage, digest-pinned Docker image with external Linux-native `sharp`
 dependencies. Local acceptance runs that image with the intended hardening and
-host-loopback publication. A separate checked-in operator can build an exact
-commit on a fresh candidate VM, provision an encrypted systemd credential, and
-select current and previous local image digests. systemd owns the one container
-and exposes the decrypted credential through a transient root-only `/run` file
-that Docker mounts read-only. Issue #29 accepted this path on the separate
-`paperbridge-api` VM, including its private proxy, credential mount, exact image
-digest, restart, reboot, and no-output tracer. `api.paperbridge.tech` still routes
-to the direct-Node `paperbridge-prod` VM until issue #30's approved cutover. All
-ingress paths reach one
-firmware job module and the
-same coordinator, renderer, and printer transport. The shared coordinator
+host-loopback publication. A checked-in operator builds an exact commit,
+provisions an encrypted systemd credential, and selects current and previous
+local image digests. systemd owns the one container and exposes the decrypted
+credential through a transient root-only `/run` file that Docker mounts
+read-only. Issues #29 and #30 accepted and promoted this path on
+`paperbridge-api`, including its private proxy, credential mount, exact image
+digest, restart, reboot, no-output tracer, and `api.paperbridge.tech` route. The
+direct-Node `paperbridge-prod` VM remains available only for issue #49 rollback
+until retirement. All ingress paths reach one firmware job module and the same
+coordinator, renderer, and printer transport. The shared coordinator
 serializes every delivery so USB diagnostics and USB/MQTT jobs cannot open
 overlapping printer sockets.
 
@@ -86,8 +85,8 @@ this does not contact the Printer or produce output. A W5500 initialization
 failure leaves USB diagnostics available. USB ping/info and printer reachability
 diagnostics remain separate from paper output. The host prepares
 bounded source images before MQTT; the device receives only a controlled raster
-block. Public authentication,
-production MQTT/TLS, durable queues, automatic retries, multi-device routing,
-image URLs, arbitrary documents, OTA, and production provisioning remain out of
-scope. The optional EMQX MQTT/TLS path preserves this contract; its bounded
-no-output scope was physically verified on 2026-08-07.
+block. Public application authentication, durable queues, automatic retries,
+multi-Device routing, image URLs, arbitrary documents, OTA, and automatic
+production deployment remain out of scope. The production EMQX MQTT/TLS path
+preserves this contract; its bounded no-output scope was physically verified on
+2026-08-07.
