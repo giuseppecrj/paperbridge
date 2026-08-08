@@ -6,7 +6,11 @@ The host CLI speaks newline-delimited JSON over USB serial. The private Node.js
 service accepts a raw semantic `print-job.v1` at `POST /api/jobs` and exposes
 one Streamable HTTP MCP tool at `/mcp`. REST and MCP call the same application job
 service, validate the authoritative schema and configured device, and publish
-one bounded MQTT job. All ingress paths reach one firmware job module and the
+one bounded MQTT job. The same generated Node bundle is packaged in a
+multi-stage, digest-pinned Docker image with external Linux-native `sharp`
+dependencies. Local acceptance runs that image with the intended hardening and
+host-loopback publication; it does not establish VM deployment or route state.
+All ingress paths reach one firmware job module and the
 same coordinator, renderer, and printer transport. The shared coordinator
 serializes every delivery so USB diagnostics and USB/MQTT jobs cannot open
 overlapping printer sockets.
