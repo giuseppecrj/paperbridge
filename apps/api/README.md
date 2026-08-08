@@ -22,6 +22,22 @@ bun run --filter @paperbridge/api start:production
 The build writes `dist/server.js` and keeps `sharp` external so Node can load its
 native binary. Application code does not use Bun runtime APIs.
 
+Build the digest-pinned Bun/Node image and run its explicit local acceptance
+check with Docker, Mosquitto, and `mosquitto_passwd` available:
+
+```sh
+just test-api-container
+```
+
+The check runs one API container as the image's non-root user with a read-only
+root filesystem, no capabilities, `no-new-privileges`, bridged networking, and
+host-loopback-only port publication. It mounts a temporary MQTT password file
+read-only, verifies that the value is absent from image history, environment
+metadata, arguments, and logs, and exercises health, readiness, REST limits,
+MCP, Linux-native `sharp` image preparation, MQTT correlation, and SIGTERM.
+Its MQTT peer is a Host test client; it does not contact a Device or Printer and
+cannot prove physical output. VM deployment remains a later acceptance stage.
+
 Local Fnox commands continue to provide `PAPERBRIDGE_MQTT_PASSWORD` directly.
 A deployed runtime may instead set `PAPERBRIDGE_MQTT_PASSWORD_FILE` to a
 non-empty mounted credential. The API and no-output probe read the file once at

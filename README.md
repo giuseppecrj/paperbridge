@@ -56,6 +56,9 @@ public backend, OTA, or production provisioning is implemented.
   same application service. It is host-/simulator-tested and was physically
   verified on 2026-08-02: job `6e46f155-c3f2-4b11-9c56-46f9261f2abe`
   delivered 42 bytes, and an operator observed the expected receipt.
+- A digest-pinned, non-root API container with a read-only root filesystem and
+  loopback-only publication is implemented and host-tested. This is local image
+  evidence only; no new VM, production deployment, route, or cutover has occurred.
 
 ## Mac setup
 

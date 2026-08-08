@@ -8,6 +8,7 @@ NETWORK_RECOVERY_TIMEOUT_SECONDS := env_var_or_default("NETWORK_RECOVERY_TIMEOUT
 NETWORK_RECOVERY_INTERVAL_SECONDS := env_var_or_default("NETWORK_RECOVERY_INTERVAL_SECONDS", "1")
 SOAK_DURATION_SECONDS := env_var_or_default("SOAK_DURATION_SECONDS", "259200")
 SOAK_INTERVAL_SECONDS := env_var_or_default("SOAK_INTERVAL_SECONDS", "60")
+API_CONTAINER_IMAGE := env_var_or_default("PAPERBRIDGE_TEST_CONTAINER_IMAGE", "paperbridge-api:test")
 
 # Verified ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin (docs/micropython-bringup.md)
 MICROPYTHON_SHA256 := "67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a62ff5dd"
@@ -30,6 +31,12 @@ format-check:
 test:
     uv run pytest
     bun run test
+
+build-api-container:
+    docker build --file apps/api/Dockerfile --tag "{{API_CONTAINER_IMAGE}}" .
+
+test-api-container: build-api-container
+    cd apps/api && PAPERBRIDGE_TEST_CONTAINER_IMAGE="{{API_CONTAINER_IMAGE}}" node --import tsx --test tests/container.acceptance.ts
 
 # Opt-in HIL: never part of ordinary `just test`. Requires a selected PORT.
 test-hardware-smoke:

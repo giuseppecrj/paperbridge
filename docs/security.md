@@ -14,6 +14,13 @@ configuration, including the Wi-Fi SSID, lives in ignored `.env`. Generated
 Device `config.json` is disposable ignored state that necessarily contains the
 credentials deployed to the ESP32; regenerate it instead of editing it.
 
+The implemented local API image runs as non-root from a read-only root
+filesystem with no capabilities, `no-new-privileges`, no Docker socket, bridged
+networking, and host-loopback-only publication. Its Host acceptance mounts a
+temporary MQTT password file read-only and checks image history, environment
+metadata, arguments, and logs for the value. This is local image evidence, not a
+VM or production security claim.
+
 The target container deployment keeps Fnox and 1Password on the deployment
 operator's machine. Its checked-in environment file will contain only non-secret
 runtime configuration and the mounted credential path. Systemd will decrypt the
@@ -39,8 +46,9 @@ default. A private exe.dev deployment must set the non-secret
 `PAPERBRIDGE_API_ALLOWED_ORIGIN`; requests without Origin remain valid for
 non-browser MCP clients. The proxy must remain private and provide
 infrastructure access control. `/health` reports process liveness, while
-`/ready` reports only the connected application MQTT client; neither reports
-Device or Printer state. Keep the Node service bound to loopback.
+`/ready` reports application MQTT readiness and whether submissions are
+accepted; neither reports Device or Printer state. Keep the Node service bound
+to loopback.
 Production credential provisioning/rotation, public broker exposure, public
 sender authorization, signed updates, and OTA remain future work and may
 trigger ESP-IDF migration.

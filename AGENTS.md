@@ -80,6 +80,9 @@ stale claim.
 - `packages/protocol/` — authoritative schemas, fixtures, and TypeScript
   validators/topic contracts.
 - `apps/api/` — portable private REST/MCP/MQTT v1 service plus no-output probe.
+- `apps/api/Dockerfile` and `apps/api/tests/container.acceptance.ts` —
+  digest-pinned local API
+  image and hardened Host acceptance; these do not prove VM deployment.
 - `tools/mosquitto/` — authenticated local-broker development configuration.
 - `tools/provisioning/` — local device-configuration generation.
 - `tools/printer-simulator/` — TCP capture and transport-failure testing.
@@ -115,6 +118,13 @@ just bootstrap
 just lint
 just format-check
 just test
+```
+
+When the API image or runtime boundary changes, also run the explicit
+Docker/Mosquitto Host gate:
+
+```sh
+just test-api-container
 ```
 
 `mise.toml` pins the tools, `uv.lock` and `bun.lock` pin dependencies, and

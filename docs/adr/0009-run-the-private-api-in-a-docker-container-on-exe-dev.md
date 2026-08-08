@@ -89,6 +89,10 @@ loading. Deployment and routine API-password rotation remain manual operator
 work. The no-output checks prove API and MQTT-client operation only; they do
 not prove Device reachability, Printer delivery, or paper output.
 
+As of 2026-08-08, the digest-pinned image and hardened local container acceptance
+are implemented and Host-tested on Linux ARM64 under OrbStack. This does not
+prove the future exe.dev VM architecture, deployment, private proxy, or route.
+
 The research behind this decision is recorded in:
 
 - `docs/research/exedev-docker-deployment-2026-08-07.md`;
