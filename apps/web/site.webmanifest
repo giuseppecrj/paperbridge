@@ -1,0 +1,16 @@
+{
+  "name": "Paperbridge",
+  "short_name": "Paperbridge",
+  "description": "A physical feed for the things you care about.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f6f0",
+  "theme_color": "#f8f6f0",
+  "icons": [
+    {
+      "src": "/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

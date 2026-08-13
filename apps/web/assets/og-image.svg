@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f8f6f0"/>
+  <circle cx="995" cy="105" r="24" fill="#f06d4f"/>
+  <path d="m995 91 4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="#171716"/>
+  <text x="78" y="87" fill="#171716" font-family="Arial,sans-serif" font-size="25" font-weight="700">✦ paperbridge</text>
+  <text x="78" y="235" fill="#171716" font-family="Arial,sans-serif" font-size="82" font-weight="700" letter-spacing="-4">The things you care about,</text>
+  <text x="78" y="326" fill="#f06d4f" font-family="Georgia,serif" font-size="91" font-style="italic" font-weight="700" letter-spacing="-4">on paper.</text>
+  <text x="82" y="390" fill="#77736c" font-family="Arial,sans-serif" font-size="22">A physical feed for your interests, shaped by context and time.</text>
+  <circle cx="970" cy="421" r="157" fill="#f9cb69"/>
+  <g transform="translate(824 280)">
+    <path d="M24 111c0-21 17-38 38-38h129c29 0 52 23 52 52v85c0 17-14 31-31 31H56c-18 0-32-14-32-32v-98Z" fill="#f5f1e9" stroke="#171716" stroke-width="7"/>
+    <path d="m29 113 32-27h125c22 0 42 14 50 34l5 14H64l-35-21Z" fill="#e8e2d6" stroke="#171716" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M76 102h103l12 24H65l11-24Z" fill="#b9b1a4" stroke="#171716" stroke-width="7"/>
+    <path d="M24 136h219v74c0 17-14 31-31 31H56c-18 0-32-14-32-32v-73Z" fill="#f5f1e9" stroke="#171716" stroke-width="7"/>
+    <path d="M24 136h219M80 174h57v27H80z" fill="none" stroke="#171716" stroke-width="6"/>
+    <rect x="84" y="178" width="49" height="20" rx="3" fill="#cfe4df"/>
+    <circle cx="54" cy="185" r="10" fill="#f06d4f" stroke="#171716" stroke-width="5"/>
+    <path d="M49 185h10M54 180v10" stroke="#171716" stroke-width="3" stroke-linecap="round"/>
+    <path d="M103 74V17c0-6 5-10 11-10h47c6 0 10 4 10 10v57" fill="#fffdf8" stroke="#171716" stroke-width="7"/>
+    <path d="M106 36c15 7 47 7 65 0v58h-65V36Z" fill="#fffdf8" stroke="#171716" stroke-width="5"/>
+  </g>
+  <text x="78" y="555" fill="#77736c" font-family="monospace" font-size="14" letter-spacing="2">USEFUL · STRANGE · WONDERFUL</text>
+  <text x="1120" y="555" text-anchor="end" fill="#77736c" font-family="monospace" font-size="14" letter-spacing="2">WORKING PROJECT</text>
+</svg>
