@@ -10,6 +10,8 @@ python3 -m http.server 4173 --directory apps/web
 
 Then open <http://127.0.0.1:4173>.
 
+The planned public URL is <https://app.paperbridge.tech>.
+
 The page has no application runtime or backend. Its inline illustration is
 intentional: it keeps the prototype page self-contained while a documentary
 printer photograph is still future work.
