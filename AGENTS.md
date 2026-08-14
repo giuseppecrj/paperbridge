@@ -27,9 +27,12 @@ infer hardware success from host tests or stale documentation.
 
 Not implemented: web app, public application authentication, durable job
 delivery, OTA, or an ESP-IDF firmware port. The private single-device API is
-production-provisioned as a hardened container on `paperbridge-api`;
-`paperbridge-prod` remains the route rollback target until issue #49 completes.
-Do not operate production or build unimplemented capabilities without an
+production-provisioned as a hardened container on `paperbridge-api`. The Owner
+reported `paperbridge-prod` deleted on 2026-08-14; VM route rollback is no longer
+available. All four authoritative nameservers confirm TTL `1800` for the active
+CNAME. Issue #49 records the completed retirement and final no-output probe
+`7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`. Do not operate production or build
+unimplemented capabilities without an
 approved issue and required Owner authorization. `apps/api` contains the private
 single-device REST/MCP/MQTT v1 service; `firmware/esp-idf/` remains a future
 placeholder.
@@ -165,9 +168,8 @@ The exe.dev container operator requires an explicit VM name, rejects
 command. Do not create a VM, provision or rotate a credential, build or deploy
 on a VM, probe, restart, reboot, roll back, change proxy visibility, or move a
 route without the issue-specific Owner authorization in
-`docs/exedev-container-deployment.md`. Issues #29 and #30 record the completed
-VM acceptance and cutover. Issue #49 owns the active rollback observation and
-legacy retirement.
+`docs/exedev-container-deployment.md`. Issues #29, #30, and #49 record the
+completed VM acceptance, cutover, rollback observation, and legacy retirement.
 
 Hardware commands are external effects. Do not erase, flash, deploy, reboot,
 print, feed, cut, or alter printer networking unless the user explicitly asks.

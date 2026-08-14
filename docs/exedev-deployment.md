@@ -1,15 +1,17 @@
 # exe.dev private Host deployment
 
-This is the legacy manual workflow for the retained `paperbridge-prod` rollback
-VM. It no longer owns `api.paperbridge.tech`. Keep it operable until issue #49
-explicitly retires it. The active Docker workflow is in
-[`exedev-container-deployment.md`](exedev-container-deployment.md); it refuses to
-target this VM.
+This is the historical manual workflow for the retired `paperbridge-prod` VM.
+It no longer owns `api.paperbridge.tech`, and the Owner reported it deleted on
+2026-08-14. These commands no longer target a live Paperbridge resource. The
+active Docker workflow is in
+[`exedev-container-deployment.md`](exedev-container-deployment.md); it rejects
+the retired VM name.
 
-The rollback VM runs the Node API as a hardened systemd service. This runbook is
-not CI/CD, Docker, public sharing, durable delivery, or physical acceptance.
-Keep it available only as the route rollback procedure recorded in
-[`exedev-container-cutover.md`](exedev-container-cutover.md).
+The retired VM ran the Node API as a hardened systemd service. This runbook is a
+historical route-rollback record, not a current operation procedure. All four
+authoritative nameservers confirm TTL `1800` for the unchanged active CNAME.
+Issue #49 records the completed retirement and final no-output probe
+`7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`.
 
 ## Boundaries
 

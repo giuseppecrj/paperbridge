@@ -4,18 +4,20 @@ This runbook records the manual issue #30 promotion of the accepted container
 VM to `api.paperbridge.tech`. The cutover completed on 2026-08-08. Do not rerun
 its activation steps without a new approved maintenance window.
 
-`paperbridge-api` is the active production VM. `paperbridge-prod` remains the
-route rollback target, and the accepted previous container digest remains the
-image rollback target. Issue #49 keeps both VMs and both image digests until the
-Owner explicitly ends the rollback window.
+`paperbridge-api` is the active production VM. The Owner reported
+`paperbridge-prod` deleted on 2026-08-14, so VM route rollback is no longer
+available. The accepted previous container digest remains the image rollback
+target. All four authoritative nameservers confirm TTL `1800` for the unchanged
+active CNAME. Issue #49 records the completed retirement and final no-output
+probe `7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`.
 
 ## Fixed scope
 
 ```text
-pre-cutover VM:    paperbridge-prod
+pre-cutover VM:    paperbridge-prod (retired; Owner-reported deleted 2026-08-14)
 active VM:         paperbridge-api
 custom domain:     api.paperbridge.tech
-rollback CNAME:    paperbridge-prod.exe.xyz
+VM route rollback: unavailable
 active CNAME:      paperbridge-api.exe.xyz
 ```
 
@@ -403,10 +405,11 @@ After separate no-output probe approval, run one probe against each restored
 runtime only if required by the approved rollback checklist. Keep the merged
 candidate digest as the new previous value; do not prune it manually.
 
-## Close the window
+## Historical close-window requirements
 
-After successful cutover, keep all of these until the Owner explicitly ends the
-rollback window:
+The Owner ended VM rollback availability by deleting `paperbridge-prod` on
+2026-08-14. The following list records what issue #30 required before that
+retirement; it is not a current inventory:
 
 - `paperbridge-prod` VM and its direct-Node service;
 - old production token and non-secret route record;

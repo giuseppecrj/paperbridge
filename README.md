@@ -65,9 +65,12 @@ routing is implemented.
   `7d0d4e163fc12f841c427df89e94af431d21d2d9` and image digest
   `sha256:2ff7b29167b8d86c0c36fd100c0f15ba54bccb9b052d93f3bdfab414e81ad5bd`.
   Its private proxy, encrypted credential, hardening, health/readiness, tracer,
-  service restart, VM reboot, and route gates passed. The direct-Node
-  `paperbridge-prod` VM remains available only as the rollback route until issue
-  #49 completes its observation and retirement gates.
+  service restart, VM reboot, and route gates passed. The Owner reported the
+  direct-Node `paperbridge-prod` VM deleted on 2026-08-14, so VM route rollback
+  is no longer available. All four authoritative nameservers now confirm TTL
+  `1800` for the unchanged active CNAME. Issue #49 records the completed
+  retirement and final no-output probe
+  `7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`.
 
 ## Mac setup
 

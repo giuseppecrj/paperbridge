@@ -6,10 +6,10 @@ through dry runs and fake remote commands. Issues #29 and #30 separately record
 its real VM acceptance and promotion to `api.paperbridge.tech`; do not infer
 those observations from this runbook alone.
 
-The operator rejects the retained direct-Node `paperbridge-prod` rollback VM.
-Its legacy runbook remains in
-[`exedev-deployment.md`](exedev-deployment.md) until issue #49 explicitly
-retires that rollback path.
+The operator rejects the retired direct-Node VM name `paperbridge-prod`. The
+Owner reported that VM deleted on 2026-08-14. Its historical runbook remains in
+[`exedev-deployment.md`](exedev-deployment.md); VM route rollback is no longer
+available.
 
 ## Boundaries
 
@@ -321,4 +321,5 @@ private-proxy observations, health/readiness results, and correlated probe IDs.
 Issue #30 and [`exedev-container-cutover.md`](exedev-container-cutover.md)
 record the merged-commit rebuild, replacement client token, custom-domain
 registration, DNS change, maintenance window, and route rollback. Issue #49
-owns the retained rollback observation and legacy retirement.
+records the completed rollback observation, legacy retirement, and final
+no-output verification.
