@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+            name="description"
+            content="Paperbridge is a physical feed for the things you care about."
+        />
+        <meta name="theme-color" content="#f8f6f0" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://app.paperbridge.tech/" />
+        <meta
+            property="og:title"
+            content="Paperbridge — The things you care about, on paper."
+        />
+        <meta
+            property="og:description"
+            content="A physical feed for your interests, shaped by context and time."
+        />
+        <meta
+            property="og:image"
+            content="https://app.paperbridge.tech/assets/og-image.png"
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta
+            property="og:image:alt"
+            content="An illustrated Paperbridge printer on a warm yellow circle."
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="Paperbridge — The things you care about, on paper."
+        />
+        <meta
+            name="twitter:description"
+            content="A physical feed for your interests, shaped by context and time."
+        />
+        <meta
+            name="twitter:image"
+            content="https://app.paperbridge.tech/assets/og-image.png"
+        />
+        <meta
+            name="twitter:image:alt"
+            content="An illustrated Paperbridge printer on a warm yellow circle."
+        />
+        <link rel="canonical" href="https://app.paperbridge.tech/" />
+        <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+        <link
+            rel="icon"
+            href="assets/favicon-32.png"
+            type="image/png"
+            sizes="32x32"
+        />
+        <link
+            rel="icon"
+            href="assets/favicon-16.png"
+            type="image/png"
+            sizes="16x16"
+        />
+        <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+        <link rel="manifest" href="site.webmanifest" />
+        <title>Paperbridge — The things you care about, on paper.</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <header class="site-header shell">
+            <a class="wordmark" href="#top" aria-label="Paperbridge home">
+                <span class="wordmark-mark" aria-hidden="true">✦</span>
+                <span>paperbridge</span>
+            </a>
+            <nav aria-label="Main navigation">
+                <a href="#questions">Questions</a>
+                <a href="#evidence">Evidence</a>
+                <a
+                    class="nav-pill"
+                    href="https://github.com/giuseppecrj/paperbridge"
+                    >View the project <span aria-hidden="true">↗</span></a
+                >
+            </nav>
+        </header>
+
+        <main id="top">
+            <section class="hero shell">
+                <div class="hero-copy">
+                    <p class="eyebrow">
+                        <span class="status-dot"></span> Working project ·
+                        private single-device MVP
+                    </p>
+                    <h1>The things you care about, <em>on paper.</em></h1>
+                    <p class="hero-lede">
+                        Weather before work. A curious fact at lunch. A story
+                        before bed. Paperbridge turns the internet and your AI
+                        agent into small, physical moments worth looking up for.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="button button-dark" href="#day"
+                            >See a day with Paperbridge
+                            <span aria-hidden="true">↓</span></a
+                        >
+                        <a class="text-link" href="#questions"
+                            >What are we exploring?
+                            <span aria-hidden="true">↘</span></a
+                        >
+                    </div>
+                </div>
+                <div
+                    class="hero-art"
+                    aria-label="An illustrated Paperbridge printer"
+                    role="img"
+                >
+                    <svg
+                        class="printer-illustration"
+                        viewBox="0 0 500 420"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                    >
+                        <path class="shadow" d="M96 355c62 26 241 31 314-2" />
+                        <path
+                            class="paper paper-back"
+                            d="M191 166V58c0-9 8-16 17-16h91c9 0 16 7 16 16v108"
+                        />
+                        <path
+                            class="paper paper-front"
+                            d="M195 91c23 11 89 10 120-1v111H195V91Z"
+                        />
+                        <path
+                            class="paper-line"
+                            d="M215 121h77M215 139h58M215 165h69"
+                        />
+                        <circle class="paper-sun" cx="286" cy="179" r="9" />
+                        <path
+                            class="printer-body"
+                            d="M104 172c0-30 24-54 54-54h188c42 0 76 34 76 76v126c0 25-20 45-45 45H151c-26 0-47-21-47-47V172Z"
+                        />
+                        <path
+                            class="printer-top"
+                            d="m112 174 46-38h182c32 0 61 20 73 50l8 20H162l-50-32Z"
+                        />
+                        <path
+                            class="printer-slot"
+                            d="M176 156h151l18 35H160l16-35Z"
+                        />
+                        <path
+                            class="printer-slot-inner"
+                            d="M184 165h133l9 17H176l8-17Z"
+                        />
+                        <path
+                            class="printer-front"
+                            d="M104 215h317v105c0 25-20 45-45 45H151c-26 0-47-21-47-47V215Z"
+                        />
+                        <path class="printer-seam" d="M104 215h317" />
+                        <rect
+                            class="screen"
+                            x="232"
+                            y="240"
+                            width="82"
+                            height="39"
+                            rx="5"
+                        />
+                        <circle class="print-button" cx="167" cy="258" r="14" />
+                        <path class="button-mark" d="M161 258h12M167 252v12" />
+                        <rect
+                            class="small-button"
+                            x="337"
+                            y="240"
+                            width="17"
+                            height="12"
+                            rx="3"
+                        />
+                        <rect
+                            class="small-button"
+                            x="361"
+                            y="240"
+                            width="17"
+                            height="12"
+                            rx="3"
+                        />
+                        <rect
+                            class="small-button"
+                            x="337"
+                            y="260"
+                            width="17"
+                            height="12"
+                            rx="3"
+                        />
+                        <rect
+                            class="small-button"
+                            x="361"
+                            y="260"
+                            width="17"
+                            height="12"
+                            rx="3"
+                        />
+                        <path
+                            class="printer-detail"
+                            d="M126 291v35M395 290v28c0 11-9 20-20 20"
+                        />
+                        <circle class="logo-dot" cx="259" cy="316" r="9" />
+                        <path
+                            class="logo-star"
+                            d="m259 310 2 4 4 2-4 2-2 5-2-5-4-2 4-2 2-4Z"
+                        />
+                    </svg>
+                </div>
+            </section>
+
+            <section class="story-section shell">
+                <p class="section-number">01 / The idea</p>
+                <div class="manifesto-grid">
+                    <h2>Less scrolling.<br /><span>More noticing.</span></h2>
+                    <div>
+                        <p class="large-copy">
+                            Paperbridge is an experiment in making digital
+                            information feel a little more alive: less
+                            scrolling, more noticing. A physical feed for your
+                            interests, shaped by context and time.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="day-section" id="day">
+                    <div class="section-intro">
+                        <p class="section-number">
+                            02 / A day with Paperbridge
+                        </p>
+                        <h2>Small moments,<br /><span>right on time.</span></h2>
+                    </div>
+                    <div
+                        class="day-agent-map"
+                        aria-label="Paperbridge sends moments chosen by an AI agent to the printer"
+                    >
+                        <div class="day-agent-node">
+                            <svg
+                                class="day-printer-icon"
+                                viewBox="80 30 340 340"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    class="printer-body"
+                                    d="M104 172c0-30 24-54 54-54h188c42 0 76 34 76 76v126c0 25-20 45-45 45H151c-26 0-47-21-47-47V172Z"
+                                />
+                                <path
+                                    class="printer-top"
+                                    d="m112 174 46-38h182c32 0 61 20 73 50l8 20H162l-50-32Z"
+                                />
+                                <path
+                                    class="printer-slot"
+                                    d="M176 156h151l18 35H160l16-35Z"
+                                />
+                                <path
+                                    class="printer-slot-inner"
+                                    d="M184 165h133l9 17H176l8-17Z"
+                                />
+                                <path
+                                    class="printer-front"
+                                    d="M104 215h317v105c0 25-20 45-45 45H151c-26 0-47-21-47-47V215Z"
+                                />
+                                <path class="printer-seam" d="M104 215h317" />
+                                <rect
+                                    class="screen"
+                                    x="232"
+                                    y="240"
+                                    width="82"
+                                    height="39"
+                                    rx="5"
+                                />
+                                <circle
+                                    class="print-button"
+                                    cx="167"
+                                    cy="258"
+                                    r="14"
+                                />
+                                <path
+                                    class="button-mark"
+                                    d="M161 258h12M167 252v12"
+                                />
+                                <circle
+                                    class="logo-dot"
+                                    cx="259"
+                                    cy="316"
+                                    r="9"
+                                />
+                            </svg>
+                            <strong>Paperbridge</strong>
+                            <small>makes it physical</small>
+                        </div>
+                        <div class="day-agent-branches" aria-hidden="true">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                    <div class="day-list">
+                        <article class="day-card day-morning">
+                            <div class="day-time">
+                                07:32 <span>morning</span>
+                            </div>
+                            <div class="receipt receipt-weather">
+                                <span class="receipt-icon">☼</span
+                                ><strong>GOOD MORNING</strong
+                                ><span>72° &nbsp; Sunny</span
+                                ><span>Traffic is light today.</span
+                                ><span>3 things on your list</span>
+                            </div>
+                            <p>
+                                <strong>Before work</strong><br />Weather,
+                                todos, and traffic—without opening an app.
+                            </p>
+                        </article>
+                        <article class="day-card day-afternoon">
+                            <div class="day-time">
+                                13:04 <span>afternoon</span>
+                            </div>
+                            <div class="receipt receipt-fact">
+                                <span class="receipt-icon">✳</span
+                                ><strong>DID YOU KNOW?</strong
+                                ><span>Octopuses have three hearts.</span
+                                ><span>Two stop beating when they swim.</span
+                                ><span>Have a curious day!</span>
+                            </div>
+                            <p>
+                                <strong>In the middle of the day</strong><br />A
+                                strange fact, a helpful nudge, something you
+                                didn’t expect.
+                            </p>
+                        </article>
+                        <article class="day-card day-night">
+                            <div class="day-time">22:18 <span>night</span></div>
+                            <div class="receipt receipt-story">
+                                <span class="receipt-icon">☾</span
+                                ><strong>BEDTIME STORY</strong
+                                ><span>Once, a small fox found</span
+                                ><span>a star beneath the snow...</span
+                                ><span>────────────</span>
+                            </div>
+                            <p>
+                                <strong>Before bed</strong><br />A story, a
+                                reflection, or a gentle plan for tomorrow.
+                            </p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flow-section shell">
+                <div class="flow-heading">
+                    <p class="section-number">03 / The quiet loop</p>
+                    <h2>Your interests in.<br /><span>Paper out.</span></h2>
+                </div>
+                <div class="flow" aria-label="How Paperbridge works">
+                    <div class="flow-node">
+                        <span class="flow-icon">♡</span
+                        ><strong>Your world</strong
+                        ><small>interests · context · time</small>
+                    </div>
+                    <span class="flow-arrow" aria-hidden="true">→</span>
+                    <div class="flow-node flow-agent">
+                        <span class="flow-icon">✦</span
+                        ><strong>Your agent</strong
+                        ><small>chooses what matters</small>
+                    </div>
+                    <span class="flow-arrow" aria-hidden="true">→</span>
+                    <div class="flow-node flow-paper">
+                        <span class="flow-icon">▤</span
+                        ><strong>Paperbridge</strong
+                        ><small>turns it physical</small>
+                    </div>
+                </div>
+                <p class="flow-note">
+                    An AI agent can use Paperbridge’s MCP interface to turn
+                    information into bounded, printable moments. The goal isn’t
+                    more notifications. It’s better timing.
+                </p>
+            </section>
+
+            <section class="questions-section shell" id="questions">
+                <div class="section-intro">
+                    <p class="section-number">
+                        04 / Questions we’re investigating
+                    </p>
+                    <h2>What deserves<br /><span>to become physical?</span></h2>
+                </div>
+                <div class="question-list">
+                    <div class="question">
+                        <span>01</span>
+                        <p>
+                            Can a physical feed create anticipation without
+                            becoming noise?
+                        </p>
+                    </div>
+                    <div class="question">
+                        <span>02</span>
+                        <p>
+                            What feels better when it arrives on paper instead
+                            of a screen?
+                        </p>
+                    </div>
+                    <div class="question">
+                        <span>03</span>
+                        <p>
+                            Can an AI agent develop a sense of timing, taste,
+                            and restraint?
+                        </p>
+                    </div>
+                    <div class="question">
+                        <span>04</span>
+                        <p>
+                            How can a device feel surprising without pretending
+                            to be a person?
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="evidence-section shell" id="evidence">
+                <div class="evidence-copy">
+                    <p class="section-number">05 / The project, today</p>
+                    <h2>A working path<br /><span>to the real world.</span></h2>
+                    <p>
+                        Paperbridge is a working hardware and protocol project.
+                        The private single-device path runs from an AI-connected
+                        service to a device, then directly to a thermal printer.
+                    </p>
+                    <a
+                        class="text-link"
+                        href="https://github.com/giuseppecrj/paperbridge"
+                        >Explore the source <span aria-hidden="true">↗</span></a
+                    >
+                </div>
+                <div class="evidence-card">
+                    <div class="evidence-row">
+                        <span>USB semantic jobs</span><b>physically verified</b>
+                    </div>
+                    <div class="evidence-row">
+                        <span>REST · MCP · MQTT ingress</span
+                        ><b>physically exercised</b>
+                    </div>
+                    <div class="evidence-row">
+                        <span>Device → W5500 → printer</span
+                        ><b>physically verified</b>
+                    </div>
+                    <div class="evidence-row">
+                        <span>Host and printer simulator</span><b>tested</b>
+                    </div>
+                    <div class="evidence-row evidence-row-muted">
+                        <span>Pairing · scheduling · public delivery</span
+                        ><b>still exploring</b>
+                    </div>
+                    <p class="evidence-footnote">
+                        “Delivered to printer” means the device wrote all bytes
+                        to the printer connection. It does not prove that paper
+                        emerged.
+                    </p>
+                </div>
+            </section>
+
+            <section class="closing shell">
+                <div class="closing-art" aria-hidden="true">
+                    <span>✦</span><span>☼</span><span>☾</span><span>▤</span>
+                </div>
+                <p class="eyebrow">A working project in public</p>
+                <h2>Make room for<br /><em>the unexpected.</em></h2>
+                <p>
+                    Read the architecture, follow the build, or help us figure
+                    out what belongs on paper.
+                </p>
+                <div class="closing-actions">
+                    <a
+                        class="button button-dark"
+                        href="https://github.com/giuseppecrj/paperbridge"
+                        >View the project <span aria-hidden="true">↗</span></a
+                    ><a
+                        class="button button-light"
+                        href="https://github.com/giuseppecrj/paperbridge/blob/main/docs/architecture.md"
+                        >Read the architecture
+                        <span aria-hidden="true">↗</span></a
+                    >
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer shell">
+            <span>© 2026 Paperbridge</span
+            ><span>Useful · strange · wonderful</span>
+        </footer>
+    </body>
+</html>
