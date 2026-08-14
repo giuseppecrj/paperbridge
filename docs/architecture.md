@@ -16,8 +16,11 @@ credential through a transient root-only `/run` file that Docker mounts
 read-only. Issues #29 and #30 accepted and promoted this path on
 `paperbridge-api`, including its private proxy, credential mount, exact image
 digest, restart, reboot, no-output tracer, and `api.paperbridge.tech` route. The
-direct-Node `paperbridge-prod` VM remains available only for issue #49 rollback
-until retirement. All ingress paths reach one firmware job module and the same
+Owner reported the direct-Node `paperbridge-prod` VM deleted on 2026-08-14, so
+VM route rollback is no longer available. All four authoritative nameservers
+confirm TTL `1800` for the unchanged active CNAME. Issue #49 records final
+no-output probe `7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`. All ingress paths reach
+one firmware job module and the same
 coordinator, renderer, and printer transport. The shared coordinator
 serializes every delivery so USB diagnostics and USB/MQTT jobs cannot open
 overlapping printer sockets.

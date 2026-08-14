@@ -3,8 +3,9 @@
 Use this guide to connect an approved private client to the deployed Paperbridge
 service. It is not a VM deployment runbook. See
 [`exedev-container-deployment.md`](exedev-container-deployment.md) for the active
-container workflow or [`exedev-deployment.md`](exedev-deployment.md) for the
-retained direct-Node rollback workflow.
+container workflow. [`exedev-deployment.md`](exedev-deployment.md) is the
+historical direct-Node workflow; its VM was Owner-reported deleted on
+2026-08-14.
 
 ## Boundary
 
