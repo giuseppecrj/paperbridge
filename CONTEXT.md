@@ -51,6 +51,17 @@ _Avoid_: Device endpoint, serial port
 A host command correlated by a request ID. It is transport work, not a print job.
 _Avoid_: Job
 
+**Receipt Template**:
+A reusable Markdown starting document for human-agent receipt work. It uses the
+same artifact format as a Shared Receipt Document and is not print-time transport
+data.
+_Avoid_: Template language, print job
+
+**Shared Receipt Document**:
+The Markdown file a human and agent co-edit as the reviewable source of a receipt.
+Human edits are authoritative. It remains distinct from print-time Blocks.
+_Avoid_: Print job, Paperbridge Blocks, transport payload
+
 **Semantic Print Job**:
 A versioned request describing printable meaning as bounded receipt blocks rather
 than printer-specific bytes.
