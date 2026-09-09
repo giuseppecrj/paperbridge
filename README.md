@@ -1,154 +1,159 @@
 # Paperbridge
 
-Paperbridge is a local-first thermal-printer appliance project. The implemented
-bring-up path is:
+**Send something real to someone far away.**
+
+[![CI](https://github.com/giuseppecrj/paperbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/giuseppecrj/paperbridge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Paperbridge turns a connected thermal printer into a **physical inbox** for
+notes, pictures, and updates from people, applications, and AI agents. The
+recipient gets something on paper without having to open an app.
+
+Imagine a note from your daughter arriving in the kitchen, or your appointments
+and the weather waiting for you each morning. That is the experience we are
+building toward. Today, this repository contains the device firmware, print
+protocol, developer tools, and private API that make the paper delivery path work.
+
+> **Early development.** USB, REST, and MCP printing have been demonstrated on
+> the reference hardware. A consumer app, pairing, sender permissions, and
+> scheduling are still ahead. The 72-hour hardware reliability soak is also
+> outstanding; Paperbridge is not yet a finished consumer product.
+
+[Get started](#get-started) · [How it works](#how-it-works) ·
+[Hardware setup](#connect-a-printer) · [API and AI agents](#connect-an-app-or-agent) ·
+[Documentation](#documentation)
+
+## A physical inbox
+
+The [product vision](docs/product.md) is a printer you pair once and place
+somewhere in your home. You choose who can send to it: family, friends, an app,
+or an AI agent. A short note arrives on paper; a QR code can point to the photos
+or other content behind it.
+
+For example, a future morning update could look like this:
 
 ```text
-Mac -- USB-C serial JSON RPC -----------------------> Waveshare ESP32-S3-ETH
-Mac/Mosquitto -- home Wi-Fi MQTT probe ------------>          |
-ESP32-S3-ETH -- direct W5500 Ethernet / TCP ESC/POS ----------> Rongta RP326
+GOOD MORNING, DAD
+
+It will be sunny today. High: 71 F
+
+10:30  Doctor appointment
+ 3:00  Call with Giuseppe
+
+Ava says:
+"We found a new apartment.
+Call us when you wake up."
+
+[QR: View photos]
 ```
 
-The Mac never needs a direct network connection to the printer. A successful
-socket write is reported as `delivered_to_printer`; it is **not** proof that
-paper emerged. The private single-device REST/MQTT v1 and MCP paths are
-implemented, simulator-tested, and physically verified on the purchased
-device/printer. MCP uses the same application path. Image preparation is host-/
-simulator-tested to 576×576, and `test.png` was physically observed at that
-bound through REST/MQTT on 2026-08-05. A smaller PNG feed/cut job was also
-observed. JPEG and broader image-quality acceptance remain unverified. The
-private single-device service is production-provisioned on exe.dev. No website,
-public application authentication, durable job delivery, OTA, or multi-Device
-routing is implemented.
+This is an example of the intended experience. Automatic morning updates,
+invitations, and phone-based setup are product work still to come.
 
-## Status
+## What works today
 
-- Repository foundation and host-only tests: implemented.
-- USB discovery physically observed at `/dev/cu.usbmodem101`; esptool detected an
-  ESP32-S3 revision v0.2, embedded 8 MB PSRAM, 16 MB flash, and USB-Serial/JTAG.
-- Official MicroPython 1.28.0 SPIRAM_OCT is flashed and running on the purchased
-  ESP32-S3; USB RPC `system.ping` and `system.info` are physically verified.
-- The dedicated direct-printer network at
-  `192.168.4.50 -> 192.168.4.87:9100` has physically verified W5500 link and
-  reachability. ASCII text, feed, and explicit partial-cut bytes `1d 56 01`
-  were physically verified before the subnet change.
-- Local semantic `print-job.v1` USB submission is implemented, host-/simulator-
-  tested, and physically verified on 2026-08-02: `job-hello-001` delivered 28
-  bytes and its fixture receipt was observed on the purchased printer.
-- Controlled post-deploy power-cycle smoke and operator-confirmed acceptance
-  passed on 2026-08-02; evidence IDs are recorded in `docs/hardware.md`.
-- Board photos confirm `ESP32-S3-ETH` silkscreen with no explicit PCB revision;
-  the RP326 self-test reports firmware `GD207_V1.14`.
-- Ethernet hot reconnect, printer-only and ESP32-only recovery, cover-open, and
-  paper-out behavior passed on 2026-08-02. A 27-sample no-output soak trial also
-  passed; only the full 72-hour soak remains.
-- The no-output MQTT 3.1.1 tracer over ESP32 Wi-Fi is implemented, host-tested,
-  and physically verified on 2026-08-02. Guarded Wi-Fi/MQTT recovery preserved
-  direct printer TCP reachability, and direct W5500 cable recovery preserved
-  Wi-Fi/MQTT as `hil-network-recovery-89867cf401c3`. On 2026-08-07,
-  `emqx-tls-spike-945ac7ad7d78` physically verified EMQX MQTT/TLS, automatic NTP,
-  one correlated no-output probe, safe rejection of a 65,000-byte invalid job,
-  and concurrent direct-printer reachability without paper output.
-- `POST /api/jobs` validates and delivers bounded `print-job.v1` through
-  authenticated local MQTT to the same firmware coordinator. On 2026-08-02,
-  `job-hw-acceptance-20260802T203016Z` returned HTTP 200 with
-  `delivered_to_printer` after 34 bytes, and an operator observed the expected
-  receipt on the purchased printer.
-- Streamable HTTP MCP at `/mcp` exposes one `paperbridge_print` tool through the
-  same application service. It is host-/simulator-tested and was physically
-  verified on 2026-08-02: job `6e46f155-c3f2-4b11-9c56-46f9261f2abe`
-  delivered 42 bytes, and an operator observed the expected receipt.
-- A digest-pinned, non-root API container with a read-only root filesystem and
-  loopback-only publication is implemented and host-tested.
-- The hardened container on `paperbridge-api` is the active private production
-  runtime. On 2026-08-08, issue #30 moved `api.paperbridge.tech` to merged commit
-  `7d0d4e163fc12f841c427df89e94af431d21d2d9` and image digest
-  `sha256:2ff7b29167b8d86c0c36fd100c0f15ba54bccb9b052d93f3bdfab414e81ad5bd`.
-  Its private proxy, encrypted credential, hardening, health/readiness, tracer,
-  service restart, VM reboot, and route gates passed. The Owner reported the
-  direct-Node `paperbridge-prod` VM deleted on 2026-08-14, so VM route rollback
-  is no longer available. All four authoritative nameservers now confirm TTL
-  `1800` for the unchanged active CNAME. Issue #49 records the completed
-  retirement and final no-output probe
-  `7751e32f-8fa6-42e0-86b0-7ad0143e7ad2`.
+| Capability | Current scope |
+| --- | --- |
+| Send from your computer | USB command-line tools submit print jobs and inspect the device. |
+| Connect an app or AI agent | A private REST API and MCP tool send jobs to one configured device over MQTT. |
+| Compose a receipt | Bounded ASCII text, alignment and emphasis, rules, QR codes, paper feed, and an explicitly authorized partial cut. |
+| Include an image | REST and MCP prepare PNG/JPEG images as monochrome rasters up to 576 × 576 pixels. PNG output has been observed on hardware; broader image-quality acceptance remains. |
+| Develop without a printer | Host tests and a TCP printer simulator exercise the software delivery path. |
 
-## Mac setup
+The reference setup is a **Waveshare ESP32-S3-ETH** running MicroPython and a
+**Rongta RP326** thermal printer. USB, private REST/MQTT, and MCP paths have
+produced operator-confirmed paper output on that setup. Compatibility with other
+boards and printers needs separate validation. The
+[hardware record](docs/hardware.md) distinguishes purchased-unit observations
+from documented specifications.
 
-Install [mise](https://mise.jdx.dev/) first, then:
+Jobs currently require an online device. Duplicate suppression lasts for one
+boot; durable delivery, automatic retries, multi-device routing, and over-the-air
+updates are not implemented. The private API has no public application
+authentication and must remain behind access control. Recent security hardening
+still has a separate [deployment and hardware acceptance gate](https://github.com/giuseppecrj/paperbridge/issues/82).
+
+## How it works
+
+```mermaid
+flowchart LR
+    App["App or AI agent"] --> API["Private REST / MCP API"]
+    API --> Broker["MQTT broker"]
+    Broker -->|Wi-Fi| Device["Paperbridge device"]
+    CLI["USB command-line tool"] -->|USB-C| Device
+    Device -->|Direct Ethernet| Printer["Thermal printer"]
+```
+
+The device receives a structured print job, converts its content into printer
+commands, and sends them to the printer over its dedicated Ethernet connection.
+The computer does not need a direct network route to the printer.
+
+A result of `delivered_to_printer` means all bytes reached the printer-facing
+socket. It does not confirm that paper emerged. A timeout returns `unknown` and
+does not automatically resend the job. See the [architecture](docs/architecture.md)
+and [print-job protocol](docs/protocol.md) for the delivery contract.
+
+## Get started
+
+You can explore the code and run the ordinary checks without a printer, device,
+or 1Password account. Install [mise](https://mise.jdx.dev/), then clone the
+repository and set up the pinned toolchain:
 
 ```sh
+git clone https://github.com/giuseppecrj/paperbridge.git
+cd paperbridge
 mise trust
 mise install
-just bootstrap
-just lint
-just test
+mise exec -- just bootstrap
+mise exec -- just lint
+mise exec -- just format-check
+mise exec -- just test
 ```
 
-`mise.toml` pins Python, `uv`, `just`, Node, Bun, Fnox, the 1Password CLI, and Gitleaks;
-`uv.lock` and `bun.lock` pin their respective packages.
+These tests do not open a serial port or operate a printer. They cover the Python
+firmware logic and CLI, TypeScript protocol and API, and simulator paths. Tests
+that need a local MQTT broker run when `mosquitto` and `mosquitto_passwd` are
+installed; otherwise they are reported as skipped. Docker container acceptance
+is a separate gate described in [Testing](docs/testing.md).
 
-Intel Macs retain the Host CLI, host tests, and `mpremote`. The development
-environment excludes `esptool` on Intel macOS because patched
-[`cryptography` versions no longer support that platform](https://cryptography.io/en/stable/changelog/#v49-0-0).
-Erase and flash operations require Apple Silicon macOS or Linux. Do not install
-an older vulnerable `cryptography` version to restore Intel flashing support.
+[mise.toml](mise.toml), [uv.lock](uv.lock), and [bun.lock](bun.lock) pin the
+project's tools and dependencies. With mise activated in your shell, you can
+use the shorter `just` commands shown throughout the documentation.
 
-Run `just secrets-scan` before sharing changes. It scans committed Git history
-with fully redacted findings; CI runs the same check with full history. It does
-not inspect ignored local credential files or uncommitted changes.
+Intel Macs support the CLI, host tests, and `mpremote`, but erase and flash
+operations require Apple Silicon macOS or Linux. The development environment
+excludes `esptool` on Intel macOS because patched `cryptography` versions no
+longer support it. Do not downgrade to a vulnerable version to restore flashing.
 
-## Development configuration and secrets
+### Connect a printer
 
-Copy the non-secret local settings and replace the example broker address,
-Wi-Fi SSID, and serial port for this machine:
+Start with the [local bring-up guide](docs/local-bringup.md),
+[hardware requirements](docs/hardware.md), and
+[network topology](docs/network-topology.md). Follow the guide's order: identify
+the board and port, verify the firmware, configure networking, check reachability,
+then test text, feed, and an explicit cut last. Power the printer from its own
+24 V adapter and the board from USB.
 
-```sh
-cp .env.example .env
-$EDITOR .env
-```
+Networked development uses non-secret settings in ignored `.env` and credentials
+provided by Fnox through 1Password. The checked-in references are project-specific;
+set up your own mappings using the [secrets workflow](docs/research/fnox-secrets-workflow.md).
+Generate the ignored device configuration with `just configure-device` rather
+than editing it by hand. Never commit `.env`, credentials, or generated
+`firmware/micropython/config.json`.
 
-The checked-in `fnox.toml` maps Paperbridge development secret names to 1Password
-references in the `Agent` vault. Enable 1Password desktop-app CLI integration,
-unlock the app, and verify the mappings without printing values:
+<details>
+<summary>Reference board: firmware download and flash commands</summary>
 
-```sh
-op vault list
-just secrets-check
-```
-
-Fnox uses 1Password desktop CLI integration and injects secrets only into the
-recipes that need them. `.env` and generated firmware `config.json` are ignored.
-Treat `config.json` as disposable derived state: regenerate it from `.env` and
-Fnox instead of editing it manually. See
-[`docs/research/fnox-secrets-workflow.md`](docs/research/fnox-secrets-workflow.md).
-
-## Discover the ESP32 serial port
-
-Connect a known USB-C **data** cable, then run:
+Read [MicroPython bring-up](docs/micropython-bringup.md) before running these
+commands. The selected image is for the verified ESP32-S3 with 16 MB flash and
+8 MB octal PSRAM; inspect your board before choosing it. Use a USB-C data cable
+and select the exact port reported by `just ports`:
 
 ```sh
 just ports
-# or
-mise exec -- uv run paperbridge ports list
-```
-
-Likely macOS names include `/dev/cu.usbmodem*`, `/dev/cu.usbserial*`, and
-`/dev/cu.wchusbserial*`. If more than one candidate exists, the CLI refuses to
-choose. Select one explicitly:
-
-```sh
+# Replace this example with your board's actual port.
 export PAPERBRIDGE_PORT=/dev/cu.usbmodem101
-# Every just recipe also accepts: PORT=/dev/cu.usbmodem101
-```
 
-## Select and flash MicroPython
-
-First inspect the purchased board silkscreen and exact chip/board revision. The
-official Waveshare SKU 28972 documentation says ESP32-S3R8, 16 MB flash, and 8
-MB octal PSRAM. The purchased chip and memory matched those runtime requirements;
-the selected and verified image is official MicroPython 1.28.0:
-
-```sh
 mkdir -p firmware/downloads
 curl -fL \
   'https://micropython.org/resources/firmware/'\
@@ -158,7 +163,12 @@ printf '%s  %s\n' \
   67c19ae123d84152019b57526ed5291dd0a2b4edd87655c5f76b46c9a62ff5dd \
   firmware/downloads/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin \
   | shasum -a 256 -c -
+```
 
+The next commands erase the selected board and install MicroPython. Continue
+only after the checksum passes and you have confirmed the board and port:
+
+```sh
 PORT="$PAPERBRIDGE_PORT" CONFIRM=erase just erase-device
 PORT="$PAPERBRIDGE_PORT" \
 FIRMWARE=firmware/downloads/ESP32_GENERIC_S3-SPIRAM_OCT-20260406-v1.28.0.bin \
@@ -167,158 +177,55 @@ PORT="$PAPERBRIDGE_PORT" just repl
 PORT="$PAPERBRIDGE_PORT" just verify-board
 ```
 
-Do not flash this variant solely from the marketing memory configuration. See
-[`docs/micropython-bringup.md`](docs/micropython-bringup.md).
+Exit the REPL before verifying the board. Return to the
+[local bring-up guide](docs/local-bringup.md) for configuration, application
+firmware deployment, and printer checks.
 
-## Configure and deploy firmware
+</details>
 
-Read the RP326 self-test receipt before changing its address. For the current
-Wi-Fi/MQTT development path, generate the ignored device configuration from
-non-secret `.env` settings and project-scoped Fnox values:
+### Connect an app or agent
 
-```sh
-just configure-device
-PORT="$PAPERBRIDGE_PORT" just deploy
-```
+The [API guide](apps/api/README.md) covers local setup, request examples, limits,
+and errors. Configure an [authenticated local MQTT broker](tools/mosquitto/README.md)
+and device before starting the API with `just api`.
 
-For an Ethernet-only setup, copy `config.example.json` manually and leave Wi-Fi
-and MQTT disabled. Deployment and application RPC are separate: `mpremote`
-copies files; the `paperbridge` CLI sends requests. `config show` redacts both
-passwords.
+- **REST:** `POST http://127.0.0.1:3000/api/jobs` accepts a complete `print-job.v1`.
+- **MCP:** `http://127.0.0.1:3000/mcp` exposes `paperbridge_print`, which accepts
+  receipt content and supplies the job identity for you.
 
-## Exercise the local path
-
-```sh
-PORT="$PAPERBRIDGE_PORT" just device-ping
-PORT="$PAPERBRIDGE_PORT" just device-info
-
-mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet init
-mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet configure-static
-PORT="$PAPERBRIDGE_PORT" just ethernet-status
-# If a soft reset leaves ETH_STARTED without link, explicitly cycle the LAN:
-mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" ethernet reconnect --confirm
-
-PORT="$PAPERBRIDGE_PORT" just printer-probe
-PORT="$PAPERBRIDGE_PORT" TEXT='Hello from my Mac' just print-test
-mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" printer feed-test
-PORT="$PAPERBRIDGE_PORT" just cut-test  # explicit confirmation; run last
-mise exec -- uv run paperbridge --port "$PAPERBRIDGE_PORT" \
-  job submit packages/protocol/fixtures/print-job-v1/valid-text-feed.json
-```
-
-Do not run the cut test until plain text and feed tests succeed. The included
-partial-cut sequence is verified only on the purchased RP326 and still requires
-explicit confirmation every time. `job submit` returns `delivered_to_printer`,
-not proof that paper emerged. A semantic cut job additionally requires
-`--allow-cut`.
-
-### Opt-in hardware smoke and acceptance
-
-Ordinary `just test` is host-only and never operates hardware. With a selected
-port:
-
-```sh
-PORT=/dev/cu.usbmodem101 just test-hardware-smoke
-```
-
-Expected: ping, info, Ethernet init, static config twice, link up, printer probe.
-No print/feed/cut.
-
-```sh
-PORT=/dev/cu.usbmodem101 just test-hardware-network-recovery
-```
-
-Expected: a no-output loop that uses guarded device Wi-Fi disconnect/reconnect
-RPCs to verify Wi-Fi/MQTT failure and recovery without losing direct W5500
-printer reachability, then interactively verifies W5500 failure and recovery
-without losing Wi-Fi/MQTT. Operator answers trigger only the W5500 steps; they
-do not count as proof. The recipe uses Fnox for the MQTT password and writes one
-`hil-network-recovery-*` evidence file under ignored `captures/hardware/`.
-
-```sh
-PORT=/dev/cu.usbmodem101 just test-hardware-acceptance
-```
-
-Expected: runs smoke, prints uniquely identified text, asks you to confirm paper
-output, feeds, asks again, requires typing exact token `CUT` before cut, then
-asks for cut confirmation. Evidence JSON is written under ignored
-`captures/hardware/`.
-
-For machine-readable output:
-
-```sh
-mise exec -- uv run paperbridge --json --port "$PAPERBRIDGE_PORT" device info
-```
-
-## Private REST/MCP/MQTT path
-
-Set up authenticated local Mosquitto from
-[`tools/mosquitto/README.md`](tools/mosquitto/README.md), put the Mac's
-home-LAN broker address, Wi-Fi SSID, and non-placeholder credentials in ignored
-`firmware/micropython/config.json`, enable Wi-Fi and MQTT, and deploy only with
-explicit hardware authorization. `mqtt.allow_cut` defaults to false and is
-device policy; REST callers cannot override it. Start the private API and submit
-a fixture with:
-
-```sh
-just api
-curl -sS -H 'content-type: application/json' \
-  --data-binary @packages/protocol/fixtures/print-job-v1/valid-text-feed.json \
-  http://127.0.0.1:3000/api/jobs
-```
-
-Source REST jobs are limited to 2,101,248 bytes; prepared MQTT jobs are limited
-to 65,536 bytes. A timeout is
-reported as `unknown` and does not republish the job. Once the device is
-connected, inspect both control-plane layers over USB and run the no-output host
-probe:
-
-```sh
-paperbridge --port "$PAPERBRIDGE_PORT" wifi status
-paperbridge --port "$PAPERBRIDGE_PORT" mqtt status
-just mqtt-probe
-```
-
-`just mqtt-probe` reads non-secret host, username, and device settings from
-`.env`, resolves `PAPERBRIDGE_MQTT_PASSWORD` through Fnox, and reports a
-correlated tracer response—not printer delivery or paper output. MCP clients
-connect to `http://127.0.0.1:3000/mcp` and call `paperbridge_print` with a v1
-receipt `content` object; the service supplies the job envelope and waits for the
-same honest result as REST. For the deployed private REST/MCP endpoints and
-current exe.dev token-only access model, see
-[`docs/private-cloud-access.md`](docs/private-cloud-access.md).
-
-## Simulator
-
-```sh
-just printer-simulator
-# captures payloads under captures/ and reports SHA-256
-```
-
-The ESP32 can target the simulator only when it can route to the Mac on a shared
-test network. The direct ESP32-to-printer mode does not depend on the simulator.
-
-## Remaining physical check
-
-Run the 72-hour no-output soak and review its reset, reachability, and heap
-summary before treating MicroPython as production-capable. See `docs/testing.md`.
-
-## ESP-IDF migration gates
-
-Migrate if W5500 or USB is unstable; Wi-Fi and Ethernet cannot coexist reliably;
-routing is unreliable; MQTT/TLS exhausts or fragments memory; a 72-hour soak
-fails; OTA or secure credentials need ESP-IDF facilities; normal network faults
-cause watchdog resets; or printer status needs lower-level control. See
-[`docs/adr/0001-use-micropython-first.md`](docs/adr/0001-use-micropython-first.md).
+Both use the same validation and delivery path. Keep the service bound to
+loopback; remote access requires a private, authenticated proxy. The
+[private access guide](docs/private-cloud-access.md) documents the existing
+operator deployment. Publishing this repository does not make that API public.
 
 ## Documentation
 
-Start with [`docs/local-bringup.md`](docs/local-bringup.md),
-[`docs/hardware.md`](docs/hardware.md), and
-[`docs/usb-serial-rpc.md`](docs/usb-serial-rpc.md). The active container operator
-workflow is in
-[`docs/exedev-container-deployment.md`](docs/exedev-container-deployment.md).
-The retained direct-Node rollback workflow is in
-[`docs/exedev-deployment.md`](docs/exedev-deployment.md). The completed cutover
-and route rollback procedure is in
-[`docs/exedev-container-cutover.md`](docs/exedev-container-cutover.md).
+| Start here | What you will find |
+| --- | --- |
+| [Product](docs/product.md) and [domain language](CONTEXT.md) | Intended recipient experience and shared vocabulary. |
+| [Architecture](docs/architecture.md) and [decisions](docs/adr/) | Runtime design, delivery boundaries, and future migration gates. |
+| [Print-job protocol](docs/protocol.md) and [USB RPC](docs/usb-serial-rpc.md) | Receipt blocks, result semantics, and device commands. |
+| [Local bring-up](docs/local-bringup.md) and [troubleshooting](docs/troubleshooting.md) | Board setup, network checks, and recovery. |
+| [Testing](docs/testing.md) and [hardware evidence](docs/hardware.md) | Automated checks, physical acceptance, and the outstanding soak. |
+| [Security](docs/security.md) | Trust boundaries, secrets handling, and rollout requirements. |
+
+The main code lives in [firmware/micropython](firmware/micropython/),
+[tools/device-cli](tools/device-cli/), [apps/api](apps/api/), and
+[packages/protocol](packages/protocol/). The
+[printer simulator](tools/printer-simulator/) provides the TCP test endpoint.
+
+## Contributing
+
+Use [GitHub Issues](https://github.com/giuseppecrj/paperbridge/issues) to find
+planned work or discuss a change. For a bug report, include the relevant software
+version, hardware model when applicable, steps to reproduce, and redacted output.
+Keep credentials out of issues and logs.
+
+Read [AGENTS.md](AGENTS.md) for project conventions. Run `just lint`,
+`just format-check`, and `just test` before submitting changes; changes to the API
+image or runtime boundary also need `just test-api-container`. Record physical
+observations separately from host-test results. Run `just secrets-scan` before
+sharing commits; it scans committed history with redacted findings, not ignored
+files or uncommitted changes.
+
+Paperbridge is available under the [MIT License](LICENSE).
