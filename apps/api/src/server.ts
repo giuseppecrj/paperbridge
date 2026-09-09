@@ -38,14 +38,16 @@ if (!brokerReady) {
 const jobs = new JobSubmissionService(deviceId, broker);
 const submitJob = (value: unknown, options: JobSubmissionOptions = {}) =>
 	jobs.submit(value, options);
+const accessPolicy = apiAccessPolicy();
 const mcp = createMcpEndpoint({
 	deviceId,
 	submitJob,
-	accessPolicy: apiAccessPolicy(),
+	accessPolicy,
 });
 const server = createApiServer({
 	submitJob,
 	mcp,
+	accessPolicy,
 	isReady: () => broker.isReady() && !jobs.isDraining(),
 });
 await new Promise<void>((resolve, reject) => {

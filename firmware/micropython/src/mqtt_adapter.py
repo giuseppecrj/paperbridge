@@ -58,7 +58,8 @@ class MqttTracer:
 
     @staticmethod
     def _default_client_factory(**settings):
-        mqtt = __import__("umqtt.simple", None, None, ("MQTTClient",))
+        from . import mqtt_client as mqtt
+
         tls = settings.get("tls")
         if tls is None:
             return mqtt.MQTTClient(
@@ -68,6 +69,8 @@ class MqttTracer:
                 user=settings["username"],
                 password=settings["password"],
                 keepalive=settings["keepalive_seconds"],
+                max_message_bytes=settings["max_message_bytes"],
+                max_topic_bytes=settings["max_topic_bytes"],
             )
         ssl = __import__("ssl")
         return mqtt.MQTTClient(
@@ -77,6 +80,8 @@ class MqttTracer:
             user=settings["username"],
             password=settings["password"],
             keepalive=settings["keepalive_seconds"],
+            max_message_bytes=settings["max_message_bytes"],
+            max_topic_bytes=settings["max_topic_bytes"],
             ssl=True,
             ssl_params={
                 "cert_reqs": ssl.CERT_REQUIRED,
@@ -168,6 +173,8 @@ class MqttTracer:
                 "username": self.settings["username"],
                 "password": self.settings["password"],
                 "keepalive_seconds": self.settings["keepalive_seconds"],
+                "max_message_bytes": self.settings["max_message_bytes"],
+                "max_topic_bytes": max(len(self.jobs_topic), len(self.print_jobs_topic)),
             }
             if tls["enabled"]:
                 settings["tls"] = tls
@@ -206,7 +213,10 @@ class MqttTracer:
         finally:
             self._lock.release()
 
-    def _handle_message(self, topic, payload):
+    def _handle_message(self, topic, payload, retained=False):
+        if retained:
+            self.record_error("RETAINED_MQTT_MESSAGE")
+            return
         if topic not in (self.jobs_topic, self.print_jobs_topic):
             self.record_error("UNEXPECTED_MQTT_TOPIC")
             return

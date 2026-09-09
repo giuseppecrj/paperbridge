@@ -17,6 +17,10 @@ bootstrap:
     uv sync
     bun install
 
+# Scan committed history only; redact any findings in console output.
+secrets-scan:
+    gitleaks git --redact=100 --log-opts="--all" .
+
 lint:
     FNOX_CONFIG_DIR=/nonexistent fnox profiles >/dev/null
     uv run ruff check .

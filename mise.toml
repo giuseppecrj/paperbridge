@@ -6,6 +6,7 @@ node = "26.3.0"
 bun = "1.3.14"
 fnox = "1.31.1"
 op = "2.35.0"
+gitleaks = "8.30.1"
 
 [env]
 _.python.venv = { path = ".venv", create = true }

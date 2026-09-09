@@ -84,8 +84,18 @@ just lint
 just test
 ```
 
-`mise.toml` pins Python, `uv`, `just`, Node, Bun, Fnox, and the 1Password CLI;
+`mise.toml` pins Python, `uv`, `just`, Node, Bun, Fnox, the 1Password CLI, and Gitleaks;
 `uv.lock` and `bun.lock` pin their respective packages.
+
+Intel Macs retain the Host CLI, host tests, and `mpremote`. The development
+environment excludes `esptool` on Intel macOS because patched
+[`cryptography` versions no longer support that platform](https://cryptography.io/en/stable/changelog/#v49-0-0).
+Erase and flash operations require Apple Silicon macOS or Linux. Do not install
+an older vulnerable `cryptography` version to restore Intel flashing support.
+
+Run `just secrets-scan` before sharing changes. It scans committed Git history
+with fully redacted findings; CI runs the same check with full history. It does
+not inspect ignored local credential files or uncommitted changes.
 
 ## Development configuration and secrets
 

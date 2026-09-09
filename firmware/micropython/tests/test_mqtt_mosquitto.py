@@ -40,7 +40,17 @@ class ConnectedWiFi:
 
 
 class PahoClient:
-    def __init__(self, client_id, host, port, username, password, keepalive_seconds):
+    def __init__(
+        self,
+        client_id,
+        host,
+        port,
+        username,
+        password,
+        keepalive_seconds,
+        max_message_bytes,
+        max_topic_bytes,
+    ):
         mqtt = __import__("paho.mqtt.client", None, None, ("Client",))
 
         self.client = mqtt.Client(
@@ -72,7 +82,7 @@ class PahoClient:
 
     def _on_message(self, _client, _userdata, message):
         if self.callback is not None:
-            self.callback(message.topic.encode("utf-8"), message.payload)
+            self.callback(message.topic.encode("utf-8"), message.payload, message.retain)
 
 
 def unused_port():

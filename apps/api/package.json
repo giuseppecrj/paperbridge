@@ -16,7 +16,7 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@paperbridge/protocol": "workspace:*",
     "mqtt": "^5.14.1",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",

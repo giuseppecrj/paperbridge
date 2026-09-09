@@ -136,8 +136,10 @@ def test_default_tls_client_factory_uses_ca_verification_and_sni(monkeypatch):
         return object()
 
     original_import = builtins.__import__
+    from src import mqtt_client as bundled_mqtt
+
+    monkeypatch.setattr(bundled_mqtt, "MQTTClient", mqtt_client)
     modules = {
-        "umqtt.simple": types.SimpleNamespace(MQTTClient=mqtt_client),
         "ssl": types.SimpleNamespace(CERT_REQUIRED="required"),
     }
     monkeypatch.setattr(
@@ -153,6 +155,8 @@ def test_default_tls_client_factory_uses_ca_verification_and_sni(monkeypatch):
         username="device",
         password="password",
         keepalive_seconds=30,
+        max_message_bytes=65_536,
+        max_topic_bytes=47,
         tls={
             "enabled": True,
             "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
@@ -167,6 +171,8 @@ def test_default_tls_client_factory_uses_ca_verification_and_sni(monkeypatch):
             "user": "device",
             "password": "password",
             "keepalive": 30,
+            "max_message_bytes": 65_536,
+            "max_topic_bytes": 47,
             "ssl": True,
             "ssl_params": {
                 "cert_reqs": "required",
@@ -202,6 +208,8 @@ def test_tls_client_factory_receives_required_ca_verification_and_sni():
         "username": "paperbridge-dev-001",
         "password": "not-a-real-secret",
         "keepalive_seconds": 30,
+        "max_message_bytes": 65_536,
+        "max_topic_bytes": len(b"v1/devices/paperbridge-dev-001/print-jobs"),
         "tls": {
             "enabled": True,
             "ca_certificate": "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----\n",
@@ -579,3 +587,208 @@ def test_tracer_does_not_connect_before_wifi_has_an_address():
     assert wifi.poll_calls == 1
     assert tracer.client is None
     assert client.connected is False
+
+
+class MemorySocket:
+    def __init__(self, raw):
+        self.raw = raw
+        self.read_sizes = []
+        self.writes = []
+        self.closed = False
+
+    def read(self, size):
+        self.read_sizes.append(size)
+        value, self.raw = self.raw[:size], self.raw[size:]
+        return value
+
+    def setblocking(self, _flag):
+        pass
+
+    def write(self, raw, size=None):
+        if isinstance(raw, str):
+            raw = raw.encode()
+        self.writes.append(bytes(raw[:size]))
+        return len(self.writes[-1])
+
+    def close(self):
+        self.closed = True
+
+
+def mqtt_length(size):
+    encoded = bytearray()
+    while size > 127:
+        encoded.append((size & 127) | 128)
+        size >>= 7
+    encoded.append(size)
+    return bytes(encoded)
+
+
+def publish_packet(topic, payload, retained=False, qos=1):
+    body = len(topic).to_bytes(2, "big") + topic
+    if qos:
+        body += b"\x00\x01"
+    body += payload
+    return bytes([0x30 | (qos << 1) | retained]) + mqtt_length(len(body)) + body
+
+
+def wire_client(tracer, raw):
+    client = MqttTracer._default_client_factory(
+        **tracer.settings, max_topic_bytes=len(tracer.print_jobs_topic)
+    )
+    client.set_callback(tracer._handle_message)
+    client.sock = MemorySocket(raw)
+    return client
+
+
+def test_wire_retained_jobs_never_deliver_across_fresh_device_instances():
+    transport = RecordingTransport()
+    settings = config()
+    service = JobService(settings, PrintCoordinator(EscPosRenderer(), transport))
+    payload = (FIXTURES / "valid-text-feed.json").read_bytes()
+    for _ in range(2):
+        tracer, published = connected_tracer(service, settings=settings)
+        client = wire_client(
+            tracer, publish_packet(tracer.print_jobs_topic, payload, retained=True)
+        )
+        client.wait_msg()
+        assert transport.payloads == []
+        assert published.published == []
+        assert tracer.last_error == "RETAINED_MQTT_MESSAGE"
+        assert client.sock.writes == [b"\x40\x02\x00\x01"]
+        # Rejection does not consume the job ID; a subsequent explicit live job works.
+        client.sock.raw = publish_packet(tracer.print_jobs_topic, payload)
+        client.wait_msg()
+        assert transport.payloads == [b"\x1b@Hello from Paperbridge\n\n\n\n"]
+        assert published.published[-1][1]["status"] == "delivered_to_printer"
+        transport.payloads.clear()
+
+
+@pytest.mark.parametrize("payload_size", [65_537, 1_048_576])
+def test_wire_oversized_publish_is_rejected_before_payload_read(payload_size):
+    tracer, _published = connected_tracer(FakeJobService())
+    client = wire_client(tracer, publish_packet(tracer.print_jobs_topic, b"x" * payload_size))
+    from src.mqtt_client import MQTTException
+
+    with pytest.raises(MQTTException, match="MQTT_PACKET_TOO_LARGE|MQTT_PAYLOAD_TOO_LARGE"):
+        client.wait_msg()
+    assert max(client.sock.read_sizes) <= len(tracer.print_jobs_topic)
+    assert client.sock.closed
+    assert tracer.job_service.calls == []
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b"\x32\x80\x80\x80\x80\x00",  # more than four remaining-length bytes
+        b"\x32\x80\x00",  # noncanonical remaining-length encoding
+        b"\x32\x01\x00",  # no room for a topic length
+        b"\x32\x04\xff\xff",  # topic extends beyond the packet
+        b"\x32\x04\x00\x01a\x00",  # truncated packet ID
+    ],
+)
+def test_wire_malformed_length_is_rejected_without_delivery(raw):
+    tracer, _published = connected_tracer(FakeJobService())
+    client = wire_client(tracer, raw)
+    from src.mqtt_client import MQTTException
+
+    with pytest.raises(MQTTException, match="INVALID_MQTT_PACKET"):
+        client.wait_msg()
+    assert max(client.sock.read_sizes) <= 2
+    assert client.sock.closed
+    assert tracer.job_service.calls == []
+
+
+def test_wire_maximum_payload_is_allowed_and_qos_one_is_acknowledged():
+    tracer, _published = connected_tracer()
+    payload = b"x" * tracer.settings["max_message_bytes"]
+    client = wire_client(tracer, publish_packet(tracer.print_jobs_topic, payload))
+    received = []
+    client.set_callback(lambda *args: received.append(args))
+    client.wait_msg()
+    assert received == [(tracer.print_jobs_topic, payload, False)]
+    assert not client.sock.closed
+    assert client.sock.writes == [b"\x40\x02\x00\x01"]
+
+
+def test_wire_subscribe_and_publish_qos_one_handshakes_are_preserved():
+    tracer, _published = connected_tracer()
+    client = wire_client(tracer, b"\x90\x03\x00\x01\x01")
+    client.subscribe(tracer.print_jobs_topic, qos=1)
+    assert client.sock.raw == b""
+    assert client.sock.writes[0][0] == 0x82
+
+    client.sock.raw = b"\x40\x02\x00\x02"
+    client.publish(tracer.job_results_topic, b"{}", qos=1, retain=False)
+    assert client.sock.raw == b""
+    assert not client.sock.closed
+    assert client.sock.writes[-1] == b"{}"
+
+
+def test_wire_qos_zero_and_ping_response_remain_supported():
+    tracer, _published = connected_tracer()
+    client = wire_client(tracer, publish_packet(tracer.jobs_topic, b"{}", qos=0))
+    received = []
+    client.set_callback(lambda *args: received.append(args))
+    client.wait_msg()
+    assert received == [(tracer.jobs_topic, b"{}", False)]
+    assert client.sock.writes == []
+    client.sock.raw = b"\xd0\x00"
+    assert client.wait_msg() is None
+    assert not client.sock.closed
+
+
+def test_wire_truncated_payload_never_reaches_callback():
+    from src.mqtt_client import MQTTException
+
+    tracer, _published = connected_tracer(FakeJobService())
+    payload = (FIXTURES / "valid-text-feed.json").read_bytes()
+    client = wire_client(tracer, publish_packet(tracer.print_jobs_topic, payload)[:-1])
+    with pytest.raises(MQTTException, match="INVALID_MQTT_PACKET"):
+        client.wait_msg()
+    assert client.sock.closed
+    assert tracer.job_service.calls == []
+
+
+def test_wire_payload_limit_cannot_be_bypassed_with_a_shorter_topic():
+    from src.mqtt_client import MQTTException
+
+    tracer, _published = connected_tracer(FakeJobService())
+    client = wire_client(tracer, publish_packet(b"a", b"x" * 65_537))
+    with pytest.raises(MQTTException, match="MQTT_PAYLOAD_TOO_LARGE"):
+        client.wait_msg()
+    assert max(client.sock.read_sizes) == 2
+    assert client.sock.closed
+    assert tracer.job_service.calls == []
+
+
+def test_wire_default_client_connects_with_clean_session_and_bounded_factory_settings(monkeypatch):
+    from src import mqtt_client
+
+    tracer, _published = connected_tracer()
+
+    class HandshakeSocket(MemorySocket):
+        def settimeout(self, timeout):
+            self.timeout = timeout
+
+        def connect(self, address):
+            self.address = address
+
+    sock = HandshakeSocket(b"\x20\x02\x00\x00")
+    monkeypatch.setattr(
+        mqtt_client,
+        "socket",
+        types.SimpleNamespace(
+            socket=lambda: sock,
+            getaddrinfo=lambda *_args: [(None, None, None, None, ("192.0.2.1", 1883))],
+        ),
+    )
+    client = MqttTracer._default_client_factory(
+        **tracer.settings, max_topic_bytes=len(tracer.print_jobs_topic)
+    )
+    assert client.connect() == 0
+    assert sock.raw == b""
+    assert sock.address == ("192.0.2.1", 1883)
+    assert sock.writes[0][0] == 0x10
+    assert sock.writes[1] == b"\x04MQTT\x04\xc2\x00\x1e"
+    assert client.max_message_bytes == tracer.settings["max_message_bytes"]
+    assert client.max_topic_bytes == len(tracer.print_jobs_topic)
