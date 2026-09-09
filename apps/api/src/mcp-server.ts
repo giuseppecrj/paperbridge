@@ -6,17 +6,20 @@ import {
 	fromJsonSchema,
 	McpServer,
 } from "@modelcontextprotocol/server";
-import {
-	hostHeaderValidation,
-	toNodeHandler,
-} from "@modelcontextprotocol/node";
+import { toNodeHandler } from "@modelcontextprotocol/node";
 import {
 	printJobSchema,
 	type JobResult,
 	type PrintJobContent,
 } from "@paperbridge/protocol";
 
-import { LOOPBACK_HOSTNAMES } from "./env.js";
+import {
+	accessError,
+	API_JOB_MAX_BYTES,
+	HttpError,
+	readBody,
+	type ApiAccessPolicy,
+} from "./http-security.js";
 import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 
 export interface McpEndpoint {
@@ -24,23 +27,16 @@ export interface McpEndpoint {
 	close(): Promise<void>;
 }
 
-export interface McpAccessPolicy {
-	allowedHostnames: string[];
-	allowedOrigins: string[];
-}
+export type McpAccessPolicy = ApiAccessPolicy;
 
 interface McpEndpointOptions {
 	deviceId: string;
 	submitJob(value: unknown, options?: JobSubmissionOptions): Promise<JobResult>;
 	accessPolicy?: McpAccessPolicy;
+	maxBodyBytes?: number;
 	createJobId?: () => string;
 	now?: () => string;
 }
-
-const defaultAccessPolicy: McpAccessPolicy = {
-	allowedHostnames: LOOPBACK_HOSTNAMES,
-	allowedOrigins: ["http://localhost", "http://127.0.0.1", "http://[::1]"],
-};
 
 const inputSchema = fromJsonSchema<{ content: PrintJobContent }>({
 	type: "object",
@@ -56,35 +52,6 @@ function toolResult(value: unknown, isError = false) {
 		structuredContent: value,
 		...(isError ? { isError: true } : {}),
 	};
-}
-
-function rejectOrigin(response: ServerResponse, message: string): false {
-	response.writeHead(403, { "Content-Type": "application/json" });
-	response.end(
-		JSON.stringify({
-			jsonrpc: "2.0",
-			error: { code: -32000, message },
-			id: null,
-		}),
-	);
-	return false;
-}
-
-function originIsAllowed(
-	request: IncomingMessage,
-	policy: McpAccessPolicy,
-): boolean {
-	const origin = request.headers.origin;
-	if (origin === undefined) return true;
-	if (Array.isArray(origin)) return false;
-	let parsed: URL;
-	try {
-		parsed = new URL(origin);
-	} catch {
-		return false;
-	}
-	if (LOOPBACK_HOSTNAMES.includes(parsed.hostname)) return true;
-	return policy.allowedOrigins.includes(parsed.origin);
 }
 
 export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
@@ -124,17 +91,43 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
 		return server;
 	});
 	const handleMcp = toNodeHandler(handler);
-	const policy = options.accessPolicy ?? defaultAccessPolicy;
-	const validateHost = hostHeaderValidation(policy.allowedHostnames);
+	const maximum = options.maxBodyBytes ?? API_JOB_MAX_BYTES;
 
 	return {
 		async handle(request, response) {
-			if (!validateHost(request, response)) return;
-			if (!originIsAllowed(request, policy)) {
-				rejectOrigin(response, "Origin header is not allowed");
+			const denied = accessError(request, options.accessPolicy);
+			if (denied) {
+				response.writeHead(403, { "content-type": "application/json" });
+				response.end(JSON.stringify({
+					jsonrpc: "2.0",
+					error: { code: -32000, message: denied.message },
+					id: null,
+				}));
 				return;
 			}
-			await handleMcp(request, response);
+			let body: Buffer;
+			try {
+				body = await readBody(request, maximum);
+			} catch (error) {
+				if (!(error instanceof HttpError)) throw error;
+				response.writeHead(413, { "content-type": "application/json" });
+				response.end(JSON.stringify({
+					jsonrpc: "2.0",
+					error: { code: -32000, message: "Request body is too large" },
+					id: null,
+				}));
+				return;
+			}
+			// The SDK's Node adapter accepts this structural request shape. Its
+			// JSON parsing and response/cancellation handling see only bounded bytes.
+			await handleMcp({
+				method: request.method,
+				url: request.url,
+				headers: request.headers,
+				async *[Symbol.asyncIterator]() {
+					yield body;
+				},
+			}, response);
 		},
 		close: () => handler.close(),
 	};

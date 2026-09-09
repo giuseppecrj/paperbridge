@@ -9,7 +9,7 @@ import {
 } from "@modelcontextprotocol/client";
 import type { JobResult } from "@paperbridge/protocol";
 
-import { createApiServer } from "../src/api-server.js";
+import { API_JOB_MAX_BYTES, createApiServer } from "../src/api-server.js";
 import { SubmissionError } from "../src/job-service.js";
 import { createMcpEndpoint } from "../src/mcp-server.js";
 
@@ -29,6 +29,7 @@ const content = {
 async function post(
 	baseUrl: string,
 	headers: Record<string, string>,
+	body = "{}",
 ): Promise<number> {
 	return new Promise((resolve, reject) => {
 		const request = httpRequest(
@@ -39,8 +40,8 @@ async function post(
 				response.once("end", () => resolve(response.statusCode ?? 0));
 			},
 		);
-		request.once("error", reject);
-		request.end("{}");
+		request.on("error", reject);
+		request.end(body);
 	});
 }
 
@@ -339,4 +340,106 @@ test("cancellation aborts the shared application waiter", async (t) => {
 	]);
 	if (timeout) clearTimeout(timeout);
 	assert.equal(serviceSignal?.aborted, true);
+});
+
+test("MCP bounds declared and chunked request bytes before SDK parsing", async (t) => {
+	let submissions = 0;
+	const mcp = createMcpEndpoint({
+		deviceId: "paperbridge-dev-001",
+		submitJob: async () => {
+			submissions += 1;
+			return delivered;
+		},
+		maxBodyBytes: 1024,
+	});
+	const server = createApiServer({ submitJob: async () => delivered, mcp });
+	const baseUrl = await listen(server);
+	t.after(async () => {
+		await mcp.close();
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	});
+	const init = JSON.stringify({
+		jsonrpc: "2.0",
+		id: 1,
+		method: "initialize",
+		params: {
+			protocolVersion: "2026-07-28",
+			capabilities: {},
+			clientInfo: { name: "test", version: "1" },
+		},
+	});
+	for (const chunked of [false, true]) {
+		const body = Buffer.from(init + " ".repeat(1025 - Buffer.byteLength(init)));
+		const result = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+			const req = httpRequest(`${baseUrl}/mcp`, {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json, text/event-stream",
+					...(chunked ? {} : { "content-length": String(body.length) }),
+				},
+			}, (res) => {
+				let text = "";
+				res.on("data", (chunk) => { text += chunk; });
+				res.once("end", () => resolve({ status: res.statusCode ?? 0, body: text }));
+			});
+			req.once("error", reject);
+			req.write(body.subarray(0, 512));
+			req.end(body.subarray(512));
+		});
+		assert.equal(result.status, 413);
+		assert.equal(JSON.parse(result.body).error.message, "Request body is too large");
+	}
+	const atLimit = await fetch(`${baseUrl}/mcp`, {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			accept: "application/json, text/event-stream",
+		},
+		body: init + " ".repeat(1024 - Buffer.byteLength(init)),
+	});
+	assert.equal(atLimit.status, 200);
+	await atLimit.text();
+	const multibyte = await fetch(`${baseUrl}/mcp`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ value: "é".repeat(600) }),
+	});
+	assert.equal(multibyte.status, 413);
+	await multibyte.text();
+	assert.equal(submissions, 0);
+});
+
+test("MCP default limit rejects an 8 MiB envelope and preserves malformed request semantics", async (t) => {
+	const mcp = createMcpEndpoint({
+		deviceId: "paperbridge-dev-001",
+		submitJob: async () => delivered,
+	});
+	const server = createApiServer({ submitJob: async () => delivered, mcp });
+	const baseUrl = await listen(server);
+	t.after(async () => {
+		await mcp.close();
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	});
+	assert(8 * 1024 * 1024 > API_JOB_MAX_BYTES);
+	assert.equal(await post(baseUrl, {
+		"content-type": "application/json",
+		accept: "application/json, text/event-stream",
+	}, " ".repeat(8 * 1024 * 1024) + JSON.stringify({
+		jsonrpc: "2.0",
+		id: 1,
+		method: "initialize",
+		params: {
+			protocolVersion: "2026-07-28",
+			capabilities: {},
+			clientInfo: { name: "test", version: "1" },
+		},
+	})), 413);
+	for (const body of ["{", "null", ""]) {
+		assert.equal(await post(baseUrl, {"content-type": "application/json", accept: "application/json, text/event-stream"}, body), 400);
+	}
+	assert.equal(await post(baseUrl, { "content-type": "text/plain" }, "{"), 415);
+	for (const origin of ["null", "ftp://localhost", "http://localhost/path", "https://localhost@attacker.example"]) {
+		assert.equal(await post(baseUrl, { origin }), 403);
+	}
 });

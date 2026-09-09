@@ -1,6 +1,5 @@
 import {
 	createServer,
-	type IncomingMessage,
 	type Server,
 	type ServerResponse,
 } from "node:http";
@@ -9,23 +8,22 @@ import type { JobResult } from "@paperbridge/protocol";
 
 import { SubmissionError, type JobSubmissionOptions } from "./job-service.js";
 import type { McpEndpoint } from "./mcp-server.js";
+import {
+	accessError,
+	API_JOB_MAX_BYTES,
+	HttpError,
+	readBody,
+	type ApiAccessPolicy,
+} from "./http-security.js";
 
-export const API_JOB_MAX_BYTES = 2 * 1024 * 1024 + 4096;
+export { API_JOB_MAX_BYTES } from "./http-security.js";
 
 export interface ApiServerOptions {
 	submitJob(value: unknown, options?: JobSubmissionOptions): Promise<JobResult>;
 	mcp?: McpEndpoint;
 	isReady?: () => boolean;
 	maxBodyBytes?: number;
-}
-
-class HttpError extends Error {
-	constructor(
-		public readonly statusCode: number,
-		public readonly errorCode: string,
-	) {
-		super(errorCode);
-	}
+	accessPolicy?: ApiAccessPolicy;
 }
 
 function writeJson(
@@ -35,21 +33,6 @@ function writeJson(
 ): void {
 	response.writeHead(statusCode, { "content-type": "application/json" });
 	response.end(JSON.stringify(value));
-}
-
-async function readBody(
-	request: IncomingMessage,
-	maximum: number,
-): Promise<Buffer> {
-	const chunks: Buffer[] = [];
-	let length = 0;
-	for await (const chunk of request) {
-		const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-		length += bytes.length;
-		if (length > maximum) throw new HttpError(413, "PAYLOAD_TOO_LARGE");
-		chunks.push(bytes);
-	}
-	return Buffer.concat(chunks);
 }
 
 function resultStatus(result: JobResult): number {
@@ -83,6 +66,14 @@ export function createApiServer(options: ApiServerOptions): Server {
 				writeJson(response, 404, {
 					status: "rejected",
 					error_code: "NOT_FOUND",
+				});
+				return;
+			}
+			const denied = accessError(request, options.accessPolicy);
+			if (denied) {
+				writeJson(response, 403, {
+					status: "rejected",
+					error_code: denied.errorCode,
 				});
 				return;
 			}

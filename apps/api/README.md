@@ -52,7 +52,8 @@ The server defaults to `127.0.0.1:3000` and exposes:
   than 2,101,248 bytes; prepared MQTT jobs remain limited to 65,536 bytes;
 - Streamable HTTP MCP at `/mcp`, with one `paperbridge_print` tool accepting v1
   receipt `content` and generating a fresh `job_id`, configured `device_id`, and
-  timestamp; and
+  timestamp; its complete HTTP body, including the JSON-RPC envelope, is also
+  limited to 2,101,248 bytes before SDK parsing;
 - the separate `just mqtt-probe` no-output diagnostic;
 - `GET /health`, which reports only Node process liveness; and
 - `GET /ready`, which reports MQTT readiness and whether the application accepts
@@ -72,14 +73,17 @@ curl -sS \
   http://127.0.0.1:3000/api/jobs
 ```
 
-MCP uses the official v2 TypeScript SDK's stateless per-request handler. The
-plain Node mount rejects unconfigured Host and Origin values. It allows
+MCP uses the official v2 TypeScript SDK's stateless per-request handler. Both
+the REST job route and MCP mount reject unconfigured Host and Origin values. They allow
 `localhost`, `127.0.0.1`, and `[::1]` loopback hosts by default; a private proxy
 may add one hostname with `PAPERBRIDGE_API_ALLOWED_HOST` and its exact HTTPS
 origin with `PAPERBRIDGE_API_ALLOWED_ORIGIN`. Requests without an Origin are
-allowed for non-browser MCP clients. Loopback development Origins use a
+allowed for non-browser clients. Loopback development Origins use a
 loopback hostname and may use HTTP or HTTPS with a local port. The configured
 proxy Origin must be HTTPS and have no path, query, or fragment.
+
+Both submission routes count actual request bytes, including chunked bodies,
+and reject oversized bodies with HTTP 413 before parsing or submitting work.
 
 `/health` remains 200 when MQTT is disconnected. `/ready` is 200 only after the
 application MQTT client has connected and subscribed to job results and while

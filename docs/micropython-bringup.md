@@ -29,6 +29,11 @@ Controlled power-cycle acceptance, Ethernet hot reconnect, printer-only and
 ESP32-only recovery, and observable cover-open/paper-out behavior passed on
 2026-08-02. The 72-hour soak remains a separate acceptance gate.
 
+MQTT now uses the checked-in, guarded client documented in
+[Firmware MQTT receive boundary](mqtt-client.md). Normal deployment force-copies
+this source with the application; a separately installed `umqtt.simple` is not
+used. The receive guards are host-tested and still require hardware acceptance.
+
 ## Flash
 
 Exact commands are in the root README. Initial erase requires

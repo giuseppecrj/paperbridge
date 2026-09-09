@@ -113,5 +113,6 @@ def test_application_ping_ok():
 def test_source_files_are_individual_py_under_src():
     files = deploy.source_files()
     assert files
+    assert deploy.firmware_root() / "src" / "mqtt_client.py" in files
     assert all(path.suffix == ".py" for path in files)
     assert all(path.parent.name == "src" for path in files)
